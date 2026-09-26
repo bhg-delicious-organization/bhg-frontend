@@ -8,68 +8,84 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>common.js 測試</h1>
+  <h1>navigation.js 測試</h1>
 
-  <button class="btn btn-primary" onclick="testCommon()">測試 common.js</button>
-  <button class="btn btn-success" onclick="testEscapeHtml_XSS()">測試 escapeHtml (XSS)</button>
+  <button class="btn btn-primary" onclick="testSmartHome()">測試 getSmartHomePage</button>
+  <button class="btn btn-success" onclick="testNavigation()">測試 navigateTo</button>
+  <button class="btn btn-warning" onclick="testAdminMode()">測試管理員模式切換</button>
 
   <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
+
+  <!-- 測試用的頁面容器 -->
+  <div id="pageContent">
+    <div id="page-user-query" class="page-container">
+      <h2>查詢頁（測試用）</h2>
+      <p>這是 user-query 頁面</p>
+    </div>
+  </div>
 
   <script src="api.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/core/ui.js"></script>
   <script src="js/core/time.js"></script>
   <script src="js/core/common.js"></script>
+  <script src="js/core/navigation.js"></script>
   <script>
-    function testCommon() {
+    function testSmartHome() {
       const resultEl = document.getElementById('result');
 
-      AppState.setAdmin(true, 'test-token-123', 'test-csrf-456');
-      const adminToken = getAdminToken();
-      const csrfToken = getCsrfToken();
+      // 情境 1：未登入、非管理員模式
+      AppState.logout();
+      const case1 = getSmartHomePage();
+
+      // 情境 2：已登入學號、非管理員模式
+      AppState.setCurrentStudentId('123456');
+      const case2 = getSmartHomePage();
+
+      // 情境 3：管理員模式、非管理時間
+      AppState.setAdmin(true, 'test-token');
+      AppState.setAdminMode(true);
+      const case3 = getSmartHomePage();
+
+      // 清理
       AppState.logout();
 
-      const result = {
-        '管理員 Token (設定後取得)': adminToken,
-        'CSRF Token (設定後取得)': csrfToken,
-        '管理員登出後 Token': getAdminToken(),
-        '管理員登出後 CSRF': getCsrfToken(),
-        'typeof escapeHtml': typeof escapeHtml,
-        'typeof getAdminToken': typeof getAdminToken,
-        'typeof getCsrfToken': typeof getCsrfToken
-      };
-
-      resultEl.textContent = JSON.stringify(result, null, 2);
+      resultEl.textContent = JSON.stringify({
+        '現在時間': getCurrentTimeNumber(),
+        '情境 1 (未登入)': case1,
+        '情境 2 (已登入學號)': case2,
+        '情境 3 (管理員模式)': case3
+      }, null, 2);
     }
 
-    function testEscapeHtml_XSS() {
+    function testNavigation() {
       const resultEl = document.getElementById('result');
 
-      // 用 String.fromCharCode 避開 < 和 >
-      const lt = String.fromCharCode(60);  // <
-      const gt = String.fromCharCode(62);  // >
+      AppState.setCurrentStudentId('123456');
+      navigateTo('user-query');
 
-      const testCases = {
-        '普通文字': 'Hello World',
-        'HTML 標籤': lt + 'script' + gt + 'alert("xss")' + lt + '/script' + gt,
-        '屬性注入': '" onmouseover="alert(1)',
-        '單引號': "It's a test",
-        '和號': 'A & B',
-        '中文+特殊符號': '王小明' + lt + 'script' + gt + 'alert(1)' + lt + '/script' + gt,
-        'null': null,
-        'undefined': undefined,
-        '數字': 12345
-      };
+      setTimeout(() => {
+        resultEl.textContent = JSON.stringify({
+          '當前頁面': AppState.currentPage(),
+          'user-query 有 active class': document.getElementById('page-user-query').classList.contains('active')
+        }, null, 2);
+      }, 500);
+    }
 
-      const results = {};
-      for (const [key, value] of Object.entries(testCases)) {
-        results[key] = {
-          '原始': value,
-          '轉義後': escapeHtml(value)
-        };
-      }
+    function testAdminMode() {
+      const resultEl = document.getElementById('result');
 
-      resultEl.textContent = JSON.stringify(results, null, 2);
+      // 模擬登入管理員
+      AppState.setAdmin(true, 'test-token');
+      switchToAdminMode();
+
+      setTimeout(() => {
+        resultEl.textContent = JSON.stringify({
+          'isAdmin': AppState.isAdmin(),
+          'isAdminMode': AppState.isAdminMode(),
+          '當前頁面': AppState.currentPage()
+        }, null, 2);
+      }, 500);
     }
   </script>
 </body>
