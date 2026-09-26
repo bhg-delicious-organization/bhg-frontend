@@ -8,10 +8,10 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>time.js 測試</h1>
+  <h1>common.js 測試</h1>
 
-  <button class="btn btn-primary" onclick="testTime()">測試時間函數</button>
-  <button class="btn btn-success" onclick="testTimeOverride()">測試從後端覆蓋 TIME</button>
+  <button class="btn btn-primary" onclick="testCommon()">測試 common.js</button>
+  <button class="btn btn-success" onclick="testEscapeHtml_XSS()">測試 escapeHtml (XSS)</button>
 
   <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
 
@@ -19,50 +19,56 @@
   <script src="js/core/state.js"></script>
   <script src="js/core/ui.js"></script>
   <script src="js/core/time.js"></script>
+  <script src="js/core/common.js"></script>
   <script>
-    function testTime() {
+    function testCommon() {
       const resultEl = document.getElementById('result');
-      const now = getCurrentTimeNumber();
+
+      // 測試 getAdminToken
+      AppState.setAdmin(true, 'test-token-123', 'test-csrf-456');
+      const adminToken = getAdminToken();
+      const csrfToken = getCsrfToken();
+
+      // 清理
+      AppState.logout();
 
       const result = {
-        '現在時間 (HHMM)': now,
-        'TIME 常數': TIME,
-        '是否為點餐時間': isUserOrderTime(),
-        '點餐是否截止': isOrderEnded(),
-        '是否為管理員設定時間': isAdminRestaurantTime(),
-        '是否為評分時間': isRatingTime(),
-        '點餐剩餘分鐘': getOrderTimeRemaining(),
-        '評分剩餘分鐘': getRatingTimeRemaining(),
-        '格式化點餐剩餘': formatTimeRemaining(getOrderTimeRemaining()),
-        '格式化評分剩餘': formatTimeRemaining(getRatingTimeRemaining()),
-        'TimeChecker 物件': typeof TimeChecker
+        '管理員 Token (設定後取得)': adminToken,
+        'CSRF Token (設定後取得)': csrfToken,
+        '管理員登出後 Token': getAdminToken(),
+        '管理員登出後 CSRF': getCsrfToken(),
+        'typeof escapeHtml': typeof escapeHtml,
+        'typeof getAdminToken': typeof getAdminToken,
+        'typeof getCsrfToken': typeof getCsrfToken
       };
 
       resultEl.textContent = JSON.stringify(result, null, 2);
     }
 
-    async function testTimeOverride() {
+    function testEscapeHtml_XSS() {
       const resultEl = document.getElementById('result');
 
-      // 從後端取得時間限制
-      const result = await callApi('getTimeLimits', {});
+      const testCases = {
+        '普通文字': 'Hello World',
+        'HTML 標籤': '<script>alert("xss")</script>',
+        '屬性注入': '" onmouseover="alert(1)',
+        '單引號': "It's a test",
+        '和號': 'A & B',
+        '中文+特殊符號': '王小明<script>alert(1)</script>',
+        'null': null,
+        'undefined': undefined,
+        '數字': 12345
+      };
 
-      if (result.success && result.limits) {
-        TIME.ORDER_START = result.limits.ORDER_START;
-        TIME.ORDER_END = result.limits.ORDER_END;
-        TIME.ADMIN_START = result.limits.ADMIN_RESTAURANT_START;
-        TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
-        TIME.RATING_START = result.limits.RATING_START;
-        TIME.RATING_END = result.limits.RATING_END;
-
-        resultEl.textContent = JSON.stringify({
-          '後端回傳': result.limits,
-          '更新後的 TIME': TIME,
-          '是否為點餐時間 (重新判斷)': isUserOrderTime()
-        }, null, 2);
-      } else {
-        resultEl.textContent = '取得失敗：' + JSON.stringify(result);
+      const results = {};
+      for (const [key, value] of Object.entries(testCases)) {
+        results[key] = {
+          '原始': value,
+          '轉義後': escapeHtml(value)
+        };
       }
+
+      resultEl.textContent = JSON.stringify(results, null, 2);
     }
   </script>
 </body>
