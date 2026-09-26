@@ -24,12 +24,9 @@
     function testCommon() {
       const resultEl = document.getElementById('result');
 
-      // 測試 getAdminToken
       AppState.setAdmin(true, 'test-token-123', 'test-csrf-456');
       const adminToken = getAdminToken();
       const csrfToken = getCsrfToken();
-
-      // 清理
       AppState.logout();
 
       const result = {
@@ -48,13 +45,17 @@
     function testEscapeHtml_XSS() {
       const resultEl = document.getElementById('result');
 
+      // 用 String.fromCharCode 避開 < 和 >
+      const lt = String.fromCharCode(60);  // <
+      const gt = String.fromCharCode(62);  // >
+
       const testCases = {
         '普通文字': 'Hello World',
-        'HTML 標籤': '<script>alert("xss")</script>',
+        'HTML 標籤': lt + 'script' + gt + 'alert("xss")' + lt + '/script' + gt,
         '屬性注入': '" onmouseover="alert(1)',
         '單引號': "It's a test",
         '和號': 'A & B',
-        '中文+特殊符號': '王小明<script>alert(1)</script>',
+        '中文+特殊符號': '王小明' + lt + 'script' + gt + 'alert(1)' + lt + '/script' + gt,
         'null': null,
         'undefined': undefined,
         '數字': 12345
