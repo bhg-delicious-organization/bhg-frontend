@@ -1,66 +1,249 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>測試</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="keywords" content="大家政, 便當廠, 儲值系統, 訂餐系統">
+    <meta name="description" content="校園儲值與訂餐系統">
+    <meta name="author" content="gtes10301">
+    <title>大家政便當廠-儲值系統</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- 樣式表 -->
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>preload.js 測試</h1>
+    <!-- ==================== 頂部標題 ==================== -->
+    <header class="header">
+        <!-- 左邊：Logo -->
+        <div class="logo-container">
+            <img src="https://i.ibb.co/1JJzGkTw/BHG-logo1.png" alt="BHG-logo" class="site-logo">
+        </div>
 
-  <button class="btn btn-primary" onclick="testPreloadTimeLimits()">測試 preloadTimeLimits</button>
-  <button class="btn btn-success" onclick="testPreloadRestaurant()">測試 preloadTodayRestaurant</button>
-  <button class="btn btn-warning" onclick="testRunPreload()">測試完整 runPreload</button>
+        <!-- 中間：標題 -->
+        <div class="title-container">
+            <h1>封測系統</h1>
+            <div class="header-subtitle">儲值系統</div>
+        </div>
 
-  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
+        <!-- 右邊：上下排列 -->
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+            <!-- 上方：管理員按鈕 -->
+            <button class="admin-btn" onclick="showAdminModal()" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
+                <i id="adminStatusIcon" class="fas fa-user-shield"></i>
+                <span id="adminStatusText">管理員</span>
+            </button>
 
-  <script src="api.js"></script>
-  <script src="js/core/state.js"></script>
-  <script src="js/core/ui.js"></script>
-  <script src="js/core/time.js"></script>
-  <script src="js/core/common.js"></script>
-  <script src="js/core/navigation.js"></script>
-  <script src="js/core/preload.js"></script>
-  <script>
-    async function testPreloadTimeLimits() {
-      const resultEl = document.getElementById('result');
-      resultEl.textContent = '載入中...';
+            <!-- 下方：學號按鈕 -->
+            <button class="quick-id-btn" onclick="showQuickIdModal()" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
+                <i class="fas fa-id-card"></i> <span id="quickIdBtnText">學號</span>
+            </button>
+        </div>
+    </header>
 
-      await preloadTimeLimits();
+    <!-- ==================== 頁面容器 ==================== -->
+    <div id="pageContent">
+        <div id="page-loader" class="loading" style="padding: 40px;">
+            <div class="spinner"></div>
+            <p>載入中...</p>
+        </div>
+    </div>
 
-      resultEl.textContent = JSON.stringify({
-        'TIME 物件': TIME,
-        '預載入成功': true
-      }, null, 2);
-    }
+    <!-- ==================== 導覽列收合按鈕 ==================== -->
+    <button id="navToggleBtn" class="nav-toggle-btn">
+        <i class="fas fa-chevron-down"></i>
+    </button>
 
-    async function testPreloadRestaurant() {
-      const resultEl = document.getElementById('result');
-      resultEl.textContent = '載入中...';
+    <!-- ==================== 使用者導覽列 ==================== -->
+    <nav class="bottom-nav user-nav" style="display: none;">
+        <a href="#" class="nav-item" data-page="user-query">
+            <i class="fas fa-search-dollar nav-icon"></i>
+            <span>查詢</span>
+        </a>
+        <a href="#" class="nav-item" data-page="user-recharge">
+            <i class="fas fa-money-bill-wave nav-icon"></i>
+            <span>儲值</span>
+        </a>
+        <a href="#" class="nav-item" data-page="user-meal">
+            <i class="fas fa-utensils nav-icon"></i>
+            <span>訂飯</span>
+        </a>
+        <a href="#" class="nav-item" data-page="user-register">
+            <i class="fas fa-edit nav-icon"></i>
+            <span>申請</span>
+        </a>
+        <a href="#" class="nav-item" data-page="user-account">
+            <i class="fas fa-user-circle nav-icon"></i>
+            <span>帳號</span>
+        </a>
+        <a href="#" class="nav-item" data-page="user-system">
+            <i class="fas fa-info-circle nav-icon"></i>
+            <span>資訊</span>
+        </a>
+        <a href="#" class="nav-item" id="switchToAdminBtn" style="color: var(--success);">
+            <i class="fas fa-user-shield nav-icon"></i>
+            <span>管理</span>
+        </a>
+    </nav>
 
-      await preloadTodayRestaurant();
+    <!-- ==================== 管理員導覽列 ==================== -->
+    <nav class="bottom-nav admin-nav" style="display: none;">
+        <a href="#" class="nav-item" data-page="admin-restaurant">
+            <i class="fas fa-store nav-icon"></i>
+            <span>餐廳</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-batch-deduct">
+            <i class="fas fa-shopping-cart nav-icon"></i>
+            <span>扣款</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-giftcode">
+            <i class="fas fa-gift nav-icon"></i>
+            <span>儲值</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-query">
+            <i class="fas fa-chart-line nav-icon"></i>
+            <span>查詢</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-account">
+            <i class="fas fa-key nav-icon"></i>
+            <span>帳號</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-analytics">
+            <i class="fas fa-chart-line nav-icon"></i>
+            <span>統計</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-orders">
+            <i class="fas fa-clipboard-list nav-icon"></i>
+            <span>訂單</span>
+        </a>
+        <a href="#" class="nav-item" data-page="admin-users">
+            <i class="fas fa-user-plus nav-icon"></i>
+            <span>用戶</span>
+        </a>
+        <a href="#" class="nav-item" id="switchToUserBtn" style="color: var(--danger);">
+            <i class="fas fa-user-shield nav-icon"></i>
+            <span>管理</span>
+        </a>
+    </nav>
 
-      resultEl.textContent = JSON.stringify({
-        'AppState.currentRestaurantName()': AppState.currentRestaurantName(),
-        '預載入成功': true
-      }, null, 2);
-    }
+    <!-- ==================== 學號登入模態視窗 ==================== -->
+    <div id="quickIdModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-id-card"></i> 學號管理</h3>
+                <button class="close-btn" onclick="hideQuickIdModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 未登入狀態 -->
+                <div id="quickIdNotLoggedIn" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">學號</label>
+                        <input type="text" id="quickIdInput" class="form-control" placeholder="6位數學號" maxlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">密碼</label>
+                        <input type="password" id="quickPasswordInput" class="form-control" placeholder="請輸入密碼">
+                    </div>
+                    <div class="form-text">若無密碼可留空</div>
+                    <div id="quickIdMessage"></div>
+                </div>
+                <!-- 已登入狀態 -->
+                <div id="quickIdLoggedIn" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">目前已登入學號</label>
+                        <div class="form-control" id="quickIdCurrentStudent" style="background: #f5f5f5;">載入中...</div>
+                    </div>
+                    <div class="form-text">您已登入，可點擊下方按鈕登出</div>
+                    <div id="quickIdLoggedInMessage"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div id="quickIdFooterNotLoggedIn" style="display: none; width: 100%; gap: 10px;">
+                    <button class="btn btn-danger" onclick="clearRememberedId()" style="flex: 1;">
+                        <i class="fas fa-trash-alt"></i> 清除
+                    </button>
+                    <button class="btn btn-primary" onclick="saveQuickId()" style="flex: 1;">
+                        <i class="fas fa-check"></i> 登入
+                    </button>
+                </div>
+                <div id="quickIdFooterLoggedIn" style="display: none; width: 100%;">
+                    <button class="btn btn-danger" onclick="logoutFromQuickModal()" style="width: 100%;">
+                        <i class="fas fa-sign-out-alt"></i> 登出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    async function testRunPreload() {
-      const resultEl = document.getElementById('result');
-      resultEl.textContent = '載入中...';
+    <!-- ==================== 管理員登入模態視窗 ==================== -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-lock"></i> 管理員登入</h3>
+                <button class="close-btn" onclick="hideAdminModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">管理員密碼</label>
+                    <input type="password" id="adminPassword" class="form-control" placeholder="請輸入密碼">
+                </div>
+                <div id="loginMessage"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideAdminModal()">取消</button>
+                <button class="btn btn-primary" onclick="adminLogin()">
+                    <i class="fas fa-sign-in-alt"></i> 登入
+                </button>
+            </div>
+        </div>
+    </div>
 
-      await runPreload();
+    <!-- ==================== 訊息模態視窗 ==================== -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="messageTitle"><i class="fas fa-info-circle"></i> 系統訊息</h3>
+                <button class="close-btn" onclick="closeMessageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="messageContent"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeMessageModal()">確定</button>
+            </div>
+        </div>
+    </div>
 
-      resultEl.textContent = JSON.stringify({
-        'TIME 物件': TIME,
-        '今日餐廳': AppState.currentRestaurantName(),
-        '當前學號': AppState.currentStudentId(),
-        '預載入完成': true
-      }, null, 2);
-    }
-  </script>
+    <!-- ==================== 確認動作彈窗 ==================== -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirmTitle"><i class="fas fa-exclamation-triangle"></i> 確認動作</h3>
+                <button class="close-btn" onclick="confirmNo()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmContent"></p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="confirmYes()">確定</button>
+                <button class="btn btn-secondary" onclick="confirmNo()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JavaScript 核心模組 ==================== -->
+    <script src="api.js"></script>
+    <script src="js/core/state.js"></script>
+    <script src="js/core/ui.js"></script>
+    <script src="js/core/time.js"></script>
+    <script src="js/core/common.js"></script>
+    <script src="js/core/navigation.js"></script>
+    <script src="js/core/preload.js"></script>
+    <script src="js/core/core.js"></script>
+
+    <!-- ==================== 使用者模組 ==================== -->
+    <script src="js/user/query.js"></script>
 </body>
 </html>
