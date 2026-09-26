@@ -8,75 +8,61 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>UI 模組測試</h1>
+  <h1>time.js 測試</h1>
 
-  <button class="btn btn-primary" onclick="testUI_showMessage()">測試 showMessage</button>
-  <button class="btn btn-success" onclick="testUI_showConfirm()">測試 showConfirm</button>
-  <button class="btn btn-warning" onclick="testUI_buttonLoading()" id="testBtn">測試 setButtonLoading</button>
+  <button class="btn btn-primary" onclick="testTime()">測試時間函數</button>
+  <button class="btn btn-success" onclick="testTimeOverride()">測試從後端覆蓋 TIME</button>
 
-  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:100px;"></pre>
-
-  <!-- 測試用的模態窗 -->
-  <div id="messageModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="messageTitle">訊息</h3>
-        <button class="close-btn" onclick="closeMessageModal()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p id="messageContent"></p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="closeMessageModal()">確定</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="confirmModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="confirmTitle">確認</h3>
-        <button class="close-btn" onclick="confirmNo()">&times;</button>
-      </div>
-      <div class="modal-body">
-        <p id="confirmContent"></p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" onclick="confirmYes()">確定</button>
-        <button class="btn btn-secondary" onclick="confirmNo()">取消</button>
-      </div>
-    </div>
-  </div>
+  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
 
   <script src="api.js"></script>
   <script src="js/core/state.js"></script>
   <script src="js/core/ui.js"></script>
+  <script src="js/core/time.js"></script>
   <script>
-    function testUI_showMessage() {
-      UI.showMessage('✅ 測試成功', '這是訊息模態窗', 'success');
+    function testTime() {
+      const resultEl = document.getElementById('result');
+      const now = getCurrentTimeNumber();
+
+      const result = {
+        '現在時間 (HHMM)': now,
+        'TIME 常數': TIME,
+        '是否為點餐時間': isUserOrderTime(),
+        '點餐是否截止': isOrderEnded(),
+        '是否為管理員設定時間': isAdminRestaurantTime(),
+        '是否為評分時間': isRatingTime(),
+        '點餐剩餘分鐘': getOrderTimeRemaining(),
+        '評分剩餘分鐘': getRatingTimeRemaining(),
+        '格式化點餐剩餘': formatTimeRemaining(getOrderTimeRemaining()),
+        '格式化評分剩餘': formatTimeRemaining(getRatingTimeRemaining()),
+        'TimeChecker 物件': typeof TimeChecker
+      };
+
+      resultEl.textContent = JSON.stringify(result, null, 2);
     }
 
-    function testUI_showConfirm() {
-      UI.showConfirm(
-        '⚠️ 確認動作',
-        '你確定要執行嗎？',
-        function() {
-          document.getElementById('result').textContent = '✅ 你按了「確定」';
-        },
-        function() {
-          document.getElementById('result').textContent = '❌ 你按了「取消」';
-        }
-      );
-    }
+    async function testTimeOverride() {
+      const resultEl = document.getElementById('result');
 
-    function testUI_buttonLoading() {
-      const btn = document.getElementById('testBtn');
-      setButtonLoading(btn, true);
+      // 從後端取得時間限制
+      const result = await callApi('getTimeLimits', {});
 
-      setTimeout(() => {
-        setButtonLoading(btn, false);
-        document.getElementById('result').textContent = '✅ 按鈕載入 2 秒後恢復';
-      }, 2000);
+      if (result.success && result.limits) {
+        TIME.ORDER_START = result.limits.ORDER_START;
+        TIME.ORDER_END = result.limits.ORDER_END;
+        TIME.ADMIN_START = result.limits.ADMIN_RESTAURANT_START;
+        TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
+        TIME.RATING_START = result.limits.RATING_START;
+        TIME.RATING_END = result.limits.RATING_END;
+
+        resultEl.textContent = JSON.stringify({
+          '後端回傳': result.limits,
+          '更新後的 TIME': TIME,
+          '是否為點餐時間 (重新判斷)': isUserOrderTime()
+        }, null, 2);
+      } else {
+        resultEl.textContent = '取得失敗：' + JSON.stringify(result);
+      }
     }
   </script>
 </body>
