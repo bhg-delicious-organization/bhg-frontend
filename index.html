@@ -2,35 +2,31 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>測試 GitHub Pages</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API 測試</title>
 </head>
 <body>
-  <h1>GitHub Pages 測試成功</h1>
-  <p>網址：<span id="url"></span></p>
-  <button onclick="testFetch()">測試 fetch GAS</button>
-  <pre id="result"></pre>
+  <h1>api.js 測試</h1>
+  <button onclick="testGetSystemInfo()">測試 getSystemInfo</button>
+  <button onclick="testGetTimeLimits()">測試 getTimeLimits</button>
+  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
 
+  <script src="api.js"></script>
   <script>
-    document.getElementById('url').textContent = window.location.href;
+    async function testGetSystemInfo() {
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = '測試中...';
 
-    async function testFetch() {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjUUEaiuoEzW7qTwMCTBwlt-zTLYAVa4ftzgXuyGUxiP9VEk9quFDo6q1Gv5C_q5ppZg/exec';
-      try {
-        const response = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'getSystemInfo',
-            data: {},
-            origin: window.location.origin
-          }),
-          redirect: 'follow'
-        });
-        const result = await response.json();
-        document.getElementById('result').textContent = JSON.stringify(result, null, 2);
-      } catch (error) {
-        document.getElementById('result').textContent = '錯誤：' + error.message;
-      }
+      const result = await callApi('getSystemInfo', {});
+      resultEl.textContent = JSON.stringify(result, null, 2);
+    }
+
+    async function testGetTimeLimits() {
+      const resultEl = document.getElementById('result');
+      resultEl.textContent = '測試中...';
+
+      const result = await callApi('getTimeLimits', {});
+      resultEl.textContent = JSON.stringify(result, null, 2);
     }
   </script>
 </body>
