@@ -8,21 +8,13 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>navigation.js 測試</h1>
+  <h1>preload.js 測試</h1>
 
-  <button class="btn btn-primary" onclick="testSmartHome()">測試 getSmartHomePage</button>
-  <button class="btn btn-success" onclick="testNavigation()">測試 navigateTo</button>
-  <button class="btn btn-warning" onclick="testAdminMode()">測試管理員模式切換</button>
+  <button class="btn btn-primary" onclick="testPreloadTimeLimits()">測試 preloadTimeLimits</button>
+  <button class="btn btn-success" onclick="testPreloadRestaurant()">測試 preloadTodayRestaurant</button>
+  <button class="btn btn-warning" onclick="testRunPreload()">測試完整 runPreload</button>
 
   <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
-
-  <!-- 測試用的頁面容器 -->
-  <div id="pageContent">
-    <div id="page-user-query" class="page-container">
-      <h2>查詢頁（測試用）</h2>
-      <p>這是 user-query 頁面</p>
-    </div>
-  </div>
 
   <script src="api.js"></script>
   <script src="js/core/state.js"></script>
@@ -30,62 +22,44 @@
   <script src="js/core/time.js"></script>
   <script src="js/core/common.js"></script>
   <script src="js/core/navigation.js"></script>
+  <script src="js/core/preload.js"></script>
   <script>
-    function testSmartHome() {
+    async function testPreloadTimeLimits() {
       const resultEl = document.getElementById('result');
+      resultEl.textContent = '載入中...';
 
-      // 情境 1：未登入、非管理員模式
-      AppState.logout();
-      const case1 = getSmartHomePage();
-
-      // 情境 2：已登入學號、非管理員模式
-      AppState.setCurrentStudentId('123456');
-      const case2 = getSmartHomePage();
-
-      // 情境 3：管理員模式、非管理時間
-      AppState.setAdmin(true, 'test-token');
-      AppState.setAdminMode(true);
-      const case3 = getSmartHomePage();
-
-      // 清理
-      AppState.logout();
+      await preloadTimeLimits();
 
       resultEl.textContent = JSON.stringify({
-        '現在時間': getCurrentTimeNumber(),
-        '情境 1 (未登入)': case1,
-        '情境 2 (已登入學號)': case2,
-        '情境 3 (管理員模式)': case3
+        'TIME 物件': TIME,
+        '預載入成功': true
       }, null, 2);
     }
 
-    function testNavigation() {
+    async function testPreloadRestaurant() {
       const resultEl = document.getElementById('result');
+      resultEl.textContent = '載入中...';
 
-      AppState.setCurrentStudentId('123456');
-      navigateTo('user-query');
+      await preloadTodayRestaurant();
 
-      setTimeout(() => {
-        resultEl.textContent = JSON.stringify({
-          '當前頁面': AppState.currentPage(),
-          'user-query 有 active class': document.getElementById('page-user-query').classList.contains('active')
-        }, null, 2);
-      }, 500);
+      resultEl.textContent = JSON.stringify({
+        'AppState.currentRestaurantName()': AppState.currentRestaurantName(),
+        '預載入成功': true
+      }, null, 2);
     }
 
-    function testAdminMode() {
+    async function testRunPreload() {
       const resultEl = document.getElementById('result');
+      resultEl.textContent = '載入中...';
 
-      // 模擬登入管理員
-      AppState.setAdmin(true, 'test-token');
-      switchToAdminMode();
+      await runPreload();
 
-      setTimeout(() => {
-        resultEl.textContent = JSON.stringify({
-          'isAdmin': AppState.isAdmin(),
-          'isAdminMode': AppState.isAdminMode(),
-          '當前頁面': AppState.currentPage()
-        }, null, 2);
-      }, 500);
+      resultEl.textContent = JSON.stringify({
+        'TIME 物件': TIME,
+        '今日餐廳': AppState.currentRestaurantName(),
+        '當前學號': AppState.currentStudentId(),
+        '預載入完成': true
+      }, null, 2);
     }
   </script>
 </body>
