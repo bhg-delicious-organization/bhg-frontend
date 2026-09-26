@@ -80,6 +80,11 @@ async function navigateTo(pageName) {
         throw new Error(`HTTP ${response.status}`);
       }
       const html = await response.text();
+
+      // 移除初始載入指示器
+      const loader = document.getElementById('page-loader');
+      if (loader) loader.remove();
+
       pageContent.insertAdjacentHTML('beforeend', html);
       targetPage = document.getElementById('page-' + pageName);
       console.log('✅ 頁面片段已載入:', pageName);
@@ -88,6 +93,10 @@ async function navigateTo(pageName) {
       showMessageModal('❌ 載入失敗', `無法載入頁面：${pageName}`);
       return;
     }
+  } else {
+    // 頁面已載入，還是要移除 loader（以防萬一）
+    const loader = document.getElementById('page-loader');
+    if (loader) loader.remove();
   }
 
   // 顯示目標頁面
@@ -136,7 +145,6 @@ async function navigateTo(pageName) {
     }
   }
 }
-
 /**
  * 切換到管理員模式
  */
