@@ -3,60 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>api.js 測試</title>
+  <title>測試</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>api.js + state.js 測試</h1>
-  <button onclick="testGetSystemInfo()">測試 getSystemInfo</button>
-  <button onclick="testGetTimeLimits()">測試 getTimeLimits</button>
-  <button onclick="testAppState()">測試 AppState</button>
-  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:200px;"></pre>
+  <h1>UI 模組測試</h1>
+
+  <button class="btn btn-primary" onclick="testUI_showMessage()">測試 showMessage</button>
+  <button class="btn btn-success" onclick="testUI_showConfirm()">測試 showConfirm</button>
+  <button class="btn btn-warning" onclick="testUI_buttonLoading()" id="testBtn">測試 setButtonLoading</button>
+
+  <pre id="result" style="background:#f0f0f0; padding:20px; margin-top:20px; min-height:100px;"></pre>
+
+  <!-- 測試用的模態窗 -->
+  <div id="messageModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="messageTitle">訊息</h3>
+        <button class="close-btn" onclick="closeMessageModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="messageContent"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeMessageModal()">確定</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confirmModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="confirmTitle">確認</h3>
+        <button class="close-btn" onclick="confirmNo()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmContent"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="confirmYes()">確定</button>
+        <button class="btn btn-secondary" onclick="confirmNo()">取消</button>
+      </div>
+    </div>
+  </div>
 
   <script src="api.js"></script>
   <script src="js/core/state.js"></script>
+  <script src="js/core/ui.js"></script>
   <script>
-    async function testGetSystemInfo() {
-      const resultEl = document.getElementById('result');
-      resultEl.textContent = '測試中...';
-      const result = await callApi('getSystemInfo', {});
-      resultEl.textContent = JSON.stringify(result, null, 2);
+    function testUI_showMessage() {
+      UI.showMessage('✅ 測試成功', '這是訊息模態窗', 'success');
     }
 
-    async function testGetTimeLimits() {
-      const resultEl = document.getElementById('result');
-      resultEl.textContent = '測試中...';
-      const result = await callApi('getTimeLimits', {});
-      resultEl.textContent = JSON.stringify(result, null, 2);
+    function testUI_showConfirm() {
+      UI.showConfirm(
+        '⚠️ 確認動作',
+        '你確定要執行嗎？',
+        function() {
+          document.getElementById('result').textContent = '✅ 你按了「確定」';
+        },
+        function() {
+          document.getElementById('result').textContent = '❌ 你按了「取消」';
+        }
+      );
     }
 
-    function testAppState() {
-      const resultEl = document.getElementById('result');
+    function testUI_buttonLoading() {
+      const btn = document.getElementById('testBtn');
+      setButtonLoading(btn, true);
 
-      // 測試 1：初始化
-      AppState.setCurrentStudentId('123456');
-      AppState.setCurrentRestaurantName('測試餐廳');
-      AppState.setAdmin(true, 'test-token', 'test-csrf');
-
-      // 測試 2：讀取
-      const snapshot = AppState.getSnapshot();
-
-      // 測試 3：訂閱
-      let notifyLog = [];
-      const unsubscribe = AppState.subscribe('studentId', (data) => {
-        notifyLog.push(`studentId 變更: ${data.old} → ${data.new}`);
-      });
-
-      AppState.setCurrentStudentId('654321');
-      unsubscribe();
-
-      // 清理（避免影響其他測試）
-      AppState.logout();
-
-      resultEl.textContent = JSON.stringify({
-        snapshot: snapshot,
-        notifyLog: notifyLog,
-        cleanedUp: AppState.getSnapshot()
-      }, null, 2);
+      setTimeout(() => {
+        setButtonLoading(btn, false);
+        document.getElementById('result').textContent = '✅ 按鈕載入 2 秒後恢復';
+      }, 2000);
     }
   </script>
 </body>
