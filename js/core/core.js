@@ -228,7 +228,8 @@ async function loadSystemInfo() {
 
   const result = await callApi('getSystemInfo', {});
 
-  if (result.success) {
+  // 檢查 version 是否存在（不依賴 success 欄位）
+  if (result && result.version) {
     el.innerHTML = `
       <p><strong>版本：</strong>${escapeHtml(result.version)}</p>
       <p><strong>開發者：</strong>${escapeHtml(result.developer)}</p>
@@ -236,7 +237,7 @@ async function loadSystemInfo() {
       <p><strong>IG：</strong><a href="${escapeHtml(result.instagramLink)}" target="_blank">📷 @bhg.delicious</a></p>
     `;
   } else {
-    el.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message || '載入失敗')}</div>`;
+    el.innerHTML = `<div class="message error">❌ ${escapeHtml(result?.message || '載入失敗')}</div>`;
   }
 }
 
