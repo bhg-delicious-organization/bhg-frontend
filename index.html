@@ -17,26 +17,21 @@
 <body>
     <!-- ==================== 頂部標題 ==================== -->
     <header class="header">
-        <!-- 左邊：Logo -->
         <div class="logo-container">
             <img src="https://i.ibb.co/1JJzGkTw/BHG-logo1.png" alt="BHG-logo" class="site-logo">
         </div>
 
-        <!-- 中間：標題 -->
         <div class="title-container">
             <h1>封測系統</h1>
             <div class="header-subtitle">儲值系統</div>
         </div>
 
-        <!-- 右邊：上下排列 -->
         <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-            <!-- 上方：管理員按鈕 -->
             <button class="admin-btn" onclick="showAdminModal()" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
                 <i id="adminStatusIcon" class="fas fa-user-shield"></i>
                 <span id="adminStatusText">管理員</span>
             </button>
 
-            <!-- 下方：學號按鈕 -->
             <button class="quick-id-btn" onclick="showQuickIdModal()" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
                 <i class="fas fa-id-card"></i> <span id="quickIdBtnText">學號</span>
             </button>
@@ -52,7 +47,7 @@
     </div>
 
     <!-- ==================== 導覽列收合按鈕 ==================== -->
-    <button id="navToggleBtn" class="nav-toggle-btn">
+    <button id="navToggleBtn" class="nav-toggle-btn" style="display: none;">
         <i class="fas fa-chevron-down"></i>
     </button>
 
@@ -136,7 +131,6 @@
                 <button class="close-btn" onclick="hideQuickIdModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <!-- 未登入狀態 -->
                 <div id="quickIdNotLoggedIn" style="display: none;">
                     <div class="form-group">
                         <label class="form-label">學號</label>
@@ -149,7 +143,6 @@
                     <div class="form-text">若無密碼可留空</div>
                     <div id="quickIdMessage"></div>
                 </div>
-                <!-- 已登入狀態 -->
                 <div id="quickIdLoggedIn" style="display: none;">
                     <div class="form-group">
                         <label class="form-label">目前已登入學號</label>
@@ -242,9 +235,9 @@
     <script src="js/core/navigation.js"></script>
     <script src="js/core/preload.js"></script>
     <script src="js/core/core.js"></script>
-    <script src="js/user/register.js"></script>
 
     <!-- ==================== 使用者模組 ==================== -->
     <script src="js/user/query.js"></script>
+    <script src="js/user/register.js"></script>
 </body>
 </html>
