@@ -1,1 +1,67 @@
+<!-- ==================== 使用者帳號頁面 ==================== -->
+<div id="page-user-account" class="page-container">
+    <!-- 未登入狀態 -->
+    <div id="accountNotLoggedIn" class="card" style="text-align: center;">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-user-circle"></i> 我的帳號
+            </h2>
+        </div>
 
+        <i class="fas fa-user-circle" style="font-size: 4rem; color: var(--gray); margin-bottom: 16px;"></i>
+        <h3>尚未登入</h3>
+        <p style="color: var(--gray); margin-bottom: 20px;">請輸入學號和密碼登入</p>
+
+        <div class="form-group" style="text-align: left;">
+            <label class="form-label">學號</label>
+            <input type="text" id="accountLoginStudentId" class="form-control" placeholder="請輸入學號" maxlength="6">
+        </div>
+
+        <div class="form-group" style="text-align: left;">
+            <label class="form-label">密碼</label>
+            <input type="password" id="accountLoginPassword" class="form-control" placeholder="請輸入密碼">
+            <div class="form-text">若無密碼可留空</div>
+        </div>
+
+        <button class="btn btn-primary" onclick="loginFromAccount()" style="width: 100%;">
+            <i class="fas fa-sign-in-alt"></i> 登入
+        </button>
+
+        <div id="accountLoginError" style="margin-top: 12px;"></div>
+    </div>
+
+    <!-- 已登入狀態 -->
+    <div id="accountLoggedIn" class="card" style="display: none;">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-user-circle"></i> 我的帳號
+            </h2>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">學號</label>
+            <div class="form-control" id="accountStudentId" style="background: #f5f5f5;">載入中...</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">姓名</label>
+            <div class="form-control" id="accountUserName" style="background: #f5f5f5;">載入中...</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">總消費金額</label>
+            <div class="form-control" id="accountTotalSpent" style="background: #f5f5f5;">載入中...</div>
+        </div>
+
+        <div style="margin: 20px 0; border-top: 1px solid #eee;"></div>
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="navigateTo('user-changepwd')" style="flex: 1;">
+                <i class="fas fa-key"></i> 修改密碼
+            </button>
+            <button class="btn btn-secondary" id="accountLogoutBtn" onclick="logoutFromAccount()" style="flex: 1;">
+                <i class="fas fa-sign-out-alt"></i> 登出
+            </button>
+        </div>
+    </div>
+</div>
