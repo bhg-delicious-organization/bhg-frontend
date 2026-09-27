@@ -221,15 +221,22 @@ function initAutoHideNav() {
 // ==================== 系統資訊 ====================
 
 async function loadSystemInfo() {
-  const result = await callApi('getSystemInfo', {});
   const el = document.getElementById('systemInfo');
-  if (el && result.success) {
+  if (!el) return;
+
+  el.innerHTML = '<div class="loading"><div class="spinner"></div><p>載入中...</p></div>';
+
+  const result = await callApi('getSystemInfo', {});
+
+  if (result.success) {
     el.innerHTML = `
       <p><strong>版本：</strong>${escapeHtml(result.version)}</p>
       <p><strong>開發者：</strong>${escapeHtml(result.developer)}</p>
       <p><strong>問題回報：</strong><a href="${escapeHtml(result.qaLink)}" target="_blank">📝 填寫表單</a></p>
       <p><strong>IG：</strong><a href="${escapeHtml(result.instagramLink)}" target="_blank">📷 @bhg.delicious</a></p>
     `;
+  } else {
+    el.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message || '載入失敗')}</div>`;
   }
 }
 
