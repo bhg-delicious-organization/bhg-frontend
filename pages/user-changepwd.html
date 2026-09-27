@@ -1,1 +1,37 @@
+<!-- ==================== 使用者修改密碼頁面 ==================== -->
+<div id="page-user-changepwd" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-key"></i> 修改密碼
+            </h2>
+        </div>
 
+        <div class="form-group">
+            <label class="form-label">原密碼</label>
+            <input type="password" id="changepwdOldPassword" class="form-control" placeholder="請輸入原密碼">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">新密碼</label>
+            <input type="password" id="changepwdNewPassword" class="form-control" placeholder="請輸入新密碼 (至少4碼)">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">確認新密碼</label>
+            <input type="password" id="changepwdConfirmPassword" class="form-control" placeholder="請再次輸入新密碼">
+        </div>
+
+        <button class="btn btn-primary" onclick="submitChangePassword()">
+            <i class="fas fa-save"></i> 確認修改密碼
+        </button>
+
+        <div id="changepwdResult" style="margin-top: 15px;"></div>
+
+        <div style="margin-top: 20px;">
+            <button class="btn btn-secondary" onclick="navigateTo('user-account')" style="width: auto;">
+                <i class="fas fa-arrow-left"></i> 返回帳號頁面
+            </button>
+        </div>
+    </div>
+</div>
