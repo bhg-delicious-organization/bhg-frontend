@@ -9,9 +9,6 @@ let lastScrollY = window.scrollY;
 
 // ==================== Enter 鍵綁定 ====================
 
-/**
- * 綁定單一元素的 Enter 鍵
- */
 function bindEnterKey(element, callback) {
   if (!element) return;
   element.addEventListener('keypress', function(e) {
@@ -22,18 +19,11 @@ function bindEnterKey(element, callback) {
   });
 }
 
-/**
- * 重新綁定所有 Enter 鍵
- */
 function rebindEnterKeys() {
   initEnterKeyBindings();
 }
 
-/**
- * 初始化所有 Enter 鍵綁定
- */
 function initEnterKeyBindings() {
-  // ========== 使用者頁面 ==========
   const queryInput = document.getElementById('queryStudentId');
   if (queryInput && typeof queryUserInfo === 'function') {
     bindEnterKey(queryInput, () => queryUserInfo());
@@ -64,7 +54,6 @@ function initEnterKeyBindings() {
     bindEnterKey(mealStudentId, () => loadMealInfo());
   }
 
-  // ========== 學號登入模態窗 ==========
   const quickIdInput = document.getElementById('quickIdInput');
   const quickPasswordInput = document.getElementById('quickPasswordInput');
   if (quickIdInput) {
@@ -76,7 +65,6 @@ function initEnterKeyBindings() {
     bindEnterKey(quickPasswordInput, () => saveQuickId());
   }
 
-  // ========== 帳號頁面 ==========
   const accountLoginStudentId = document.getElementById('accountLoginStudentId');
   const accountLoginPassword = document.getElementById('accountLoginPassword');
   if (accountLoginStudentId) {
@@ -88,7 +76,6 @@ function initEnterKeyBindings() {
     bindEnterKey(accountLoginPassword, () => loginFromAccount());
   }
 
-  // ========== 修改密碼頁面 ==========
   const changepwdOldPassword = document.getElementById('changepwdOldPassword');
   const changepwdNewPassword = document.getElementById('changepwdNewPassword');
   const changepwdConfirmPassword = document.getElementById('changepwdConfirmPassword');
@@ -107,7 +94,6 @@ function initEnterKeyBindings() {
     bindEnterKey(changepwdConfirmPassword, () => submitChangePassword());
   }
 
-  // ========== 管理員登入模態窗 ==========
   const adminPasswordInput = document.getElementById('adminPassword');
   if (adminPasswordInput && typeof adminLogin === 'function') {
     bindEnterKey(adminPasswordInput, () => adminLogin());
@@ -118,9 +104,6 @@ function initEnterKeyBindings() {
 
 // ==================== 剪貼簿 ====================
 
-/**
- * 複製文字到剪貼簿
- */
 function copyToClipboard(text) {
   return new Promise((resolve, reject) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -154,9 +137,6 @@ function fallbackCopyToClipboard(text, resolve, reject) {
 
 // ==================== 錯誤處理 ====================
 
-/**
- * 回報前端錯誤到後端
- */
 function reportFrontendError(functionName, error, description = '') {
   const errorMsg = error?.message || error;
   callApi('reportFrontendError', {
@@ -168,9 +148,6 @@ function reportFrontendError(functionName, error, description = '') {
   console.error(`[前端錯誤] ${functionName}:`, error);
 }
 
-/**
- * 處理前端錯誤
- */
 function handleFrontendError(functionName, error, userMessage = '操作失敗，請稍後再試') {
   reportFrontendError(functionName, error);
 
@@ -187,18 +164,12 @@ function handleFrontendError(functionName, error, userMessage = '操作失敗，
 
 // ==================== 學號記憶 ====================
 
-/**
- * 初始化記住學號功能
- */
 function initRememberedId() {
   const studentId = AppState.currentStudentId();
   const btnText = document.getElementById('quickIdBtnText');
   if (btnText) btnText.textContent = studentId || '學號';
 }
 
-/**
- * 將學號填入所有學號輸入框
- */
 function fillAllStudentIdInputs(studentId, setAsCurrent = false) {
   const inputs = ['queryStudentId', 'rechargeStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
   inputs.forEach(id => {
@@ -322,14 +293,25 @@ async function initApp() {
   // 7. 執行預載入
   await runPreload();
 
-  // 8. 判斷管理模式
+  // 8. 顯示正確的導覽列 + 判斷管理模式
+  const userNav = document.querySelector('.user-nav');
+  const adminNav = document.querySelector('.admin-nav');
+
   if (isLoggedIn) {
+    // 管理員模式
+    if (userNav) userNav.style.display = 'none';
+    if (adminNav) adminNav.style.display = 'flex';
+
     AppState.setAdmin(true, sessionStorage.getItem('adminToken'), sessionStorage.getItem('csrfToken'));
     if (statusText) statusText.textContent = '已登入';
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
     switchToAdminMode();
   } else {
+    // 使用者模式
+    if (userNav) userNav.style.display = 'flex';  // ← 關鍵！
+    if (adminNav) adminNav.style.display = 'none';
+
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
