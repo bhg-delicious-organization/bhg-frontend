@@ -1,1 +1,26 @@
+<!-- ==================== 使用者儲值頁面 ==================== -->
+<div id="page-user-recharge" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-money-bill-wave"></i> 儲值
+            </h2>
+        </div>
 
+        <div class="form-group">
+            <label class="form-label">禮包碼</label>
+            <input type="text" id="giftCode" class="form-control" placeholder="請輸入6位數字禮包碼" maxlength="6">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">學號</label>
+            <input type="text" id="rechargeStudentId" class="form-control" placeholder="請輸入6位數學號" maxlength="6">
+        </div>
+
+        <button class="btn btn-success" onclick="redeemGiftCode()">
+            <i class="fas fa-check"></i> 確認儲值
+        </button>
+
+        <div id="rechargeResult" style="margin-top: 15px;"></div>
+    </div>
+</div>
