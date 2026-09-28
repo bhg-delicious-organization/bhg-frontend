@@ -1,1 +1,39 @@
+<!-- ==================== 使用者點餐頁面 ==================== -->
+<div id="page-user-meal-order" class="page-container">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <button class="btn btn-secondary" onclick="navigateTo('user-meal')" style="width: auto; padding: 6px 12px; margin: 0;">
+                <i class="fas fa-arrow-left"></i> 返回
+            </button>
+            <h2 class="card-title" id="mealOrderTitle">
+                <i class="fas fa-pen"></i> 點餐
+            </h2>
+        </div>
 
+        <!-- 今日特選餐廳區塊 -->
+        <div id="orderRestaurantSection" class="admin-section" style="border-left-color: #4f46e5; margin-top: 15px;">
+            <h3>🍽️ 今日特選餐廳</h3>
+            <div id="orderTodayRestaurantName" style="font-weight: bold; margin-bottom: 10px;">載入中...</div>
+
+            <select id="orderRestaurantCategorySelect" class="form-control" style="margin-bottom: 10px;" onchange="onRestaurantCategoryChange()">
+                <option value="">請選擇分類</option>
+            </select>
+
+            <select id="orderRestaurantItemSelect" class="form-control" style="margin-bottom: 10px;">
+                <option value="">請先選擇分類</option>
+            </select>
+
+            <button class="btn btn-success" onclick="addOrderRestaurantMeal(event)" style="width: 100%;">
+                <i class="fas fa-plus"></i> 加入今日特選餐廳餐點
+            </button>
+        </div>
+
+        <!-- 已點餐點列表 -->
+        <div class="admin-section" style="margin-top: 15px;">
+            <h3>📋 您今天的餐點</h3>
+            <div id="orderMealsList">
+                載入中...
+            </div>
+        </div>
+    </div>
+</div>
