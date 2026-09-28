@@ -1,1 +1,45 @@
+<!-- ==================== 使用者訂飯頁面 ==================== -->
+<div id="page-user-meal" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-utensils"></i> 訂飯頁面
+            </h2>
+        </div>
 
+        <div class="balance-box" id="mealBalanceBox">
+            請先查詢餘額
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <input type="text" id="mealStudentId" class="form-control" placeholder="請輸入學號" style="flex: 1; padding: 10px 12px;">
+            <button class="btn btn-primary" onclick="loadMealInfo(event)" style="width: auto; flex-shrink: 0; padding: 10px 16px;">載入</button>
+        </div>
+
+        <div class="today-meal" id="todayMealDisplay">
+            <h3 style="margin-bottom: 10px;">今日餐點</h3>
+            <p>請點擊載入查看餐點</p>
+        </div>
+
+        <div class="meal-links" id="mealSelection" style="display: none;">
+            <button class="btn btn-success" onclick="enterMealOrderMode(event)">
+                <i class="fas fa-utensils"></i> 點餐
+            </button>
+        </div>
+    </div>
+
+    <!-- 歷史訂單紀錄 -->
+    <div class="card" id="userOrderHistorySection" style="display: none;">
+        <h2 class="card-title">
+            <i class="fas fa-history"></i> 歷史訂單紀錄
+            <span id="orderHistoryBadge" class="badge badge-info" style="margin-left: 10px;">已截止</span>
+        </h2>
+
+        <div id="userOrderHistory">
+            <div class="message info">
+                <i class="fas fa-info-circle"></i>
+                今日訂餐尚未截止
+            </div>
+        </div>
+    </div>
+</div>
