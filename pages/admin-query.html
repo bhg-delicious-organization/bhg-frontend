@@ -1,1 +1,42 @@
+<!-- ==================== 管理員查詢頁面 ==================== -->
+<div id="page-admin-query" class="page-container">
 
+    <!-- 全體查詢區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-chart-line"></i> 全體查詢
+        </h2>
+
+        <div class="button-group" style="margin-bottom: 20px;">
+            <button class="btn btn-secondary" onclick="getAllBalances(event)">查詢全體餘額</button>
+            <button class="btn btn-warning" onclick="getLowBalanceUsers(event)">查詢餘額低於100</button>
+        </div>
+
+        <div id="adminQueryResult"></div>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+            <h4 style="margin-bottom: 15px; color: var(--primary);">
+                <i class="fas fa-clipboard-list"></i> 複製名單
+            </h4>
+
+            <div class="button-group" style="margin-bottom: 20px;">
+                <button class="btn btn-secondary" onclick="copyAllUsersList(event)">全體餘額名單</button>
+                <button class="btn btn-warning" onclick="copyLowBalanceUsersList(event)">低於100元名單</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 報錯紀錄區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-bug"></i> 報錯紀錄
+        </h2>
+
+        <button class="btn btn-secondary" onclick="viewErrorLogs(event)" style="margin-bottom: 15px;">
+            <i class="fas fa-sync"></i> 重新載入
+        </button>
+
+        <div id="errorLogsDisplay"></div>
+    </div>
+
+</div>
