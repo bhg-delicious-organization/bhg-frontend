@@ -1,1 +1,72 @@
+<!-- ==================== 管理員禮包碼頁面 ==================== -->
+<div id="page-admin-giftcode" class="page-container">
 
+    <!-- 產生禮包碼區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-gift"></i> 產生禮包碼
+        </h2>
+
+        <div class="form-group">
+            <label class="form-label">金額</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setAdminGiftAmount(100)">$100</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setAdminGiftAmount(200)">$200</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setAdminGiftAmount(500)">$500</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setAdminGiftAmount(1000)">$1000</button>
+            </div>
+            <input type="number" id="giftAmount" class="form-control" placeholder="輸入金額">
+        </div>
+
+        <button class="btn btn-primary" onclick="generateGiftCode(event)">
+            <i class="fas fa-gift"></i> 產生禮包碼
+        </button>
+
+        <div id="giftCodeResult" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- 最近禮包碼列表 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-history"></i> 最近產生的禮包碼
+        </h2>
+        <div id="recentGiftCodesList" style="max-height: 300px; overflow-y: auto;">
+            <div class="loading"><div class="spinner" style="width: 30px; height: 30px;"></div><p>載入中...</p></div>
+        </div>
+    </div>
+
+    <!-- 直接儲值區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-bolt"></i> 直接儲值（免禮包碼）
+        </h2>
+
+        <div class="form-group">
+            <label class="form-label">學號</label>
+            <input type="text" id="directRechargeUserId" class="form-control" placeholder="請輸入6位數學號" maxlength="6">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">金額</label>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(100)">$100</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(200)">$200</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(500)">$500</button>
+                <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(1000)">$1000</button>
+            </div>
+            <input type="number" id="directRechargeAmount" class="form-control" placeholder="輸入金額">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">備註（選填）</label>
+            <input type="text" id="directRechargeNote" class="form-control" placeholder="例如：班費、獎學金...">
+        </div>
+
+        <button class="btn btn-success" onclick="directRecharge(event)">
+            <i class="fas fa-check-circle"></i> 確認直接儲值
+        </button>
+
+        <div id="directRechargeResult" style="margin-top: 15px;"></div>
+    </div>
+
+</div>
