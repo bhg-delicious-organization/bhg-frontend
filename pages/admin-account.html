@@ -1,1 +1,29 @@
+<!-- ==================== 管理員帳號頁面 ==================== -->
+<div id="page-admin-account" class="page-container">
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-key"></i> 更改密碼
+        </h2>
 
+        <div class="form-group">
+            <label class="form-label">原密碼</label>
+            <input type="password" id="adminOldPassword" class="form-control" placeholder="請輸入原密碼">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">新密碼</label>
+            <input type="password" id="adminNewPassword" class="form-control" placeholder="請輸入新密碼（至少4碼）">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">確認新密碼</label>
+            <input type="password" id="adminConfirmPassword" class="form-control" placeholder="請再次輸入新密碼">
+        </div>
+
+        <button class="btn btn-primary" onclick="changeAdminPassword()">
+            <i class="fas fa-check"></i> 確認修改密碼
+        </button>
+
+        <div id="adminPasswordResult" style="margin-top: 15px;"></div>
+    </div>
+</div>
