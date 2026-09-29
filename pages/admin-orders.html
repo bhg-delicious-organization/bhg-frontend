@@ -1,1 +1,19 @@
+<!-- ==================== 管理員訂單頁面 ==================== -->
+<div id="page-admin-orders" class="page-container">
 
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-clipboard-list"></i> 今日訂單紀錄
+            <span id="orderCountBadge" class="badge badge-info" style="margin-left: 10px;">載入中</span>
+        </h2>
+
+        <button class="btn btn-secondary" onclick="loadTodayOrders(event)" style="margin-bottom: 15px;">
+            <i class="fas fa-sync"></i> 重新載入
+        </button>
+
+        <div id="ordersDisplay">
+            <div class="loading"><div class="spinner"></div>載入中...</div>
+        </div>
+    </div>
+
+</div>
