@@ -2,7 +2,7 @@
 // 統一 API 呼叫層
 // ====================================================
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbzkevocXTkVwt4625cQV4U5myURTy_OT7jopetHSDSZFlZHUVpsFDQqkr9Ru8u10YMTWA/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwUpbcB2nrvrJAzFKCsGhSKfZl5DyFpuRI9O2MAUKrqKC6urKAN8Z8kQkUp-qDU8MdyZA/exec';
 
 async function callApi(action, data = {}, withToken = false) {
   const payload = {
