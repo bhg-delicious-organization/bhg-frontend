@@ -1,1 +1,58 @@
+<!-- ==================== 管理員餐廳頁面 ==================== -->
+<div id="page-admin-restaurant" class="page-container">
 
+    <!-- 決定餐廳區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-store"></i> 決定餐廳
+        </h2>
+
+        <div id="todayRestaurantStatus" style="margin-bottom: 15px; padding: 15px; background: #f0f9ff; border-radius: var(--radius); border-left: 4px solid #4f46e5;">
+            <span id="todayRestaurantText">載入中...</span>
+        </div>
+
+        <div id="restaurantSelectContainer" style="display: none;">
+            <select id="restaurantSelect" class="form-control" style="margin-bottom: 15px;">
+                <option value="">請選擇餐廳</option>
+            </select>
+            <button class="btn btn-primary" onclick="setTodayRestaurant(event)">確認設定</button>
+        </div>
+
+        <div id="restaurantResult" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- 截止訂餐區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-cut"></i> 截止訂餐
+        </h2>
+        <button class="btn btn-warning" onclick="cutOffOrder()">
+            <i class="fas fa-scissors"></i> 截止訂餐並扣款
+        </button>
+        <div id="cutOffResult" style="margin-top: 15px;"></div>
+    </div>
+
+    <!-- 餐點統計區塊 -->
+    <div class="card">
+        <h2 class="card-title">
+            <i class="fas fa-chart-bar"></i> 餐點統計
+        </h2>
+
+        <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 8px;">🔍 檢視</p>
+        <div class="button-group" style="margin-bottom: 12px;">
+            <button class="btn btn-primary" onclick="showTodayRestaurantStats(event)">
+                <i class="fas fa-utensils"></i> 今日餐廳
+            </button>
+        </div>
+
+        <div id="mealStatsResult" style="margin-bottom: 12px;"></div>
+
+        <p style="font-size: 0.85rem; color: var(--gray); margin-bottom: 8px;">📋 複製餐點</p>
+        <div class="button-group">
+            <button class="btn btn-secondary" onclick="copyRestaurantStatsList(event)">
+                <i class="fas fa-clipboard"></i> 今日餐廳
+            </button>
+        </div>
+    </div>
+
+</div>
