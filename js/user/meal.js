@@ -24,6 +24,9 @@ async function loadMealInfo(event) {
 
   if (btn) setButtonLoading(btn, true);
 
+  // 顯示柯南載入動畫
+  showConanLoading('mealBalanceBox', 'getUserBalance');
+
   // 1. 查詢餐廳
   const restaurantResult = await callApi('getTodayRestaurant', {});
   const hasRestaurant = restaurantResult.success && restaurantResult.restaurant;
