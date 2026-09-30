@@ -26,8 +26,8 @@ async function loadTodayRestaurantForOrder() {
   const restaurantNameEl = document.getElementById('orderTodayRestaurantName');
   const categorySelect = document.getElementById('orderRestaurantCategorySelect');
 
-  if (restaurantNameEl) restaurantNameEl.innerHTML = '<span style="color: var(--gray);">載入中...</span>';
-  if (categorySelect) categorySelect.innerHTML = '<option value="">載入中...</option>';
+  if (restaurantNameEl) restaurantNameEl.innerHTML = '<span style="color: var(--gray);">🔍 調查中...</span>';
+  if (categorySelect) categorySelect.innerHTML = '<option value="">🔍 調查中...</option>';
 
   const result = await callApi('getTodayRestaurant', {});
 
@@ -155,7 +155,7 @@ async function loadOrderMealsList() {
   const container = document.getElementById('orderMealsList');
 
   if (container) {
-    container.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+    showConanLoading('orderMealsList', 'getUserTodayMeals');
   }
 
   const result = await callApi('getUserTodayMeals', { userId: studentId });
