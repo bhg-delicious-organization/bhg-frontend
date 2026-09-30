@@ -45,7 +45,7 @@ async function directRecharge(event) {
   const resultDiv = document.getElementById('directRechargeResult');
 
   if (btn) setButtonLoading(btn, true);
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>儲值中...</div>';
+  if (resultDiv) showConanLoading('directRechargeResult', 'adminDirectRecharge');
 
   const result = await callAdminApi('adminDirectRecharge', {
     userId: userId,
@@ -67,14 +67,4 @@ async function directRecharge(event) {
       `;
     }
     document.getElementById('directRechargeUserId').value = '';
-    document.getElementById('directRechargeAmount').value = '';
-    document.getElementById('directRechargeNote').value = '';
-  } else {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
-  }
-}
-
-window.setDirectAmount = setDirectAmount;
-window.directRecharge = directRecharge;
-
-console.log('⚡ 直接儲值模組已載入');
+    document.getElementById
