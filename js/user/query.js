@@ -9,7 +9,6 @@
  * @param {Event} [event] - 按鈕點擊事件
  */
 async function queryUserInfo(skipRecord = false, event) {
-  // 取得按鈕元素
   let btn = null;
   if (event && event.currentTarget) {
     btn = event.currentTarget;
@@ -35,6 +34,9 @@ async function queryUserInfo(skipRecord = false, event) {
   if (btn) {
     setButtonLoading(btn, true);
   }
+
+  // 顯示柯南載入動畫
+  showConanLoading('balanceDisplay', 'getUserBalance');
 
   // 記錄最近學號
   if (!skipRecord && studentId !== AppState.rememberedStudentId()) {
