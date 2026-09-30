@@ -69,7 +69,7 @@ async function setTodayRestaurant(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('restaurantResult');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>設定中...</div>';
+  if (resultDiv) showConanLoading('restaurantResult', 'setTodayRestaurant');
 
   const result = await callAdminApi('setTodayRestaurant', {
     restaurantName: restaurantName
@@ -93,7 +93,7 @@ async function showTodayRestaurantStats(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('mealStatsResult');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>統計中...</p></div>';
+  if (resultDiv) showConanLoading('mealStatsResult', 'getTodayRestaurantStats');
 
   const result = await callAdminApi('getTodayRestaurantStats', {});
 
@@ -158,7 +158,7 @@ function cutOffOrder() {
       if (btn) setButtonLoading(btn, true);
 
       const resultDiv = document.getElementById('cutOffResult');
-      if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>截止中...</div>';
+      if (resultDiv) showConanLoading('cutOffResult', 'cutOffOrder');
 
       const result = await callAdminApi('cutOffOrder', {});
 
