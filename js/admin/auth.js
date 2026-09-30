@@ -52,7 +52,9 @@ async function adminLogin(event) {
     btn.disabled = true;
   }
 
-  if (messageEl) messageEl.innerHTML = '<div class="loading"><div class="spinner"></div>驗證中...</div>';
+  if (messageEl) {
+    showConanLoading('loginMessage', 'verifyAdminLogin');
+  }
 
   const result = await callApi('verifyAdminLogin', { password: password });
 
@@ -141,7 +143,9 @@ async function changeAdminPassword(event) {
     btn.disabled = true;
   }
 
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>修改中...</div>';
+  if (resultDiv) {
+    showConanLoading('adminPasswordResult', 'changeMyPassword');
+  }
 
   const result = await callAdminApi('changeAdminPassword', {
     oldPassword: oldPassword,
