@@ -18,7 +18,7 @@ function loadAdminAnalytics() {
 async function loadBasicStats() {
   const container = document.getElementById('basicStats');
   if (!container) return;
-  container.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  showConanLoading('basicStats', 'getBasicStats');
 
   const result = await callAdminApi('getBasicStats', {});
 
@@ -68,7 +68,7 @@ async function loadBasicStats() {
 async function loadSpendingRanking() {
   const container = document.getElementById('spendingRanking');
   if (!container) return;
-  container.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  showConanLoading('spendingRanking', 'getSpendingRanking');
 
   const result = await callAdminApi('getSpendingRanking', { limit: 10 });
 
@@ -126,7 +126,7 @@ async function loadSpendingRanking() {
 async function loadTransactionTrend() {
   const container = document.getElementById('trendChart');
   if (!container) return;
-  container.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  showConanLoading('trendChart', 'getTransactionTrend');
 
   const result = await callAdminApi('getTransactionTrend', { days: 30 });
 
