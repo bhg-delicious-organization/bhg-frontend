@@ -317,13 +317,18 @@ async function initApp() {
     switchToAdminMode();
   } else {
     // 使用者模式
-    if (userNav) userNav.style.display = 'flex';  // ← 關鍵！
+    if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
 
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
-    navigateTo(getSmartHomePage());
+
+    // ⚠️ navigateTo 是非同步，等它完成
+    await navigateTo(getSmartHomePage());
+
+    // ⚠️ navigateTo 完成後，才執行自動查詢
+    setTimeout(autoQueryIfLoggedIn, 300);
   }
 
   // 9. 顯示時間提示橫幅
