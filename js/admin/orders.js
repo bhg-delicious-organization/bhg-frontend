@@ -13,7 +13,7 @@ async function loadTodayOrders(event) {
   const display = document.getElementById('ordersDisplay');
   const badge = document.getElementById('orderCountBadge');
 
-  if (display) display.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  if (display) showConanLoading('ordersDisplay', 'getOrderDetails');
 
   const result = await callAdminApi('getOrderDetails', {});
 
