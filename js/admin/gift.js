@@ -26,7 +26,7 @@ async function generateGiftCode(event) {
   const resultDiv = document.getElementById('giftCodeResult');
 
   if (btn) setButtonLoading(btn, true);
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>產生中...</div>';
+  if (resultDiv) showConanLoading('giftCodeResult', 'generateGiftCode');
 
   const result = await callAdminApi('generateGiftCode', {
     amount: parseFloat(amount)
@@ -63,7 +63,7 @@ async function loadRecentGiftCodes() {
   const list = document.getElementById('recentGiftCodesList');
   if (!list) return;
 
-  list.innerHTML = '<div class="loading"><div class="spinner"></div><p>載入禮包碼中...</p></div>';
+  showConanLoading('recentGiftCodesList', 'getRecentGiftCodes');
 
   const result = await callAdminApi('getRecentGiftCodes', { limit: 10 });
 
