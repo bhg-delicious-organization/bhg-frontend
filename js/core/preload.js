@@ -1,11 +1,10 @@
 // ==================== preload.js ====================
 // 預載入模組
-// 目的：一進頁面就先載入常用資料，減少等待
 // 依賴：api.js、state.js、time.js
 // ====================================================
 
 /**
- * 預載入時間限制（從後端取得，取代前端硬編碼）
+ * 預載入時間限制
  */
 async function preloadTimeLimits() {
   console.log('⏰ 預載入時間限制...');
@@ -44,7 +43,34 @@ async function preloadTodayRestaurant() {
 }
 
 /**
- * 自動預查詢（若已登入學號，自動查詢餘額）
+ * 等待元素出現
+ */
+function waitForElement(elementId, timeout = 3000) {
+  return new Promise((resolve, reject) => {
+    const el = document.getElementById(elementId);
+    if (el) {
+      resolve(el);
+      return;
+    }
+
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const el = document.getElementById(elementId);
+      if (el) {
+        clearInterval(interval);
+        resolve(el);
+        return;
+      }
+      if (Date.now() - startTime > timeout) {
+        clearInterval(interval);
+        reject(new Error(`等待元素 ${elementId} 超時`));
+      }
+    }, 100);
+  });
+}
+
+/**
+ * 自動預查詢
  */
 async function autoQueryIfLoggedIn() {
   const studentId = AppState.currentStudentId();
@@ -58,7 +84,7 @@ async function autoQueryIfLoggedIn() {
   if (queryInput) queryInput.value = studentId;
   if (mealInput) mealInput.value = studentId;
 
-  // 執行查詢（若查詢函數存在）
+  // 執行查詢
   if (typeof queryUserInfo === 'function') {
     try {
       await queryUserInfo(true);
@@ -69,35 +95,37 @@ async function autoQueryIfLoggedIn() {
 
   // 若在點餐時間，也載入訂飯頁
   if (isUserOrderTime() && typeof loadMealInfo === 'function') {
-    setTimeout(() => {
-      try {
-        loadMealInfo();
-      } catch (error) {
-        console.warn('自動載入訂飯頁失敗:', error);
+    waitForElement('mealStudentId', 3000).then(() => {
+      const mealInput = document.getElementById('mealStudentId');
+      if (mealInput && mealInput.value.trim()) {
+        try {
+          loadMealInfo();
+        } catch (error) {
+          console.warn('自動載入訂飯頁失敗:', error);
+        }
       }
-    }, 300);
+    }).catch(() => {
+      console.log('ℹ️ 訂飯頁未在 3 秒內載入，跳過自動載入');
+    });
   }
 }
 
 /**
- * 執行所有預載入
+ * 執行所有預載入（不含自動查詢）
  */
 async function runPreload() {
   console.log('🚀 開始預載入...');
 
-  // 平行執行所有預載入
   await Promise.all([
     preloadTimeLimits(),
     preloadTodayRestaurant()
   ]);
 
   console.log('✅ 預載入完成');
-
-  // 等時間限制載入後，才做自動查詢（因為需要判斷點餐時間）
-  setTimeout(autoQueryIfLoggedIn, 500);
+  // ⚠️ 不在這裡呼叫 autoQueryIfLoggedIn
+  // 由 initApp 在 navigateTo 之後呼叫
 }
 
-// 掛載到 window
 window.preloadTimeLimits = preloadTimeLimits;
 window.preloadTodayRestaurant = preloadTodayRestaurant;
 window.autoQueryIfLoggedIn = autoQueryIfLoggedIn;
