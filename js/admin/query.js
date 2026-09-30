@@ -11,7 +11,7 @@ async function getAllBalances(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('adminQueryResult');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  if (resultDiv) showConanLoading('adminQueryResult', 'getAllBalances');
 
   const result = await callAdminApi('getAllBalances', {});
 
@@ -53,7 +53,7 @@ async function getLowBalanceUsers(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('adminQueryResult');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  if (resultDiv) showConanLoading('adminQueryResult', 'getLowBalanceUsers');
 
   const result = await callAdminApi('getLowBalanceUsers', {});
 
@@ -141,7 +141,7 @@ async function viewErrorLogs(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('errorLogsDisplay');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>載入中...</div>';
+  if (resultDiv) showConanLoading('errorLogsDisplay', 'getErrorLogs');
 
   const result = await callAdminApi('getErrorLogs', { limit: 50 });
 
