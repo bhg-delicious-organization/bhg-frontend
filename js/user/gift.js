@@ -26,7 +26,7 @@ async function redeemGiftCode(event) {
   const resultDiv = document.getElementById('rechargeResult');
 
   if (btn) setButtonLoading(btn, true);
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>處理中...</div>';
+  if (resultDiv) showConanLoading('rechargeResult', 'redeemGiftCode');
 
   const result = await callApi('redeemGiftCode', {
     userId: userId,
