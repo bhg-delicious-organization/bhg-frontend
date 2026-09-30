@@ -41,7 +41,7 @@ async function changeUserId(oldUserId, newUserId) {
 
   if (btn) setButtonLoading(btn, true);
   if (resultDiv) {
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div><p>更新中...</p></div>';
+    showConanLoading('changeUserIdResult', 'changeUserId');
   }
 
   const result = await callAdminApi('changeUserId', {
