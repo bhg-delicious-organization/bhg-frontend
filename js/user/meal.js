@@ -101,6 +101,9 @@ async function loadUserTodayMeals(studentId) {
   const orderEnd = TIME.ORDER_END;
   const ratingTime = isRatingTime();
 
+  // 顯示柯南載入動畫
+  showConanLoading('todayMealDisplay', 'getUserTodayMeals');
+
   const result = await callApi('getUserTodayMeals', { userId: studentId });
   const container = document.getElementById('todayMealDisplay');
   if (!container) return;
