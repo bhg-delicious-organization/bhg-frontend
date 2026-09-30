@@ -45,7 +45,7 @@ async function registerUser(event) {
   }
 
   if (resultDiv) {
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>申請中...</div>';
+    showConanLoading('registerResult', 'registerUser');
   }
 
   // 呼叫 API
