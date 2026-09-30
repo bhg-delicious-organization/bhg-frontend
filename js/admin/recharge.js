@@ -67,4 +67,14 @@ async function directRecharge(event) {
       `;
     }
     document.getElementById('directRechargeUserId').value = '';
-    document.getElementById
+    document.getElementById('directRechargeAmount').value = '';
+    document.getElementById('directRechargeNote').value = '';
+  } else {
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+  }
+}
+
+window.setDirectAmount = setDirectAmount;
+window.directRecharge = directRecharge;
+
+console.log('⚡ 直接儲值模組已載入');
