@@ -58,7 +58,7 @@ async function submitChangePassword() {
 
   const resultDiv = document.getElementById('changepwdResult');
   if (resultDiv) {
-    resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>修改中...</div>';
+    showConanLoading('changepwdResult', 'changeMyPassword');
   }
 
   const result = await callApi('changeMyPassword', {
