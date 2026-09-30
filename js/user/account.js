@@ -31,6 +31,9 @@ async function loadAccountPage() {
     const studentIdEl = document.getElementById('accountStudentId');
     if (studentIdEl) studentIdEl.textContent = studentId;
 
+    // 顯示柯南載入動畫
+    showConanLoading('accountUserName', 'getUserBalance');
+
     // 載入姓名與餘額
     const balanceResult = await callApi('getUserBalance', { userId: studentId });
     const userNameEl = document.getElementById('accountUserName');
@@ -64,7 +67,9 @@ async function loginFromAccount() {
     return;
   }
 
-  if (errorDiv) errorDiv.innerHTML = '<div class="loading"><div class="spinner"></div>驗證中...</div>';
+  if (errorDiv) {
+    showConanLoading('accountLoginError', 'verifyUserPassword');
+  }
 
   const result = await callApi('verifyUserPassword', {
     userId: studentId,
