@@ -1021,3 +1021,123 @@ body.tutorial-active {
     opacity: 1;
   }
 }
+
+/* ==================== 新手教學樣式 ==================== */
+.tutorial-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 3000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.tutorial-highlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 3001;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid var(--secondary);
+}
+
+.tutorial-card {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  z-index: 3002;
+  animation: slideUp 0.3s ease;
+  width: calc(100% - 40px);
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .tutorial-card {
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    width: 100%;
+  }
+}
+
+.tutorial-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--primary);
+  color: white;
+  border-radius: 20px 20px 0 0;
+}
+
+.tutorial-card-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tutorial-skip-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.3s;
+}
+
+.tutorial-skip-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.tutorial-card-body {
+  padding: 20px;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #333;
+  min-height: 100px;
+}
+
+.tutorial-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+}
+
+.tutorial-step-counter {
+  color: var(--gray);
+  font-size: 0.85rem;
+}
+
+.tutorial-card-footer .btn {
+  width: auto;
+  padding: 8px 20px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+body.tutorial-active {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+}
