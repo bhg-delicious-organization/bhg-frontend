@@ -143,8 +143,15 @@ async function navigateTo(pageName) {
         if (typeof loadChangePwdPage === 'function') loadChangePwdPage();
         break;
     }
+
+    // ✅ 發送「頁面載入完成」事件
+    console.log('📢 發送 pageLoaded 事件:', pageName);
+    window.dispatchEvent(new CustomEvent('pageLoaded', {
+      detail: { pageName: pageName }
+    }));
   }
 }
+
 /**
  * 切換到管理員模式
  */
