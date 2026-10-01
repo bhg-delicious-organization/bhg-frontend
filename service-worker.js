@@ -1,12 +1,14 @@
 // ==================== service-worker.js ====================
 // PWA Service Worker + OneSignal 整合
+// 路徑：/bhg-frontend/service-worker.js
 // ==========================================================
 
 // ==================== OneSignal Service Worker ====================
+// ⚠️ 必須放在最上面
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
 
-// ==================== PWA 快取 ====================
-const CACHE_NAME = 'bhg-cache-v1';
+// ==================== PWA 快取設定 ====================
+const CACHE_NAME = 'bhg-cache-v2';  // 版本號更新，強制清除舊快取
 
 const URLS_TO_CACHE = [
   './',
@@ -21,10 +23,12 @@ const URLS_TO_CACHE = [
   './js/core/navigation.js',
   './js/core/preload.js',
   './js/core/quick-id.js',
-  './js/core/core.js'
+  './js/core/core.js',
+  './js/shared/notify.js',
+  './js/shared/tutorial.js'
 ];
 
-// 安裝：預快取靜態資源
+// ==================== 安裝：預快取靜態資源 ====================
 self.addEventListener('install', function(event) {
   console.log('📦 Service Worker 安裝中...');
   event.waitUntil(
@@ -39,7 +43,7 @@ self.addEventListener('install', function(event) {
   );
 });
 
-// 啟用：清除舊快取
+// ==================== 啟用：清除舊快取 ====================
 self.addEventListener('activate', function(event) {
   console.log('✅ Service Worker 已啟用');
   event.waitUntil(
@@ -58,24 +62,25 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// 攔截請求：快取優先，網路備援
+// ==================== 攔截請求：快取優先，網路備援 ====================
 self.addEventListener('fetch', function(event) {
   // 只處理 GET
   if (event.request.method !== 'GET') return;
 
+  const url = event.request.url;
+
   // GAS API 不快取
-  if (event.request.url.includes('script.google.com')) {
+  if (url.includes('script.google.com')) {
     return;
   }
 
-  // OneSignal 不快取
-  if (event.request.url.includes('onesignal.com')) {
+  // OneSignal API 不快取
+  if (url.includes('onesignal.com')) {
     return;
   }
 
   // 圖片 CDN 不快取
-  if (event.request.url.includes('i.ibb.co') ||
-      event.request.url.includes('cdnjs.cloudflare.com')) {
+  if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) {
     return;
   }
 
