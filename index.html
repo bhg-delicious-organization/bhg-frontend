@@ -303,11 +303,13 @@
         </div>
     </div>
 
-    <!-- ==================== PWA Service Worker ==================== -->
+    <!-- ==================== PWA Service Worker 註冊 ==================== -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
-          navigator.serviceWorker.register('service-worker.js')
+          navigator.serviceWorker.register('service-worker.js', {
+            scope: '/bhg-frontend/'
+          })
             .then(function(registration) {
               console.log('✅ Service Worker 註冊成功:', registration.scope);
             })
@@ -322,14 +324,22 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
-        await OneSignal.init({
-          appId: "57ab86da-998b-4d1a-ba6e-efcca2c519b2",
-          safari_web_id: "web.onesignal.auto.28be2e0f-48c0-43fd-877a-95cc3c6fc0d9",
-          notifyButton: {
-            enable: false
-          },
-        });
-        console.log('✅ OneSignal 已初始化');
+        try {
+          await OneSignal.init({
+            appId: "57ab86da-998b-4d1a-ba6e-efcca2c519b2",
+            safari_web_id: "web.onesignal.auto.28be2e0f-48c0-43fd-877a-95cc3c6fc0d9",
+            notifyButton: {
+              enable: false
+            },
+            // ✅ 關鍵：指定使用你自己的 Service Worker
+            serviceWorkerParam: { scope: "/bhg-frontend/" },
+            serviceWorkerPath: "/bhg-frontend/service-worker.js",
+            allowLocalhostAsSecureOrigin: true,
+          });
+          console.log('✅ OneSignal 已初始化');
+        } catch (error) {
+          console.error('❌ OneSignal 初始化失敗:', error);
+        }
       });
     </script>
 </body>
