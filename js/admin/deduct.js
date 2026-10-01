@@ -28,7 +28,7 @@ async function deductBalance(event) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('deductResult');
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>扣款中...</div>';
+  if (resultDiv) showConanLoading('deductResult', 'deductBalance');
 
   const result = await callAdminApi('deductBalance', {
     userId: studentId,
@@ -117,7 +117,7 @@ async function showCategoryOrderers() {
     return;
   }
 
-  container.innerHTML = '<div class="loading"><div class="spinner" style="width: 20px; height: 20px;"></div>載入中...</div>';
+  showConanLoading('batchOrderersList', 'getCategoryOrderers');
 
   const result = await callAdminApi('getCategoryOrderers', {
     restaurantName: currentRestaurant,
@@ -192,7 +192,7 @@ async function executeBatchDeductByCategory(restaurant, category, amount) {
   const btn = document.querySelector('#page-admin-batch-deduct .btn-warning');
 
   if (btn) setButtonLoading(btn, true);
-  if (resultDiv) resultDiv.innerHTML = '<div class="loading"><div class="spinner"></div>批量扣款中...</div>';
+  if (resultDiv) showConanLoading('batchDeductResult', 'batchDeductByCategory');
 
   const result = await callAdminApi('batchDeductByCategory', {
     restaurantName: restaurant,
