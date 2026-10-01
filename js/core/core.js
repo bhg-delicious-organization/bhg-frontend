@@ -228,7 +228,6 @@ async function loadSystemInfo() {
 
   const result = await callApi('getSystemInfo', {});
 
-  // 檢查 version 是否存在（不依賴 success 欄位）
   if (result && result.version) {
     el.innerHTML = `
       <p><strong>版本：</strong>${escapeHtml(result.version)}</p>
@@ -298,10 +297,13 @@ async function initApp() {
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
-  // 7. 執行預載入
-  await runPreload();
+  // 7. 執行基礎預載入（時間 + 餐廳）
+  await runBasePreload();
 
-  // 8. 顯示正確的導覽列 + 判斷管理模式
+  // 8. 設定 pageLoaded 事件監聽
+  setupPageLoadedListener();
+
+  // 9. 顯示正確的導覽列 + 判斷管理模式
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
 
@@ -324,17 +326,14 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // ⚠️ navigateTo 是非同步，等它完成
+    // navigateTo 完成後會自動發送 pageLoaded 事件
     await navigateTo(getSmartHomePage());
-
-    // ⚠️ navigateTo 完成後，才執行自動查詢
-    setTimeout(autoQueryIfLoggedIn, 300);
   }
 
-  // 9. 顯示時間提示橫幅
+  // 10. 顯示時間提示橫幅
   setTimeout(showTimeModeHint, 100);
 
-  // 10. 綁定 Enter 鍵
+  // 11. 綁定 Enter 鍵
   setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
