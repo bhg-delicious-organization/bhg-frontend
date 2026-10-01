@@ -1,5 +1,6 @@
 // ==================== preload.js ====================
 // 預載入模組
+// 目的：等 navigateTo 完成後，才執行頁面相關的預載入
 // 依賴：api.js、state.js、time.js
 // ====================================================
 
@@ -70,65 +71,94 @@ function waitForElement(elementId, timeout = 3000) {
 }
 
 /**
- * 自動預查詢
+ * 執行基礎預載入（時間 + 餐廳）
+ * 這些不需要頁面已載入
  */
-async function autoQueryIfLoggedIn() {
-  const studentId = AppState.currentStudentId();
-  if (!studentId) return;
-
-  console.log('🔍 自動預查詢學號:', studentId);
-
-  // 填入輸入框
-  const queryInput = document.getElementById('queryStudentId');
-  const mealInput = document.getElementById('mealStudentId');
-  if (queryInput) queryInput.value = studentId;
-  if (mealInput) mealInput.value = studentId;
-
-  // 執行查詢
-  if (typeof queryUserInfo === 'function') {
-    try {
-      await queryUserInfo(true);
-    } catch (error) {
-      console.warn('自動預查詢失敗:', error);
-    }
-  }
-
-  // 若在點餐時間，也載入訂飯頁
-  if (isUserOrderTime() && typeof loadMealInfo === 'function') {
-    waitForElement('mealStudentId', 3000).then(() => {
-      const mealInput = document.getElementById('mealStudentId');
-      if (mealInput && mealInput.value.trim()) {
-        try {
-          loadMealInfo();
-        } catch (error) {
-          console.warn('自動載入訂飯頁失敗:', error);
-        }
-      }
-    }).catch(() => {
-      console.log('ℹ️ 訂飯頁未在 3 秒內載入，跳過自動載入');
-    });
-  }
-}
-
-/**
- * 執行所有預載入（不含自動查詢）
- */
-async function runPreload() {
-  console.log('🚀 開始預載入...');
+async function runBasePreload() {
+  console.log('🚀 開始基礎預載入...');
 
   await Promise.all([
     preloadTimeLimits(),
     preloadTodayRestaurant()
   ]);
 
-  console.log('✅ 預載入完成');
-  // ⚠️ 不在這裡呼叫 autoQueryIfLoggedIn
-  // 由 initApp 在 navigateTo 之後呼叫
+  console.log('✅ 基礎預載入完成');
 }
 
+/**
+ * 頁面載入後，執行頁面專屬的自動載入
+ * @param {string} pageName - 頁面名稱
+ */
+async function runPagePreload(pageName) {
+  const studentId = AppState.currentStudentId();
+  if (!studentId) {
+    console.log(`ℹ️ 未登入學號，跳過頁面預載入 [${pageName}]`);
+    return;
+  }
+
+  console.log(`🎯 執行頁面預載入 [${pageName}]，學號: ${studentId}`);
+
+  switch (pageName) {
+    // ========== 查詢頁 ==========
+    case 'user-query':
+      if (typeof queryUserInfo === 'function') {
+        const queryInput = document.getElementById('queryStudentId');
+        if (queryInput) {
+          queryInput.value = studentId;
+          try {
+            await queryUserInfo(true);
+          } catch (error) {
+            console.warn('自動查詢失敗:', error);
+          }
+        }
+      }
+      break;
+
+    // ========== 訂飯頁 ==========
+    case 'user-meal':
+      if (typeof loadMealInfo === 'function') {
+        const mealInput = document.getElementById('mealStudentId');
+        if (mealInput) {
+          mealInput.value = studentId;
+          try {
+            await loadMealInfo();
+          } catch (error) {
+            console.warn('自動載入訂飯頁失敗:', error);
+          }
+        }
+      }
+      break;
+
+    // ========== 帳號頁 ==========
+    case 'user-account':
+      // 帳號頁本身會處理，不需要額外
+      break;
+
+    // ========== 其他頁面 ==========
+    default:
+      console.log(`ℹ️ 頁面 ${pageName} 無需預載入`);
+      break;
+  }
+}
+
+/**
+ * 設定事件監聽：頁面載入完成後執行對應的預載入
+ */
+function setupPageLoadedListener() {
+  window.addEventListener('pageLoaded', function(event) {
+    const pageName = event.detail.pageName;
+    console.log('📥 收到 pageLoaded 事件:', pageName);
+    runPagePreload(pageName);
+  });
+  console.log('✅ 已監聽 pageLoaded 事件');
+}
+
+// 掛載到 window
 window.preloadTimeLimits = preloadTimeLimits;
 window.preloadTodayRestaurant = preloadTodayRestaurant;
-window.autoQueryIfLoggedIn = autoQueryIfLoggedIn;
-window.runPreload = runPreload;
+window.runBasePreload = runBasePreload;
+window.runPagePreload = runPagePreload;
+window.setupPageLoadedListener = setupPageLoadedListener;
+window.waitForElement = waitForElement;
 
 console.log('📦 預載入模組已載入');
