@@ -1,11 +1,13 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker
-// 提供離線快取功能
+// PWA Service Worker + OneSignal 整合
 // ==========================================================
 
+// ==================== OneSignal Service Worker ====================
+importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
+
+// ==================== PWA 快取 ====================
 const CACHE_NAME = 'bhg-cache-v1';
 
-// 需要預快取的靜態資源
 const URLS_TO_CACHE = [
   './',
   './index.html',
@@ -66,7 +68,12 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // 圖片 CDN 不快取（讓瀏覽器處理）
+  // OneSignal 不快取
+  if (event.request.url.includes('onesignal.com')) {
+    return;
+  }
+
+  // 圖片 CDN 不快取
   if (event.request.url.includes('i.ibb.co') ||
       event.request.url.includes('cdnjs.cloudflare.com')) {
     return;
@@ -78,18 +85,15 @@ self.addEventListener('fetch', function(event) {
         return response;
       }
       return fetch(event.request).then(function(networkResponse) {
-        // 不快取非成功回應
         if (!networkResponse || networkResponse.status !== 200) {
           return networkResponse;
         }
-        // 複製回應並加入快取
         const responseToCache = networkResponse.clone();
         caches.open(CACHE_NAME).then(function(cache) {
           cache.put(event.request, responseToCache);
         });
         return networkResponse;
       }).catch(function() {
-        // 離線時，若是頁面導航請求，回傳首頁
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }
