@@ -1057,10 +1057,10 @@ body.tutorial-active {
   border-radius: 20px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
   z-index: 3002;
-  animation: slideUp 0.3s ease;
   width: calc(100% - 40px);
   max-width: 400px;
   margin: 0 auto;
+  transition: none;
 }
 
 @media (min-width: 768px) {
