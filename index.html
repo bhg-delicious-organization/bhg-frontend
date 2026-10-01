@@ -11,6 +11,15 @@
     <link rel="icon" type="image/png" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
     <title>大家政便當廠-儲值系統</title>
 
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="便當廠">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
+
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -259,5 +268,20 @@
     <script src="js/admin/orders.js"></script>
     <script src="js/admin/users.js"></script>
     <script src="js/admin/deduct.js"></script>
+
+    <!-- ==================== PWA Service Worker ==================== -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('service-worker.js')
+            .then(function(registration) {
+              console.log('✅ Service Worker 註冊成功:', registration.scope);
+            })
+            .catch(function(error) {
+              console.warn('⚠️ Service Worker 註冊失敗:', error);
+            });
+        });
+      }
+    </script>
 </body>
 </html>
