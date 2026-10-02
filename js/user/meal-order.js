@@ -1,4 +1,3 @@
-<script>
 // ==================== meal-order.js ====================
 // 使用者點餐頁面模組
 // 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js、time.js
@@ -266,4 +265,3 @@ window.onRestaurantCategoryChange = onRestaurantCategoryChange;
 window.addOrderRestaurantMeal = addOrderRestaurantMeal;
 
 console.log('🍽️ 點餐模組已載入');
-</script>
