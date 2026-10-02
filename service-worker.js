@@ -1,14 +1,9 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker + OneSignal 整合
+// PWA Service Worker（只管快取）
 // 路徑：/bhg-frontend/service-worker.js
 // ==========================================================
 
-// ==================== OneSignal Service Worker ====================
-// ⚠️ 必須放在最上面
-importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js');
-
-// ==================== PWA 快取設定 ====================
-const CACHE_NAME = 'bhg-cache-v2';  // 版本號更新，強制清除舊快取
+const CACHE_NAME = 'bhg-cache-v3';  // 版本號更新
 
 const URLS_TO_CACHE = [
   './',
@@ -28,7 +23,7 @@ const URLS_TO_CACHE = [
   './js/shared/tutorial.js'
 ];
 
-// ==================== 安裝：預快取靜態資源 ====================
+// ==================== 安裝 ====================
 self.addEventListener('install', function(event) {
   console.log('📦 Service Worker 安裝中...');
   event.waitUntil(
@@ -43,7 +38,7 @@ self.addEventListener('install', function(event) {
   );
 });
 
-// ==================== 啟用：清除舊快取 ====================
+// ==================== 啟用 ====================
 self.addEventListener('activate', function(event) {
   console.log('✅ Service Worker 已啟用');
   event.waitUntil(
@@ -62,33 +57,20 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// ==================== 攔截請求：快取優先，網路備援 ====================
+// ==================== 攔截請求 ====================
 self.addEventListener('fetch', function(event) {
-  // 只處理 GET
   if (event.request.method !== 'GET') return;
 
   const url = event.request.url;
 
-  // GAS API 不快取
-  if (url.includes('script.google.com')) {
-    return;
-  }
-
-  // OneSignal API 不快取
-  if (url.includes('onesignal.com')) {
-    return;
-  }
-
-  // 圖片 CDN 不快取
-  if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) {
-    return;
-  }
+  if (url.includes('script.google.com')) return;
+  if (url.includes('onesignal.com')) return;
+  if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
 
   event.respondWith(
     caches.match(event.request).then(function(response) {
-      if (response) {
-        return response;
-      }
+      if (response) return response;
+
       return fetch(event.request).then(function(networkResponse) {
         if (!networkResponse || networkResponse.status !== 200) {
           return networkResponse;
