@@ -1,9 +1,11 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker（只管快取）
-// 路徑：/bhg-frontend/service-worker.js
+// PWA Service Worker（自動判斷大改/小改）
 // ==========================================================
 
-const CACHE_NAME = 'bhg-cache-v3';
+const VERSION = '1.0.0';  // ⚠️ 只改這行
+const CACHE_NAME = 'bhg-cache-' + VERSION;
+
+console.log(`📦 Service Worker 版本: ${VERSION}`);
 
 const URLS_TO_CACHE = [
   './',
@@ -23,12 +25,19 @@ const URLS_TO_CACHE = [
   './js/shared/tutorial.js'
 ];
 
+// ==================== 判斷是否為大改 ====================
+function isMajorUpdate(oldVersion, newVersion) {
+  if (!oldVersion) return false;
+  const oldParts = oldVersion.split('.').map(Number);
+  const newParts = newVersion.split('.').map(Number);
+  return oldParts[0] !== newParts[0];
+}
+
 // ==================== 安裝 ====================
 self.addEventListener('install', function(event) {
-  console.log('📦 Service Worker 安裝中...');
+  console.log(`📦 新版本 ${VERSION} 安裝中...`);
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
-      console.log('📦 預快取靜態資源');
       return cache.addAll(URLS_TO_CACHE).catch(function(err) {
         console.warn('⚠️ 部分資源快取失敗:', err);
       });
@@ -40,19 +49,49 @@ self.addEventListener('install', function(event) {
 
 // ==================== 啟用 ====================
 self.addEventListener('activate', function(event) {
-  console.log('✅ Service Worker 已啟用');
+  console.log(`✅ 新版本 ${VERSION} 已啟用`);
+
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
+      const oldCacheNames = cacheNames.filter(function(name) {
+        return name.startsWith('bhg-cache-') && name !== CACHE_NAME;
+      });
+
+      let oldVersion = null;
+      if (oldCacheNames.length > 0) {
+        oldVersion = oldCacheNames[0].replace('bhg-cache-', '');
+      }
+
+      const isMajor = isMajorUpdate(oldVersion, VERSION);
+      console.log(`🔍 舊版本: ${oldVersion || '無'} | 新版本: ${VERSION} | 大改: ${isMajor}`);
+
       return Promise.all(
-        cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
-            console.log('🗑️ 清除舊快取:', cacheName);
-            return caches.delete(cacheName);
-          }
+        oldCacheNames.map(function(cacheName) {
+          console.log('🗑️ 清除舊快取:', cacheName);
+          return caches.delete(cacheName);
         })
-      );
-    }).then(function() {
-      return self.clients.claim();
+      ).then(function() {
+        return {
+          oldVersion: oldVersion,
+          newVersion: VERSION,
+          isMajorUpdate: isMajor
+        };
+      });
+    }).then(function(updateInfo) {
+      return self.clients.claim().then(function() {
+        return updateInfo;
+      });
+    }).then(function(updateInfo) {
+      return self.clients.matchAll({ type: 'window' }).then(function(clients) {
+        clients.forEach(function(client) {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            oldVersion: updateInfo.oldVersion,
+            newVersion: updateInfo.newVersion,
+            isMajorUpdate: updateInfo.isMajorUpdate
+          });
+        });
+      });
     })
   );
 });
@@ -63,17 +102,10 @@ self.addEventListener('fetch', function(event) {
 
   const url = event.request.url;
 
-  // GAS API 不快取
   if (url.includes('script.google.com')) return;
-
-  // OneSignal API 不快取
   if (url.includes('onesignal.com')) return;
-
-  // ✅ OneSignal Service Worker 檔案不快取（重要！）
   if (url.includes('OneSignalSDKWorker.js')) return;
   if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
-
-  // 圖片 CDN 不快取
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
 
   event.respondWith(
@@ -96,4 +128,11 @@ self.addEventListener('fetch', function(event) {
       });
     })
   );
+});
+
+// ==================== 接收訊息 ====================
+self.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
