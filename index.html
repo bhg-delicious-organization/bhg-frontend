@@ -404,16 +404,15 @@
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
-          await OneSignal.init({
-            appId: "57ab86da-998b-4d1a-ba6e-efcca2c519b2",
-            safari_web_id: "web.onesignal.auto.28be2e0f-48c0-43fd-877a-95cc3c6fc0d9",
-            notifyButton: {
-              enable: false
-            },
-            serviceWorkerParam: { scope: "/bhg-frontend/" },
-            serviceWorkerPath: "/bhg-frontend/OneSignalSDKWorker.js",
-            allowLocalhostAsSecureOrigin: true,
-          });
+            await OneSignal.init({
+              appId: "57ab86da-998b-4d1a-ba6e-efcca2c519b2",
+              safari_web_id: "web.onesignal.auto.28be2e0f-48c0-43fd-877a-95cc3c6fc0d9",
+              notifyButton: { enable: false },
+              // ✅ 改到 onesignal 子目錄
+              serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
+              serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
+              allowLocalhostAsSecureOrigin: true,
+            });
           console.log('✅ OneSignal 已初始化');
         } catch (error) {
           console.error('❌ OneSignal 初始化失敗:', error);
