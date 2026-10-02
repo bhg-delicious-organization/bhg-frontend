@@ -1,3 +1,4 @@
+<script>
 // ==================== time.js ====================
 // 時間檢查模組
 // 依賴：無
@@ -89,6 +90,26 @@ function formatTimeRemaining(minutes) {
   return `${mins}分鐘`;
 }
 
+/**
+ * ✅ 新增：格式化時間 (HHMM → "HH:MM")
+ * @param {number} time - 時間數字 (800 → "08:00", 2400 → "全天候")
+ * @returns {string} 格式化字串
+ */
+function formatTimeHHMM(time) {
+  if (Number(time) >= 2400) return '全天候';
+  const hour = Math.floor(time / 100);
+  const minute = time % 100;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/**
+ * ✅ 新增：取得點餐時間範圍字串
+ * @returns {string} 例如 "08:00 - 10:00" 或 "08:00 - 全天候"
+ */
+function getOrderTimeRange() {
+  return `${formatTimeHHMM(TIME.ORDER_START)} - ${formatTimeHHMM(TIME.ORDER_END)}`;
+}
+
 // ========== 掛載到 window ==========
 window.TIME = TIME;
 window.getCurrentTimeNumber = getCurrentTimeNumber;
@@ -99,6 +120,8 @@ window.isRatingTime = isRatingTime;
 window.getOrderTimeRemaining = getOrderTimeRemaining;
 window.getRatingTimeRemaining = getRatingTimeRemaining;
 window.formatTimeRemaining = formatTimeRemaining;
+window.formatTimeHHMM = formatTimeHHMM;
+window.getOrderTimeRange = getOrderTimeRange;
 
 // ========== TimeChecker 對象（向後兼容） ==========
 window.TimeChecker = {
@@ -109,7 +132,10 @@ window.TimeChecker = {
   isRatingTime: isRatingTime,
   getOrderTimeRemaining: getOrderTimeRemaining,
   getRatingTimeRemaining: getRatingTimeRemaining,
-  formatTimeRemaining: formatTimeRemaining
+  formatTimeRemaining: formatTimeRemaining,
+  formatTimeHHMM: formatTimeHHMM,
+  getOrderTimeRange: getOrderTimeRange
 };
 
 console.log('⏰ 時間檢查模組已載入');
+</script>
