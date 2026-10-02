@@ -328,7 +328,6 @@
               console.warn('⚠️ Service Worker 註冊失敗:', error);
             });
 
-          // 監聽 Service Worker 訊息
           navigator.serviceWorker.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'SW_UPDATED') {
               const { oldVersion, newVersion, isMajorUpdate } = event.data;
@@ -336,10 +335,8 @@
               console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion} (${isMajorUpdate ? '大改' : '小改'})`);
 
               if (isMajorUpdate) {
-                // 大改：顯示提示
                 showMajorUpdatePrompt(oldVersion, newVersion);
               } else {
-                // 小改：靜默更新
                 console.log('🔇 小改：靜默更新中...');
                 setTimeout(function() {
                   window.location.reload();
@@ -350,9 +347,6 @@
         });
       }
 
-      /**
-       * 大改：顯示提示
-       */
       function showMajorUpdatePrompt(oldVersion, newVersion) {
         const prompt = document.createElement('div');
         prompt.id = 'majorUpdatePrompt';
@@ -399,20 +393,21 @@
       }
     </script>
 
-    <!-- ==================== OneSignal 初始化 ==================== -->
+    <!-- ==================== OneSignal 初始化（新版 App ID） ==================== -->
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
         try {
-            await OneSignal.init({
-              appId: "57ab86da-998b-4d1a-ba6e-efcca2c519b2",
-              safari_web_id: "web.onesignal.auto.28be2e0f-48c0-43fd-877a-95cc3c6fc0d9",
-              notifyButton: { enable: false },
-              // ✅ 改到 onesignal 子目錄
-              serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
-              serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
-              allowLocalhostAsSecureOrigin: true,
-            });
+          await OneSignal.init({
+            appId: "fb14b87c-e10e-4aa0-8613-0f2b05e5c937",
+            safari_web_id: "web.onesignal.auto.2510e921-2066-4b3b-be25-8e0e09bd836c",
+            notifyButton: {
+              enable: false
+            },
+            serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
+            serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
+            allowLocalhostAsSecureOrigin: true,
+          });
           console.log('✅ OneSignal 已初始化');
         } catch (error) {
           console.error('❌ OneSignal 初始化失敗:', error);
