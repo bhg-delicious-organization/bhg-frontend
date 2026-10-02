@@ -303,7 +303,7 @@
         </div>
     </div>
 
-    <!-- ==================== PWA Service Worker 註冊 ==================== -->
+    <!-- ==================== PWA Service Worker 註冊（自動判斷大改/小改） ==================== -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
@@ -311,12 +311,91 @@
             scope: '/bhg-frontend/'
           })
             .then(function(registration) {
-              console.log('✅ Service Worker 註冊成功:', registration.scope);
+              console.log('✅ Service Worker 註冊成功');
+
+              registration.addEventListener('updatefound', function() {
+                const newWorker = registration.installing;
+                console.log('🔄 發現新版本，正在下載...');
+
+                newWorker.addEventListener('statechange', function() {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('✅ 新版本已下載，等待啟動');
+                  }
+                });
+              });
             })
             .catch(function(error) {
               console.warn('⚠️ Service Worker 註冊失敗:', error);
             });
+
+          // 監聽 Service Worker 訊息
+          navigator.serviceWorker.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'SW_UPDATED') {
+              const { oldVersion, newVersion, isMajorUpdate } = event.data;
+
+              console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion} (${isMajorUpdate ? '大改' : '小改'})`);
+
+              if (isMajorUpdate) {
+                // 大改：顯示提示
+                showMajorUpdatePrompt(oldVersion, newVersion);
+              } else {
+                // 小改：靜默更新
+                console.log('🔇 小改：靜默更新中...');
+                setTimeout(function() {
+                  window.location.reload();
+                }, 500);
+              }
+            }
+          });
         });
+      }
+
+      /**
+       * 大改：顯示提示
+       */
+      function showMajorUpdatePrompt(oldVersion, newVersion) {
+        const prompt = document.createElement('div');
+        prompt.id = 'majorUpdatePrompt';
+        prompt.style.cssText = `
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: white;
+          border-radius: 16px;
+          padding: 24px;
+          z-index: 9999;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+          text-align: center;
+          max-width: 320px;
+          width: calc(100% - 40px);
+        `;
+        prompt.innerHTML = `
+          <div style="font-size: 3rem; margin-bottom: 16px;">🎉</div>
+          <h3 style="color: var(--primary); margin-bottom: 8px;">重大更新！</h3>
+          <p style="color: var(--gray); margin-bottom: 20px;">
+            系統已更新到 <strong>${newVersion}</strong><br>
+            包含新功能與改進！
+          </p>
+          <button id="majorUpdateBtn" style="
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 32px;
+            font-size: 1rem;
+            cursor: pointer;
+            width: 100%;
+          ">
+            <i class="fas fa-check"></i> 立即更新
+          </button>
+        `;
+        document.body.appendChild(prompt);
+
+        document.getElementById('majorUpdateBtn').onclick = function() {
+          navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
+          window.location.reload();
+        };
       }
     </script>
 
@@ -331,7 +410,6 @@
             notifyButton: {
               enable: false
             },
-            // ✅ 關鍵：指定使用你自己的 Service Worker
             serviceWorkerParam: { scope: "/bhg-frontend/" },
             serviceWorkerPath: "/bhg-frontend/OneSignalSDKWorker.js",
             allowLocalhostAsSecureOrigin: true,
