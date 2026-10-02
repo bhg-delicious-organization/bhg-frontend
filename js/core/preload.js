@@ -1,4 +1,3 @@
-<script>
 // ==================== preload.js ====================
 // 預載入模組
 // 依賴：api.js、state.js、time.js、core.js
@@ -127,4 +126,3 @@ window.setupPageLoadedListener = setupPageLoadedListener;
 window.waitForElement = waitForElement;
 
 console.log('📦 預載入模組已載入');
-</script>
