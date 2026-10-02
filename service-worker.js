@@ -108,6 +108,9 @@ self.addEventListener('fetch', function(event) {
   if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
 
+  // ✅ 新增：跳過 onesignal 目錄
+  if (url.includes('/onesignal/')) return;
+
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if (response) return response;
