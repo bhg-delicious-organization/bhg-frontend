@@ -1,4 +1,3 @@
-<script>
 // ==================== meal.js ====================
 // 使用者訂飯模組（訂飯頁面）
 // 依賴：api.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
@@ -66,7 +65,6 @@ async function loadMealInfo(event) {
 }
 
 async function updateMealBalanceDisplay(balance) {
-  // ✅ 改用 getUserTodayMeals，前端加總（避免依賴公式）
   const mealsResult = await callApi('getUserTodayMeals', {
     userId: AppState.currentStudentId()
   });
@@ -105,8 +103,6 @@ async function loadUserTodayMeals(studentId) {
   if (!container) return;
 
   let html = '<h3>📋 今日餐點</h3>';
-
-  // ✅ 動態時間範圍
   const timeRange = getOrderTimeRange();
 
   if (currentTime < orderStart) {
@@ -245,7 +241,6 @@ async function enterMealOrderMode(event) {
     btn = document.querySelector('#mealSelection .btn-success');
   }
 
-  // ✅ 動態時間範圍
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
     showMessageModal('❌ 非點餐時間', `點餐時間為 ${timeRange}`);
@@ -317,77 +312,4 @@ async function checkUserOrderHistory() {
   }
 }
 
-function displayUserOrderHistory(orders, container) {
-  let html = '';
-  let grandTotal = 0;
-
-  orders.forEach(order => {
-    const orderDate = new Date(order.timestamp);
-    const dateStr = orderDate.toLocaleString('zh-TW', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit'
-    });
-
-    const restaurantDisplay = order.displayRestaurant || '未知餐廳';
-
-    html += `
-      <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 5px;">
-          <div>
-            <span class="badge badge-info" style="margin-right: 8px;">${escapeHtml(restaurantDisplay)}</span>
-            <span style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(order.orderId)}</span>
-          </div>
-          <span class="badge badge-info">${dateStr}</span>
-        </div>
-        <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid #dee2e6;">
-              <th style="padding: 5px; text-align: left;">餐點</th>
-              <th style="padding: 5px; text-align: center;">數量</th>
-              <th style="padding: 5px; text-align: right;">單價</th>
-              <th style="padding: 5px; text-align: right;">小計</th>
-            </tr>
-          </thead>
-          <tbody>
-    `;
-
-    order.items.forEach(item => {
-      html += `
-        <tr>
-          <td style="padding: 5px;">${escapeHtml(item.mealName)}</td>
-          <td style="padding: 5px; text-align: center;">x${item.quantity}</td>
-          <td style="padding: 5px; text-align: right;">$${item.price.toFixed(1)}</td>
-          <td style="padding: 5px; text-align: right;">$${item.subtotal.toFixed(1)}</td>
-        </tr>
-      `;
-    });
-
-    html += `
-          </tbody>
-        </table>
-        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #dee2e6; text-align: right;">
-          <strong>此訂單小計: $${order.orderTotal.toFixed(1)}</strong>
-        </div>
-      </div>
-    `;
-
-    grandTotal += order.orderTotal;
-  });
-
-  html += `
-    <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-calculator"></i> <strong>顯示訂單總計</strong></span>
-        <span style="font-size: 1.3rem; font-weight: bold;">$${grandTotal.toFixed(1)}</span>
-      </div>
-    </div>
-  `;
-
-  container.innerHTML = html;
-}
-
-window.loadMealInfo = loadMealInfo;
-window.enterMealOrderMode = enterMealOrderMode;
-
-console.log('🍽️ 訂飯模組已載入');
-</script>
+function displayUserOrderHistory(orders,
