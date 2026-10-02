@@ -1,14 +1,10 @@
-<script>
 // ==================== core.js ====================
 // 核心功能模組
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js
 // ==================================================
 
-// ==================== 全域變數 ====================
 let navHidden = false;
 let lastScrollY = window.scrollY;
-
-// ==================== Enter 鍵綁定 ====================
 
 function bindEnterKey(element, callback) {
   if (!element) return;
@@ -103,8 +99,6 @@ function initEnterKeyBindings() {
   console.log('✅ Enter 鍵綁定完成');
 }
 
-// ==================== 剪貼簿 ====================
-
 function copyToClipboard(text) {
   return new Promise((resolve, reject) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -136,8 +130,6 @@ function fallbackCopyToClipboard(text, resolve, reject) {
   }
 }
 
-// ==================== 錯誤處理 ====================
-
 function reportFrontendError(functionName, error, description = '') {
   const errorMsg = error?.message || error;
   callApi('reportFrontendError', {
@@ -163,8 +155,6 @@ function handleFrontendError(functionName, error, userMessage = '操作失敗，
   showMessageModal('❌ 錯誤', userMessage);
 }
 
-// ==================== 學號記憶 ====================
-
 function initRememberedId() {
   const studentId = AppState.currentStudentId();
   const btnText = document.getElementById('quickIdBtnText');
@@ -181,8 +171,6 @@ function fillAllStudentIdInputs(studentId, setAsCurrent = false) {
     AppState.setCurrentStudentId(studentId);
   }
 }
-
-// ==================== 導覽列收合 ====================
 
 function toggleNav() {
   const activeNav = AppState.isAdminMode() ? '.admin-nav' : '.user-nav';
@@ -219,8 +207,6 @@ function initAutoHideNav() {
   }, { passive: true });
 }
 
-// ==================== 系統資訊 ====================
-
 async function loadSystemInfo() {
   const el = document.getElementById('systemInfo');
   if (!el) return;
@@ -241,14 +227,10 @@ async function loadSystemInfo() {
   }
 }
 
-// ==================== 時間提示橫幅 ====================
-
 function showTimeModeHint() {
   if (document.querySelector('.time-hint')) return;
 
   const isOrderTime = isUserOrderTime();
-
-  // ✅ 動態取得時間範圍
   const timeRange = getOrderTimeRange();
 
   const message = isOrderTime
@@ -266,16 +248,11 @@ function showTimeModeHint() {
   header.parentNode.insertBefore(hint, header.nextSibling);
 }
 
-/**
- * ✅ 新增：更新時間提示橫幅（給 preload 呼叫）
- */
 function updateTimeModeHint() {
   const existingHint = document.querySelector('.time-hint');
   if (existingHint) existingHint.remove();
   showTimeModeHint();
 }
-
-// ==================== 初始化 ====================
 
 async function initApp() {
   console.log('🚀 系統初始化開始');
@@ -336,18 +313,14 @@ async function initApp() {
     await navigateTo(getSmartHomePage());
   }
 
-  // ✅ 時間提示橫幅（時間限制已載入）
   setTimeout(showTimeModeHint, 100);
-
   setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
 }
 
-// ==================== 啟動 ====================
 document.addEventListener('DOMContentLoaded', initApp);
 
-// 掛載到 window
 window.initApp = initApp;
 window.toggleNav = toggleNav;
 window.copyToClipboard = copyToClipboard;
@@ -358,4 +331,3 @@ window.updateTimeModeHint = updateTimeModeHint;
 window.loadSystemInfo = loadSystemInfo;
 
 console.log('⚙️ core.js 已載入');
-</script>
