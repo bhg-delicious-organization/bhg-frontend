@@ -1,7 +1,8 @@
+<script>
 // ==================== core.js ====================
 // 核心功能模組
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js
-// ====================================================
+// ==================================================
 
 // ==================== 全域變數 ====================
 let navHidden = false;
@@ -244,11 +245,20 @@ async function loadSystemInfo() {
 
 function showTimeModeHint() {
   if (document.querySelector('.time-hint')) return;
+
   const isOrderTime = isUserOrderTime();
-  const message = isOrderTime ? '🍱 點餐時間（08:00-10:00）' : '🔍 查詢時間（點餐已截止）';
+
+  // ✅ 動態取得時間範圍
+  const timeRange = getOrderTimeRange();
+
+  const message = isOrderTime
+    ? `🍱 點餐時間（${timeRange}）`
+    : `🔍 查詢時間（點餐已截止）`;
+
   const bgColor = isOrderTime ? 'var(--success)' : 'var(--gray)';
   const header = document.querySelector('.header');
   if (!header) return;
+
   const hint = document.createElement('div');
   hint.className = 'time-hint';
   hint.innerHTML = `<i class="fas fa-clock"></i> ${message}`;
@@ -256,12 +266,20 @@ function showTimeModeHint() {
   header.parentNode.insertBefore(hint, header.nextSibling);
 }
 
+/**
+ * ✅ 新增：更新時間提示橫幅（給 preload 呼叫）
+ */
+function updateTimeModeHint() {
+  const existingHint = document.querySelector('.time-hint');
+  if (existingHint) existingHint.remove();
+  showTimeModeHint();
+}
+
 // ==================== 初始化 ====================
 
 async function initApp() {
   console.log('🚀 系統初始化開始');
 
-  // 1. 綁定導覽列點擊事件
   document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
     item.addEventListener('click', function(e) {
       e.preventDefault();
@@ -270,45 +288,35 @@ async function initApp() {
     });
   });
 
-  // 2. 防止表單提交
   document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', e => { e.preventDefault(); return false; });
   });
 
-  // 3. 綁定模式切換按鈕
   const switchToAdminBtn = document.getElementById('switchToAdminBtn');
   const switchToUserBtn = document.getElementById('switchToUserBtn');
   if (switchToAdminBtn) switchToAdminBtn.addEventListener('click', switchToAdminMode);
   if (switchToUserBtn) switchToUserBtn.addEventListener('click', switchToUserMode);
 
-  // 4. 綁定導覽列收合按鈕
   const toggleBtn = document.getElementById('navToggleBtn');
   if (toggleBtn && !toggleBtn._navBound) {
     toggleBtn.addEventListener('click', toggleNav);
     toggleBtn._navBound = true;
   }
 
-  // 5. 初始化
   initRememberedId();
   initAutoHideNav();
 
-  // 6. 初始化 AppState
   const isLoggedIn = AppState.init();
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
-  // 7. 執行基礎預載入（時間 + 餐廳）
   await runBasePreload();
-
-  // 8. 設定 pageLoaded 事件監聽
   setupPageLoadedListener();
 
-  // 9. 顯示正確的導覽列 + 判斷管理模式
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
 
   if (isLoggedIn) {
-    // 管理員模式
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
 
@@ -318,7 +326,6 @@ async function initApp() {
     updateAdminUI();
     switchToAdminMode();
   } else {
-    // 使用者模式
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
 
@@ -326,14 +333,12 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // navigateTo 完成後會自動發送 pageLoaded 事件
     await navigateTo(getSmartHomePage());
   }
 
-  // 10. 顯示時間提示橫幅
+  // ✅ 時間提示橫幅（時間限制已載入）
   setTimeout(showTimeModeHint, 100);
 
-  // 11. 綁定 Enter 鍵
   setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
@@ -349,6 +354,8 @@ window.copyToClipboard = copyToClipboard;
 window.handleFrontendError = handleFrontendError;
 window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.showTimeModeHint = showTimeModeHint;
+window.updateTimeModeHint = updateTimeModeHint;
 window.loadSystemInfo = loadSystemInfo;
 
 console.log('⚙️ core.js 已載入');
+</script>
