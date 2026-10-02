@@ -1,14 +1,12 @@
+<script>
 // ==================== meal-order.js ====================
 // 使用者點餐頁面模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js
-// ====================================================
+// 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js、time.js
+// ==================================================
 
 let currentRestaurantCategories = [];
 let currentRestaurantItems = [];
 
-/**
- * 載入點餐頁面
- */
 function loadMealOrderPage() {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
@@ -17,17 +15,10 @@ function loadMealOrderPage() {
     return;
   }
 
-  // ✅ 檢查時間
+  // ✅ 動態時間範圍
   if (!isUserOrderTime()) {
-    let endTimeStr = '10:00';
-    if (TIME.ORDER_END >= 2400) {
-      endTimeStr = '全天候';
-    } else {
-      const hour = Math.floor(TIME.ORDER_END / 100);
-      const minute = TIME.ORDER_END % 100;
-      endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    }
-    showMessageModal('❌ 非點餐時間', `點餐時間為 08:00 - ${endTimeStr}`);
+    const timeRange = getOrderTimeRange();
+    showMessageModal('❌ 非點餐時間', `點餐時間為 ${timeRange}`);
     navigateTo('user-meal');
     return;
   }
@@ -44,9 +35,6 @@ function loadMealOrderPage() {
   loadOrderMealsList();
 }
 
-/**
- * 載入今日餐廳資訊
- */
 async function loadTodayRestaurantForOrder() {
   const restaurantNameEl = document.getElementById('orderTodayRestaurantName');
   const categorySelect = document.getElementById('orderRestaurantCategorySelect');
@@ -67,9 +55,6 @@ async function loadTodayRestaurantForOrder() {
   }
 }
 
-/**
- * 載入餐廳分類
- */
 async function loadRestaurantCategories(restaurantName) {
   const categorySelect = document.getElementById('orderRestaurantCategorySelect');
   if (!categorySelect) return;
@@ -92,9 +77,6 @@ async function loadRestaurantCategories(restaurantName) {
   }
 }
 
-/**
- * 分類變更時載入餐點
- */
 async function onRestaurantCategoryChange() {
   const categorySelect = document.getElementById('orderRestaurantCategorySelect');
   const itemSelect = document.getElementById('orderRestaurantItemSelect');
@@ -131,9 +113,6 @@ async function onRestaurantCategoryChange() {
   }
 }
 
-/**
- * 加入今日餐廳餐點
- */
 async function addOrderRestaurantMeal(event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
@@ -172,9 +151,6 @@ async function addOrderRestaurantMeal(event) {
   }
 }
 
-/**
- * 載入已點餐點列表
- */
 async function loadOrderMealsList() {
   const studentId = AppState.currentStudentId();
   const container = document.getElementById('orderMealsList');
@@ -193,8 +169,13 @@ async function loadOrderMealsList() {
   }
 
   let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+  let grandTotal = 0;
 
   result.meals.forEach(meal => {
+    // ✅ 前端自己算 total（不依賴公式）
+    const total = (meal.amount || 0) * (meal.cost || 0);
+    grandTotal += total;
+
     html += `
       <div class="meal-item" data-slot="${meal.slotIndex}"
            style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
@@ -206,7 +187,7 @@ async function loadOrderMealsList() {
           </div>
         </div>
         <div>
-          <span style="font-weight: bold;">$${meal.total}</span>
+          <span style="font-weight: bold;">$${total}</span>
           <div style="display: flex; gap: 5px; margin-top: 5px;">
             <button class="btn btn-secondary meal-adjust-btn" data-slot="${meal.slotIndex}" data-change="-1"
                     style="width: auto; padding: 2px 8px;">-</button>
@@ -220,9 +201,19 @@ async function loadOrderMealsList() {
   });
 
   html += '</div>';
+
+  // ✅ 顯示總計
+  html += `
+    <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span><i class="fas fa-calculator"></i> <strong>今日餐點總計</strong></span>
+        <span style="font-size: 1.3rem; font-weight: bold;">$${grandTotal}</span>
+      </div>
+    </div>
+  `;
+
   container.innerHTML = html;
 
-  // 事件委派
   container.querySelectorAll('.meal-adjust-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -235,9 +226,6 @@ async function loadOrderMealsList() {
   });
 }
 
-/**
- * 調整餐點數量
- */
 async function adjustMealQuantity(mealName, change, slotIndex, mealItem) {
   const studentId = AppState.currentStudentId();
   let originalTexts = [];
@@ -278,3 +266,4 @@ window.onRestaurantCategoryChange = onRestaurantCategoryChange;
 window.addOrderRestaurantMeal = addOrderRestaurantMeal;
 
 console.log('🍽️ 點餐模組已載入');
+</script>
