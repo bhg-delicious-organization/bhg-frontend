@@ -12,10 +12,30 @@
         </div>
 
         <div id="restaurantSelectContainer" style="display: none;">
-            <select id="restaurantSelect" class="form-control" style="margin-bottom: 15px;">
-                <option value="">請選擇餐廳</option>
-            </select>
-            <button class="btn btn-primary" onclick="setTodayRestaurant(event)">確認設定</button>
+            <div class="form-group">
+                <label class="form-label">餐廳</label>
+                <select id="restaurantSelect" class="form-control">
+                    <option value="">請選擇餐廳</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">點餐截止時間</label>
+                <select id="orderEndTimeSelect" class="form-control">
+                    <option value="900">09:00</option>
+                    <option value="930">09:30</option>
+                    <option value="1000" selected>10:00（預設）</option>
+                    <option value="1030">10:30</option>
+                    <option value="1100">11:00</option>
+                    <option value="1130">11:30</option>
+                    <option value="1200">12:00</option>
+                </select>
+                <div class="form-text">使用者需在此時間前完成點餐</div>
+            </div>
+
+            <button class="btn btn-primary" onclick="setTodayRestaurant(event)">
+                <i class="fas fa-check"></i> 確認設定
+            </button>
         </div>
 
         <div id="restaurantResult" style="margin-top: 15px;"></div>
