@@ -4,6 +4,24 @@
 // ====================================================
 
 /**
+ * 快捷設定截止時間
+ */
+function setEndTimeQuick(time) {
+  const input = document.getElementById('orderEndTimeInput');
+  if (input) input.value = time;
+}
+
+/**
+ * 格式化時間
+ */
+function formatTimeStr(time) {
+  if (Number(time) >= 2400) return '全天候';
+  const hour = Math.floor(time / 100);
+  const minute = time % 100;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+/**
  * 載入今日餐廳設定狀態
  */
 async function loadTodayRestaurantStatus() {
@@ -21,10 +39,7 @@ async function loadTodayRestaurantStatus() {
     try {
       const limitsResult = await callApi('getTimeLimits', {});
       if (limitsResult.success && limitsResult.limits) {
-        const endTime = limitsResult.limits.ORDER_END;
-        const hour = Math.floor(endTime / 100);
-        const minute = endTime % 100;
-        endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+        endTimeStr = formatTimeStr(limitsResult.limits.ORDER_END);
       }
     } catch (e) {
       console.warn('讀取截止時間失敗:', e);
@@ -73,20 +88,22 @@ async function loadRestaurantOptions() {
  */
 async function setTodayRestaurant(event) {
   const select = document.getElementById('restaurantSelect');
-  const endTimeSelect = document.getElementById('orderEndTimeSelect');
+  const endTimeInput = document.getElementById('orderEndTimeInput');
 
   const restaurantName = select ? select.value : '';
-  const orderEndTime = endTimeSelect ? endTimeSelect.value : '1000';
+  const orderEndTime = endTimeInput ? endTimeInput.value : '1000';
 
   if (!restaurantName) {
     showMessageModal('❌ 錯誤', '請選擇餐廳');
     return;
   }
 
-  // 確認對話框
-  const hour = Math.floor(orderEndTime / 100);
-  const minute = orderEndTime % 100;
-  const endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  if (!orderEndTime || isNaN(orderEndTime) || orderEndTime < 0 || orderEndTime > 2400) {
+    showMessageModal('❌ 錯誤', '請輸入有效的截止時間（0-2400）');
+    return;
+  }
+
+  const endTimeStr = formatTimeStr(orderEndTime);
 
   showConfirmModal(
     '⚠️ 確認設定餐廳',
@@ -113,10 +130,7 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   if (btn) setButtonLoading(btn, false);
 
   if (result.success) {
-    // ✅ 更新前端快取
     AppState.setCurrentRestaurantName(restaurantName);
-
-    // ✅ 更新 TIME.ORDER_END
     TIME.ORDER_END = parseInt(orderEndTime);
 
     if (resultDiv) {
@@ -209,7 +223,6 @@ function cutOffOrder() {
 
       if (result.success) {
         showMessageModal('✅ 截止訂餐', result.message);
-        // 清空前端快取
         AppState.setCurrentRestaurantName('');
         loadTodayRestaurantStatus();
       } else {
@@ -219,6 +232,7 @@ function cutOffOrder() {
   );
 }
 
+window.setEndTimeQuick = setEndTimeQuick;
 window.loadTodayRestaurantStatus = loadTodayRestaurantStatus;
 window.setTodayRestaurant = setTodayRestaurant;
 window.showTodayRestaurantStats = showTodayRestaurantStats;
