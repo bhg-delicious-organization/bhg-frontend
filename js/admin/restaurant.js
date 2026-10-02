@@ -16,11 +16,26 @@ async function loadTodayRestaurantStatus() {
   const result = await callApi('getTodayRestaurant', {});
 
   if (result.success && result.restaurant) {
-    statusText.innerHTML = `✅ 今日餐廳：<strong>${escapeHtml(result.restaurant)}</strong>（已設定，無法修改）`;
+    // 已設定 → 顯示餐廳 + 截止時間
+    let endTimeStr = '10:00';
+    try {
+      const limitsResult = await callApi('getTimeLimits', {});
+      if (limitsResult.success && limitsResult.limits) {
+        const endTime = limitsResult.limits.ORDER_END;
+        const hour = Math.floor(endTime / 100);
+        const minute = endTime % 100;
+        endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      }
+    } catch (e) {
+      console.warn('讀取截止時間失敗:', e);
+    }
+
+    statusText.innerHTML = `✅ 今日餐廳：<strong>${escapeHtml(result.restaurant)}</strong><br>⏰ 截止時間：<strong>${endTimeStr}</strong>（已設定，無法修改）`;
     statusDiv.style.backgroundColor = '#f0fdf4';
     statusDiv.style.borderLeftColor = '#10b981';
     if (selectContainer) selectContainer.style.display = 'none';
   } else {
+    // 未設定 → 顯示選擇介面
     statusText.innerHTML = `⏳ 今日餐廳尚未設定，請選擇：`;
     statusDiv.style.backgroundColor = '#fff7ed';
     statusDiv.style.borderLeftColor = '#f97316';
@@ -54,17 +69,36 @@ async function loadRestaurantOptions() {
 }
 
 /**
- * 設定今日餐廳
+ * 設定今日餐廳 + 截止時間
  */
 async function setTodayRestaurant(event) {
   const select = document.getElementById('restaurantSelect');
+  const endTimeSelect = document.getElementById('orderEndTimeSelect');
+
   const restaurantName = select ? select.value : '';
+  const orderEndTime = endTimeSelect ? endTimeSelect.value : '1000';
 
   if (!restaurantName) {
     showMessageModal('❌ 錯誤', '請選擇餐廳');
     return;
   }
 
+  // 確認對話框
+  const hour = Math.floor(orderEndTime / 100);
+  const minute = orderEndTime % 100;
+  const endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+  showConfirmModal(
+    '⚠️ 確認設定餐廳',
+    `餐廳：${restaurantName}\n點餐截止：${endTimeStr}\n\n確定要設定嗎？\n（設定後無法修改）`,
+    function() { doSetTodayRestaurant(restaurantName, orderEndTime, event); }
+  );
+}
+
+/**
+ * 實際執行設定
+ */
+async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
 
@@ -72,13 +106,22 @@ async function setTodayRestaurant(event) {
   if (resultDiv) showConanLoading('restaurantResult', 'setTodayRestaurant');
 
   const result = await callAdminApi('setTodayRestaurant', {
-    restaurantName: restaurantName
+    restaurantName: restaurantName,
+    orderEndTime: orderEndTime
   });
 
   if (btn) setButtonLoading(btn, false);
 
   if (result.success) {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
+    // ✅ 更新前端快取
+    AppState.setCurrentRestaurantName(restaurantName);
+
+    // ✅ 更新 TIME.ORDER_END
+    TIME.ORDER_END = parseInt(orderEndTime);
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
+    }
     loadTodayRestaurantStatus();
   } else {
     if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
@@ -166,6 +209,8 @@ function cutOffOrder() {
 
       if (result.success) {
         showMessageModal('✅ 截止訂餐', result.message);
+        // 清空前端快取
+        AppState.setCurrentRestaurantName('');
         loadTodayRestaurantStatus();
       } else {
         showMessageModal('❌ 截止失敗', result.message);
