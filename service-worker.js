@@ -3,7 +3,7 @@
 // 路徑：/bhg-frontend/service-worker.js
 // ==========================================================
 
-const CACHE_NAME = 'bhg-cache-v3';  // 版本號更新
+const CACHE_NAME = 'bhg-cache-v3';
 
 const URLS_TO_CACHE = [
   './',
@@ -63,8 +63,17 @@ self.addEventListener('fetch', function(event) {
 
   const url = event.request.url;
 
+  // GAS API 不快取
   if (url.includes('script.google.com')) return;
+
+  // OneSignal API 不快取
   if (url.includes('onesignal.com')) return;
+
+  // ✅ OneSignal Service Worker 檔案不快取（重要！）
+  if (url.includes('OneSignalSDKWorker.js')) return;
+  if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
+
+  // 圖片 CDN 不快取
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
 
   event.respondWith(
