@@ -1,7 +1,6 @@
-
 // ==================== notify.js ====================
 // OneSignal 推播管理
-// 依賴：OneSignal SDK
+// 依賴：OneSignal SDK、api.js
 // ====================================================
 
 /**
@@ -14,22 +13,42 @@ async function toggleNotifications() {
       return;
     }
 
-    // 等 OneSignal 完全就緒
-    await new Promise(resolve => {
-      window.OneSignalDeferred.push(async function() {
-        resolve();
-      });
+    await new Promise(r => {
+      window.OneSignalDeferred.push(async () => r());
     });
 
     const isSubscribed = OneSignal.User.PushSubscription.optedIn;
 
     if (isSubscribed) {
       // 取消訂閱
+      const subId = OneSignal.User.PushSubscription.id;
+      
       await OneSignal.User.PushSubscription.optOut();
+      
+      // 從後端移除
+      if (subId) {
+        await callApi('removeSubscription', { subscriptionId: subId });
+        console.log('📤 已從後端移除訂閱');
+      }
+      
       showMessageModal('🔕 已關閉通知', '您將不會收到推播通知');
     } else {
-      // 訂閱（會觸發瀏覽器彈出「允許通知」）
+      // 訂閱
       await OneSignal.User.PushSubscription.optIn();
+      await new Promise(r => setTimeout(r, 2000));
+
+      const subId = OneSignal.User.PushSubscription.id;
+      const studentId = AppState.currentStudentId();
+
+      // ✅ 上報訂閱 ID 到後端
+      if (subId) {
+        const result = await callApi('saveSubscription', {
+          subscriptionId: subId,
+          studentId: studentId || ''
+        });
+        console.log('📤 訂閱 ID 已上報:', result);
+      }
+
       showMessageModal('🔔 已開啟通知', '您將收到今日餐廳等通知');
     }
 
@@ -71,7 +90,7 @@ function updateNotifyButton() {
 }
 
 /**
- * 檢查訂閱狀態
+ * 檢查訂閱狀態（並自動上報）
  */
 async function checkSubscriptionStatus() {
   try {
@@ -80,15 +99,26 @@ async function checkSubscriptionStatus() {
       return;
     }
 
-    // 等 OneSignal 初始化完成
-    await new Promise(resolve => {
-      window.OneSignalDeferred.push(async function() {
-        resolve();
-      });
+    await new Promise(r => {
+      window.OneSignalDeferred.push(async () => r());
     });
 
     const isSubscribed = OneSignal.User.PushSubscription.optedIn;
     console.log('🔔 推播訂閱狀態:', isSubscribed ? '已訂閱' : '未訂閱');
+
+    // ✅ 若已訂閱，自動上報訂閱 ID
+    if (isSubscribed) {
+      const subId = OneSignal.User.PushSubscription.id;
+      const studentId = AppState.currentStudentId();
+
+      if (subId) {
+        const result = await callApi('saveSubscription', {
+          subscriptionId: subId,
+          studentId: studentId || ''
+        });
+        console.log('📤 訂閱 ID 自動上報:', result);
+      }
+    }
 
     updateNotifyButton();
   } catch (error) {
