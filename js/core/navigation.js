@@ -5,13 +5,14 @@
 
 /**
  * 智慧首頁判斷
- * 依據：管理模式 + 學號 + 當前時間
+ * 依據：管理模式 + 學號 + 時間 + 餐廳
  */
 function getSmartHomePage() {
   const isAdminMode = AppState.isAdminMode();
   const studentId = AppState.currentStudentId();
   const currentTime = getCurrentTimeNumber();
 
+  // 管理員模式
   if (isAdminMode) {
     if (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) {
       return 'admin-restaurant';
@@ -19,11 +20,23 @@ function getSmartHomePage() {
     return 'admin-query';
   }
 
+  // 未登入學號
   if (!studentId) {
     return 'user-register';
   }
 
-  if (currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END) {
+  // ✅ 三個 AND 條件
+  const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
+  const hasRestaurant = !!AppState.currentRestaurantName();
+
+  console.log('🏠 智慧首頁判斷:');
+  console.log('   現在時間:', currentTime);
+  console.log('   點餐時間:', `${TIME.ORDER_START} ~ ${TIME.ORDER_END}`);
+  console.log('   在點餐時間內:', isOrderTime);
+  console.log('   今日餐廳:', AppState.currentRestaurantName() || '未設定');
+  console.log('   → 導向:', (isOrderTime && hasRestaurant) ? 'user-meal' : 'user-query');
+
+  if (isOrderTime && hasRestaurant) {
     return 'user-meal';
   }
   return 'user-query';
@@ -31,12 +44,10 @@ function getSmartHomePage() {
 
 /**
  * 導航到指定頁面
- * @param {string} pageName - 頁面名稱
  */
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
-  // 檢查管理員權限
   const adminPages = [
     'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
     'admin-query', 'admin-account', 'admin-analytics',
@@ -48,7 +59,7 @@ async function navigateTo(pageName) {
     return;
   }
 
-  // 更新導覽列 active 狀態
+  // 更新導覽列 active
   const isAdminModeNow = AppState.isAdminMode();
   const activeNav = isAdminModeNow ? '.admin-nav' : '.user-nav';
   document.querySelectorAll(`${activeNav} .nav-item`).forEach(item => {
@@ -62,10 +73,8 @@ async function navigateTo(pageName) {
     page.classList.remove('active');
   });
 
-  // 檢查頁面是否已載入
   let targetPage = document.getElementById('page-' + pageName);
 
-  // 若未載入，動態 fetch
   if (!targetPage) {
     const pageContent = document.getElementById('pageContent');
     if (!pageContent) {
@@ -81,7 +90,6 @@ async function navigateTo(pageName) {
       }
       const html = await response.text();
 
-      // 移除初始載入指示器
       const loader = document.getElementById('page-loader');
       if (loader) loader.remove();
 
@@ -94,24 +102,20 @@ async function navigateTo(pageName) {
       return;
     }
   } else {
-    // 頁面已載入，還是要移除 loader（以防萬一）
     const loader = document.getElementById('page-loader');
     if (loader) loader.remove();
   }
 
-  // 顯示目標頁面
   if (targetPage) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
-    // 執行頁面專屬載入邏輯
     switch (pageName) {
       case 'user-system':
         if (typeof loadSystemInfo === 'function') loadSystemInfo();
         break;
       case 'admin-restaurant':
         if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
-        if (typeof loadMealStats === 'function') loadMealStats();
         break;
       case 'admin-batch-deduct':
         if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
@@ -144,7 +148,6 @@ async function navigateTo(pageName) {
         break;
     }
 
-    // ✅ 發送「頁面載入完成」事件
     console.log('📢 發送 pageLoaded 事件:', pageName);
     window.dispatchEvent(new CustomEvent('pageLoaded', {
       detail: { pageName: pageName }
@@ -168,22 +171,11 @@ function switchToAdminMode() {
   const adminNav = document.querySelector('.admin-nav');
   const toggleBtn = document.getElementById('navToggleBtn');
 
-  if (userNav) {
-    userNav.style.display = 'none';
-    userNav.classList.remove('hidden');
-  }
-  if (adminNav) {
-    adminNav.style.display = 'flex';
-    adminNav.classList.remove('hidden');
-  }
-  if (toggleBtn) {
-    toggleBtn.style.display = 'flex';
-    toggleBtn.classList.remove('nav-hidden');
-  }
+  if (userNav) { userNav.style.display = 'none'; userNav.classList.remove('hidden'); }
+  if (adminNav) { adminNav.style.display = 'flex'; adminNav.classList.remove('hidden'); }
+  if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
 
-  if (typeof navHidden !== 'undefined') {
-    window.navHidden = false;
-  }
+  if (typeof navHidden !== 'undefined') window.navHidden = false;
 
   navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 }
@@ -200,27 +192,15 @@ function switchToUserMode() {
   const adminNav = document.querySelector('.admin-nav');
   const toggleBtn = document.getElementById('navToggleBtn');
 
-  if (adminNav) {
-    adminNav.style.display = 'none';
-    adminNav.classList.remove('hidden');
-  }
-  if (userNav) {
-    userNav.style.display = 'flex';
-    userNav.classList.remove('hidden');
-  }
-  if (toggleBtn) {
-    toggleBtn.style.display = 'flex';
-    toggleBtn.classList.remove('nav-hidden');
-  }
+  if (adminNav) { adminNav.style.display = 'none'; adminNav.classList.remove('hidden'); }
+  if (userNav) { userNav.style.display = 'flex'; userNav.classList.remove('hidden'); }
+  if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
 
-  if (typeof navHidden !== 'undefined') {
-    window.navHidden = false;
-  }
+  if (typeof navHidden !== 'undefined') window.navHidden = false;
 
   navigateTo(getSmartHomePage());
 }
 
-// 掛載到 window
 window.getSmartHomePage = getSmartHomePage;
 window.navigateTo = navigateTo;
 window.switchToAdminMode = switchToAdminMode;
