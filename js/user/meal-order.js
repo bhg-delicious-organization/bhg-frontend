@@ -13,8 +13,33 @@ function loadMealOrderPage() {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
     showMessageModal('❌ 錯誤', '請先返回訂飯頁面載入學號');
+    navigateTo('user-meal');
     return;
   }
+
+  // ✅ 檢查時間
+  if (!isUserOrderTime()) {
+    let endTimeStr = '10:00';
+    if (TIME.ORDER_END >= 2400) {
+      endTimeStr = '全天候';
+    } else {
+      const hour = Math.floor(TIME.ORDER_END / 100);
+      const minute = TIME.ORDER_END % 100;
+      endTimeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+    }
+    showMessageModal('❌ 非點餐時間', `點餐時間為 08:00 - ${endTimeStr}`);
+    navigateTo('user-meal');
+    return;
+  }
+
+  // ✅ 檢查餐廳
+  const hasRestaurant = !!AppState.currentRestaurantName();
+  if (!hasRestaurant) {
+    showMessageModal('❌ 今日餐廳尚未設定', '請稍後再試');
+    navigateTo('user-meal');
+    return;
+  }
+
   loadTodayRestaurantForOrder();
   loadOrderMealsList();
 }
