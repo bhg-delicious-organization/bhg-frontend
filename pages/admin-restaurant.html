@@ -21,17 +21,15 @@
 
             <div class="form-group">
                 <label class="form-label">點餐截止時間</label>
-                <select id="orderEndTimeSelect" class="form-control">
-                    <option value="900">09:00</option>
-                    <option value="930">09:30</option>
-                    <option value="1000" selected>10:00（預設）</option>
-                    <option value="1030">10:30</option>
-                    <option value="1100">11:00</option>
-                    <option value="1130">11:30</option>
-                    <option value="1200">12:00</option>
-                    <option value="2359">🌐 全天候（測試用，23:59 截止）</option>
-                </select>
-                <div class="form-text">使用者需在此時間前完成點餐</div>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 60px;" onclick="setEndTimeQuick(930)">09:30</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 60px;" onclick="setEndTimeQuick(1000)">10:00</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 60px;" onclick="setEndTimeQuick(1200)">12:00</button>
+                    <button type="button" class="btn btn-secondary" style="flex: 1; min-width: 60px;" onclick="setEndTimeQuick(1800)">18:00</button>
+                    <button type="button" class="btn btn-warning" style="flex: 1; min-width: 60px;" onclick="setEndTimeQuick(2400)">🌐 全天候</button>
+                </div>
+                <input type="number" id="orderEndTimeInput" class="form-control" placeholder="輸入 HHMM（例如 1000）" value="1000" min="0" max="2400">
+                <div class="form-text">格式 HHMM（0930 = 09:30，2400 = 全天候）</div>
             </div>
 
             <button class="btn btn-primary" onclick="setTodayRestaurant(event)">
