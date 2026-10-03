@@ -5,8 +5,18 @@
 
 /**
  * 切換推播訂閱狀態
+ * @param {Event} [event] - 按鈕點擊事件（可選）
  */
-async function toggleNotifications() {
+async function toggleNotifications(event) {
+  const btn = event ? event.currentTarget : null;
+
+  // 手動 disable，不替換 innerHTML
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+    btn.style.pointerEvents = 'none';
+  }
+
   try {
     if (!window.OneSignal) {
       showMessageModal('❌ 錯誤', 'OneSignal 尚未載入，請重新整理頁面');
@@ -22,15 +32,15 @@ async function toggleNotifications() {
     if (isSubscribed) {
       // 取消訂閱
       const subId = OneSignal.User.PushSubscription.id;
-      
+
       await OneSignal.User.PushSubscription.optOut();
-      
+
       // 從後端移除
       if (subId) {
         await callApi('removeSubscription', { subscriptionId: subId });
         console.log('📤 已從後端移除訂閱');
       }
-      
+
       showMessageModal('🔕 已關閉通知', '您將不會收到推播通知');
     } else {
       // 訂閱
@@ -40,7 +50,7 @@ async function toggleNotifications() {
       const subId = OneSignal.User.PushSubscription.id;
       const studentId = AppState.currentStudentId();
 
-      // ✅ 上報訂閱 ID 到後端
+      // 上報訂閱 ID 到後端
       if (subId) {
         const result = await callApi('saveSubscription', {
           subscriptionId: subId,
@@ -56,6 +66,13 @@ async function toggleNotifications() {
   } catch (error) {
     console.error('切換通知失敗:', error);
     showMessageModal('❌ 錯誤', '操作失敗，請稍後再試');
+  } finally {
+    // 恢復按鈕狀態
+    if (btn) {
+      btn.disabled = false;
+      btn.style.opacity = '';
+      btn.style.pointerEvents = '';
+    }
   }
 }
 
@@ -106,7 +123,7 @@ async function checkSubscriptionStatus() {
     const isSubscribed = OneSignal.User.PushSubscription.optedIn;
     console.log('🔔 推播訂閱狀態:', isSubscribed ? '已訂閱' : '未訂閱');
 
-    // ✅ 若已訂閱，自動上報訂閱 ID
+    // 若已訂閱，自動上報訂閱 ID
     if (isSubscribed) {
       const subId = OneSignal.User.PushSubscription.id;
       const studentId = AppState.currentStudentId();
