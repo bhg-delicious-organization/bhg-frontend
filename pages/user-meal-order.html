@@ -23,17 +23,24 @@
                 <option value="">請先選擇分類</option>
             </select>
 
-            <button class="btn btn-success" onclick="addOrderRestaurantMeal(event)" style="width: 100%;">
+            <button class="btn btn-success" onclick="addOrderRestaurantMeal()" style="width: 100%;">
                 <i class="fas fa-plus"></i> 加入今日特選餐廳餐點
             </button>
         </div>
 
-        <!-- 已點餐點列表 -->
+        <!-- 已點餐點列表（購物車） -->
         <div class="admin-section" style="margin-top: 15px;">
             <h3>📋 您今天的餐點</h3>
             <div id="orderMealsList">
                 載入中...
             </div>
+        </div>
+
+        <!-- 確認送出按鈕 -->
+        <div style="margin-top: 16px;">
+            <button id="submitOrderBtn" class="btn btn-primary" onclick="submitOrder(event)" style="width: 100%;">
+                <i class="fas fa-check-circle"></i> 確認送出
+            </button>
         </div>
     </div>
 </div>
