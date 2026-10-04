@@ -1,12 +1,15 @@
 // ==================== meal-order.js ====================
-// 使用者點餐頁面模組
+// 使用者點餐頁面模組（購物車模式）
 // 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js、time.js
 // ==================================================
 
-let currentRestaurantCategories = [];
-let currentRestaurantItems = [];
+let menuCache = null;   // 整個餐廳菜單（分類 + 餐點）
+let cart = [];          // 購物車
 
-function loadMealOrderPage() {
+/**
+ * 載入點餐頁面
+ */
+async function loadMealOrderPage() {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
     showMessageModal('❌ 錯誤', '請先返回訂飯頁面載入學號');
@@ -14,7 +17,6 @@ function loadMealOrderPage() {
     return;
   }
 
-  // ✅ 動態時間範圍
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
     showMessageModal('❌ 非點餐時間', `點餐時間為 ${timeRange}`);
@@ -22,147 +24,150 @@ function loadMealOrderPage() {
     return;
   }
 
-  // ✅ 檢查餐廳
-  const hasRestaurant = !!AppState.currentRestaurantName();
-  if (!hasRestaurant) {
+  const restaurantName = AppState.currentRestaurantName();
+  if (!restaurantName) {
     showMessageModal('❌ 今日餐廳尚未設定', '請稍後再試');
     navigateTo('user-meal');
     return;
   }
 
-  loadTodayRestaurantForOrder();
-  loadOrderMealsList();
-}
-
-async function loadTodayRestaurantForOrder() {
+  // 顯示餐廳名稱
   const restaurantNameEl = document.getElementById('orderTodayRestaurantName');
-  const categorySelect = document.getElementById('orderRestaurantCategorySelect');
+  if (restaurantNameEl) {
+    restaurantNameEl.innerHTML = `<strong style="color: var(--secondary);">${escapeHtml(restaurantName)}</strong>`;
+  }
 
-  if (restaurantNameEl) restaurantNameEl.innerHTML = '<span style="color: var(--gray);">🔍 調查中...</span>';
-  if (categorySelect) categorySelect.innerHTML = '<option value="">🔍 調查中...</option>';
+  // 重置購物車
+  cart = [];
+  menuCache = null;
 
-  const result = await callApi('getTodayRestaurant', {});
+  // 顯示載入中
+  showConanLoading('orderMealsList', 'getRestaurantMenu');
 
-  if (result.success && result.restaurant) {
-    if (restaurantNameEl) {
-      restaurantNameEl.innerHTML = `<strong style="color: var(--secondary);">${escapeHtml(result.restaurant)}</strong>`;
+  // 並行載入：菜單 + 已點餐點
+  const [menuResult, mealsResult] = await Promise.all([
+    callApi('getRestaurantMenu', { restaurantName: restaurantName }),
+    callApi('getUserTodayMeals', { userId: studentId })
+  ]);
+
+  // 處理菜單
+  if (!menuResult.success) {
+    const container = document.getElementById('orderMealsList');
+    if (container) {
+      container.innerHTML = `<div class="message error">❌ ${escapeHtml(menuResult.message || '載入菜單失敗')}</div>`;
     }
-    loadRestaurantCategories(result.restaurant);
-  } else {
-    if (restaurantNameEl) restaurantNameEl.innerHTML = '<span style="color: var(--danger);">今日餐廳尚未設定</span>';
-    if (categorySelect) categorySelect.innerHTML = '<option value="">無餐廳</option>';
-  }
-}
-
-async function loadRestaurantCategories(restaurantName) {
-  const categorySelect = document.getElementById('orderRestaurantCategorySelect');
-  if (!categorySelect) return;
-
-  const result = await callApi('getRestaurantCategories', {
-    restaurantName: restaurantName
-  });
-
-  if (result.success && result.categories && result.categories.length > 0) {
-    currentRestaurantCategories = result.categories;
-    categorySelect.innerHTML = '<option value="">請選擇分類</option>';
-    result.categories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat.col;
-      option.textContent = cat.name;
-      categorySelect.appendChild(option);
-    });
-  } else {
-    categorySelect.innerHTML = '<option value="">無分類資料</option>';
-  }
-}
-
-async function onRestaurantCategoryChange() {
-  const categorySelect = document.getElementById('orderRestaurantCategorySelect');
-  const itemSelect = document.getElementById('orderRestaurantItemSelect');
-  const selectedCol = categorySelect ? categorySelect.value : '';
-
-  if (!selectedCol) {
-    if (itemSelect) itemSelect.innerHTML = '<option value="">請先選擇分類</option>';
-    currentRestaurantItems = [];
     return;
   }
 
-  const restaurantName = document.getElementById('orderTodayRestaurantName')?.innerText || '';
-  if (itemSelect) itemSelect.innerHTML = '<option value="">載入中...</option>';
+  menuCache = menuResult;
+  renderCategorySelect(menuResult.categories);
 
-  const result = await callApi('getCategoryItems', {
-    restaurantName: restaurantName,
-    categoryCol: parseInt(selectedCol)
+  // 處理已點餐點 → 初始化購物車
+  if (mealsResult.success && mealsResult.meals && mealsResult.meals.length > 0) {
+    cart = mealsResult.meals.map(meal => ({
+      category: meal.category,
+      name: meal.name,
+      price: meal.cost,
+      amount: meal.amount
+    }));
+  }
+
+  renderCart();
+}
+
+/**
+ * 渲染分類下拉選單
+ */
+function renderCategorySelect(categories) {
+  const select = document.getElementById('orderRestaurantCategorySelect');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">請選擇分類</option>';
+  categories.forEach((cat, idx) => {
+    const option = document.createElement('option');
+    option.value = idx;
+    option.textContent = cat.name;
+    select.appendChild(option);
   });
 
-  if (result.success && result.items && result.items.length > 0) {
-    currentRestaurantItems = result.items;
-    if (itemSelect) {
-      itemSelect.innerHTML = '<option value="">請選擇餐點</option>';
-      result.items.forEach(item => {
-        const option = document.createElement('option');
-        option.value = JSON.stringify({ name: item.name, price: item.price });
-        option.textContent = `${item.name} - $${item.price}`;
-        itemSelect.appendChild(option);
-      });
-    }
-  } else {
-    if (itemSelect) itemSelect.innerHTML = '<option value="">無餐點資料</option>';
-    currentRestaurantItems = [];
+  // 重置餐點下拉
+  const itemSelect = document.getElementById('orderRestaurantItemSelect');
+  if (itemSelect) {
+    itemSelect.innerHTML = '<option value="">請先選擇分類</option>';
   }
 }
 
-async function addOrderRestaurantMeal(event) {
-  const btn = event ? event.currentTarget : null;
-  if (btn) setButtonLoading(btn, true);
-
-  const studentId = AppState.currentStudentId();
-  const categorySelect = document.getElementById('orderRestaurantCategorySelect');
+/**
+ * 分類變更 → 渲染餐點下拉選單
+ */
+function onRestaurantCategoryChange() {
+  const select = document.getElementById('orderRestaurantCategorySelect');
   const itemSelect = document.getElementById('orderRestaurantItemSelect');
-  const restaurantName = document.getElementById('orderTodayRestaurantName')?.innerText || '';
+  if (!select || !itemSelect) return;
 
-  if (!categorySelect || !itemSelect || !categorySelect.value || !itemSelect.value) {
+  const idx = select.value;
+  if (idx === '') {
+    itemSelect.innerHTML = '<option value="">請先選擇分類</option>';
+    return;
+  }
+
+  const category = menuCache.categories[parseInt(idx)];
+  itemSelect.innerHTML = '<option value="">請選擇餐點</option>';
+
+  category.items.forEach((item, itemIdx) => {
+    const option = document.createElement('option');
+    option.value = itemIdx;
+    option.textContent = `${item.name} - $${item.price}`;
+    itemSelect.appendChild(option);
+  });
+}
+
+/**
+ * 加入餐點到購物車
+ */
+function addOrderRestaurantMeal() {
+  const catSelect = document.getElementById('orderRestaurantCategorySelect');
+  const itemSelect = document.getElementById('orderRestaurantItemSelect');
+
+  if (!catSelect || !itemSelect) return;
+
+  const catIdx = catSelect.value;
+  const itemIdx = itemSelect.value;
+
+  if (catIdx === '' || itemIdx === '') {
     showMessageModal('❌ 輸入錯誤', '請選擇分類和餐點');
-    if (btn) setButtonLoading(btn, false);
     return;
   }
 
-  const selectedCategory = categorySelect.options[categorySelect.selectedIndex];
-  const selectedItem = itemSelect.options[itemSelect.selectedIndex];
-  const itemData = JSON.parse(selectedItem.value);
+  const category = menuCache.categories[parseInt(catIdx)];
+  const item = category.items[parseInt(itemIdx)];
 
-  const result = await callApi('saveUserMeal', {
-    userId: studentId,
-    store: restaurantName,
-    category: selectedCategory.text,
-    mealName: itemData.name,
-    price: itemData.price,
-    amount: 1
-  });
+  // 檢查購物車有沒有同樣的餐點
+  const existing = cart.find(c => c.name === item.name && c.category === category.name);
 
-  if (btn) setButtonLoading(btn, false);
-
-  if (result.success) {
-    showMessageModal('✅ 加入成功', result.message);
-    loadOrderMealsList();
+  if (existing) {
+    existing.amount += 1;
   } else {
-    showMessageModal('❌ 加入失敗', result.message);
+    cart.push({
+      category: category.name,
+      name: item.name,
+      price: item.price,
+      amount: 1
+    });
   }
+
+  renderCart();
+  showMessageModal('✅ 已加入', `${item.name} x1`);
 }
 
-async function loadOrderMealsList() {
-  const studentId = AppState.currentStudentId();
+/**
+ * 渲染購物車
+ */
+function renderCart() {
   const container = document.getElementById('orderMealsList');
-
-  if (container) {
-    showConanLoading('orderMealsList', 'getUserTodayMeals');
-  }
-
-  const result = await callApi('getUserTodayMeals', { userId: studentId });
-
   if (!container) return;
 
-  if (!result.success || result.meals.length === 0) {
+  if (cart.length === 0) {
     container.innerHTML = '<p style="color: var(--gray);">尚未點餐</p>';
     return;
   }
@@ -170,28 +175,27 @@ async function loadOrderMealsList() {
   let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
   let grandTotal = 0;
 
-  result.meals.forEach(meal => {
-    // ✅ 前端自己算 total（不依賴公式）
-    const total = (meal.amount || 0) * (meal.cost || 0);
+  cart.forEach((item, idx) => {
+    const total = item.amount * item.price;
     grandTotal += total;
 
     html += `
-      <div class="meal-item" data-slot="${meal.slotIndex}"
+      <div class="meal-item" data-idx="${idx}"
            style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8f9fa; border-radius: 8px;">
         <div>
-          <strong>${escapeHtml(meal.name)}</strong>
-          <span style="color: var(--gray); font-size: 0.85rem;"> x${meal.amount}</span>
+          <strong>${escapeHtml(item.name)}</strong>
+          <span style="color: var(--gray); font-size: 0.85rem;"> x${item.amount}</span>
           <div style="font-size: 0.8rem; color: var(--gray);">
-            ${escapeHtml(meal.category)} - $${meal.cost}元/份
+            ${escapeHtml(item.category)} - $${item.price}元/份
           </div>
         </div>
         <div>
           <span style="font-weight: bold;">$${total}</span>
           <div style="display: flex; gap: 5px; margin-top: 5px;">
-            <button class="btn btn-secondary meal-adjust-btn" data-slot="${meal.slotIndex}" data-change="-1"
+            <button class="btn btn-secondary meal-adjust-btn" data-idx="${idx}" data-change="-1"
                     style="width: auto; padding: 2px 8px;">-</button>
-            <span style="min-width: 30px; text-align: center;">${meal.amount}</span>
-            <button class="btn btn-secondary meal-adjust-btn" data-slot="${meal.slotIndex}" data-change="1"
+            <span style="min-width: 30px; text-align: center;">${item.amount}</span>
+            <button class="btn btn-secondary meal-adjust-btn" data-idx="${idx}" data-change="1"
                     style="width: auto; padding: 2px 8px;">+</button>
           </div>
         </div>
@@ -201,7 +205,7 @@ async function loadOrderMealsList() {
 
   html += '</div>';
 
-  // ✅ 顯示總計
+  // 總計
   html += `
     <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -213,55 +217,78 @@ async function loadOrderMealsList() {
 
   container.innerHTML = html;
 
+  // 綁定 +/- 事件
   container.querySelectorAll('.meal-adjust-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
-      const slotIndex = parseInt(this.dataset.slot);
+      const idx = parseInt(this.dataset.idx);
       const change = parseInt(this.dataset.change);
-      const mealItem = this.closest('.meal-item');
-      const mealName = mealItem.querySelector('strong').textContent;
-      adjustMealQuantity(mealName, change, slotIndex, mealItem);
+      adjustCartItem(idx, change);
     });
   });
 }
 
-async function adjustMealQuantity(mealName, change, slotIndex, mealItem) {
-  const studentId = AppState.currentStudentId();
-  let originalTexts = [];
+/**
+ * 調整購物車數量
+ */
+function adjustCartItem(idx, change) {
+  if (idx < 0 || idx >= cart.length) return;
 
-  if (mealItem) {
-    const allButtons = mealItem.querySelectorAll('button');
-    allButtons.forEach((btn, idx) => {
-      originalTexts[idx] = btn.innerHTML;
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-      btn.disabled = true;
-    });
+  cart[idx].amount += change;
+
+  if (cart[idx].amount <= 0) {
+    cart.splice(idx, 1);
   }
 
-  const result = await callApi('adjustUserMealAmount', {
+  renderCart();
+}
+
+/**
+ * 確認送出訂單
+ */
+async function submitOrder(event) {
+  const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
+
+  if (cart.length === 0) {
+    showMessageModal('❌ 錯誤', '尚未點任何餐點');
+    return;
+  }
+
+  const studentId = AppState.currentStudentId();
+  const restaurantName = AppState.currentRestaurantName();
+
+  if (!studentId || !restaurantName) {
+    showMessageModal('❌ 錯誤', '資料不完整，請重新載入頁面');
+    return;
+  }
+
+  // 按鈕轉圈圈
+  if (btn) setButtonLoading(btn, true);
+
+  const result = await callApi('submitOrder', {
     userId: studentId,
-    mealName: mealName,
-    change: change
+    restaurant: restaurantName,
+    items: cart.map(item => ({
+      category: item.category,
+      name: item.name,
+      price: item.price,
+      amount: item.amount
+    }))
   });
 
-  if (mealItem) {
-    const allButtons = mealItem.querySelectorAll('button');
-    allButtons.forEach((btn, idx) => {
-      btn.innerHTML = originalTexts[idx];
-      btn.disabled = false;
-    });
-  }
+  if (btn) setButtonLoading(btn, false);
 
   if (result.success) {
-    loadOrderMealsList();
-    if (result.message) showMessageModal('✅ 更新成功', result.message);
+    showMessageModal('✅ 送出成功', result.message || `訂單已送出，總計 $${result.total || 0}`);
+    // 購物車維持（因為已寫入後端）
   } else {
-    showMessageModal('❌ 更新失敗', result.message);
+    showMessageModal('❌ 送出失敗', result.message || '請稍後再試');
   }
 }
 
 window.loadMealOrderPage = loadMealOrderPage;
 window.onRestaurantCategoryChange = onRestaurantCategoryChange;
 window.addOrderRestaurantMeal = addOrderRestaurantMeal;
+window.submitOrder = submitOrder;
 
 console.log('🍽️ 點餐模組已載入');
