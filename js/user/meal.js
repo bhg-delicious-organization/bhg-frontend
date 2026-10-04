@@ -27,6 +27,9 @@ async function loadMealInfo(event) {
 
   if (btn) setButtonLoading(btn, true);
 
+  // ✅ 確保時間限制已載入
+  await ensureTimeLimitsLoaded();
+
   const restaurantResult = await callApi('getTodayRestaurant', {});
   const hasRestaurant = restaurantResult.success && restaurantResult.restaurant;
 
@@ -65,7 +68,6 @@ async function loadMealInfo(event) {
 }
 
 async function updateMealBalanceDisplay(balance) {
-  // ✅ 改用 getUserTodayMeals，前端加總（避免依賴公式）
   const mealsResult = await callApi('getUserTodayMeals', {
     userId: AppState.currentStudentId()
   });
@@ -105,7 +107,6 @@ async function loadUserTodayMeals(studentId) {
 
   let html = '<h3>📋 今日餐點</h3>';
 
-  // ✅ 動態時間範圍
   const timeRange = getOrderTimeRange();
 
   if (currentTime < orderStart) {
@@ -244,7 +245,9 @@ async function enterMealOrderMode(event) {
     btn = document.querySelector('#mealSelection .btn-success');
   }
 
-  // ✅ 動態時間範圍
+  // ✅ 確保時間限制已載入
+  await ensureTimeLimitsLoaded();
+
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
     showMessageModal('❌ 非點餐時間', `點餐時間為 ${timeRange}`);
