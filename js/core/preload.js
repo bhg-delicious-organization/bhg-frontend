@@ -59,15 +59,35 @@ function waitForElement(elementId, timeout = 3000) {
   });
 }
 
+/**
+ * 基礎預載入（只等今日餐廳，時間限制背景跑）
+ * 用於需要「等今日餐廳才能決定首頁」的場景
+ */
 async function runBasePreload() {
   console.log('🚀 開始基礎預載入...');
+
+  // 只等今日餐廳
+  await preloadTodayRestaurant();
+
+  // 時間限制背景跑，不阻塞
+  preloadTimeLimits();
+
+  console.log('✅ 基礎預載入完成');
+}
+
+/**
+ * 完整預載入（會等全部完成）
+ * 用於背景執行，不阻塞畫面
+ */
+async function runFullPreload() {
+  console.log('🚀 開始完整預載入...');
 
   await Promise.all([
     preloadTimeLimits(),
     preloadTodayRestaurant()
   ]);
 
-  console.log('✅ 基礎預載入完成');
+  console.log('✅ 完整預載入完成');
 }
 
 async function runPagePreload(pageName) {
@@ -121,6 +141,7 @@ function setupPageLoadedListener() {
 window.preloadTimeLimits = preloadTimeLimits;
 window.preloadTodayRestaurant = preloadTodayRestaurant;
 window.runBasePreload = runBasePreload;
+window.runFullPreload = runFullPreload;
 window.runPagePreload = runPagePreload;
 window.setupPageLoadedListener = setupPageLoadedListener;
 window.waitForElement = waitForElement;
