@@ -287,10 +287,9 @@ async function initApp() {
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
-  // ✅ 先設定事件監聽（同步）
   setupPageLoadedListener();
 
-  // ✅ 背景跑完整預載入，不阻塞畫面
+  // 背景跑完整預載入，不阻塞畫面
   runFullPreload();
 
   const userNav = document.querySelector('.user-nav');
@@ -313,7 +312,6 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // ✅ 直接載入首頁，不等任何 API
     const studentId = AppState.currentStudentId();
     if (!studentId) {
       await navigateTo('user-register');
@@ -322,7 +320,14 @@ async function initApp() {
     }
   }
 
-  setTimeout(showTimeModeHint, 100);
+  // ✅ 等時間限制載入完成後，再顯示橫幅（最多等 3 秒）
+  Promise.race([
+    ensureTimeLimitsLoaded(),
+    new Promise(r => setTimeout(r, 3000))
+  ]).then(() => {
+    showTimeModeHint();
+  });
+
   setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
