@@ -77,9 +77,9 @@ const AppState = (function() {
       const old = _currentStudentId;
       _currentStudentId = id;
       if (id) {
-        sessionStorage.setItem('currentStudentId', id);
+        localStorage.setItem('currentStudentId', id);
       } else {
-        sessionStorage.removeItem('currentStudentId');
+        localStorage.removeItem('currentStudentId');
       }
       _notify('studentId', { old, new: id });
     },
@@ -118,7 +118,7 @@ const AppState = (function() {
         isLoggedIn = true;
       }
 
-      const savedStudentId = sessionStorage.getItem('currentStudentId');
+      const savedStudentId = localStorage.getItem('currentStudentId');
       if (savedStudentId) {
         _currentStudentId = savedStudentId;
       }
