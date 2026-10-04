@@ -3,8 +3,8 @@
 // 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js、time.js
 // ==================================================
 
-let menuCache = null;   // 整個餐廳菜單（分類 + 餐點）
-let cart = [];          // 購物車
+let menuCache = null;
+let cart = [];
 
 /**
  * 載入點餐頁面
@@ -16,6 +16,9 @@ async function loadMealOrderPage() {
     navigateTo('user-meal');
     return;
   }
+
+  // ✅ 確保時間限制已載入
+  await ensureTimeLimitsLoaded();
 
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
@@ -31,26 +34,21 @@ async function loadMealOrderPage() {
     return;
   }
 
-  // 顯示餐廳名稱
   const restaurantNameEl = document.getElementById('orderTodayRestaurantName');
   if (restaurantNameEl) {
     restaurantNameEl.innerHTML = `<strong style="color: var(--secondary);">${escapeHtml(restaurantName)}</strong>`;
   }
 
-  // 重置購物車
   cart = [];
   menuCache = null;
 
-  // 顯示載入中
   showConanLoading('orderMealsList', 'getRestaurantMenu');
 
-  // 並行載入：菜單 + 已點餐點
   const [menuResult, mealsResult] = await Promise.all([
     callApi('getRestaurantMenu', { restaurantName: restaurantName }),
     callApi('getUserTodayMeals', { userId: studentId })
   ]);
 
-  // 處理菜單
   if (!menuResult.success) {
     const container = document.getElementById('orderMealsList');
     if (container) {
@@ -62,7 +60,6 @@ async function loadMealOrderPage() {
   menuCache = menuResult;
   renderCategorySelect(menuResult.categories);
 
-  // 處理已點餐點 → 初始化購物車
   if (mealsResult.success && mealsResult.meals && mealsResult.meals.length > 0) {
     cart = mealsResult.meals.map(meal => ({
       category: meal.category,
@@ -75,9 +72,6 @@ async function loadMealOrderPage() {
   renderCart();
 }
 
-/**
- * 渲染分類下拉選單
- */
 function renderCategorySelect(categories) {
   const select = document.getElementById('orderRestaurantCategorySelect');
   if (!select) return;
@@ -90,16 +84,12 @@ function renderCategorySelect(categories) {
     select.appendChild(option);
   });
 
-  // 重置餐點下拉
   const itemSelect = document.getElementById('orderRestaurantItemSelect');
   if (itemSelect) {
     itemSelect.innerHTML = '<option value="">請先選擇分類</option>';
   }
 }
 
-/**
- * 分類變更 → 渲染餐點下拉選單
- */
 function onRestaurantCategoryChange() {
   const select = document.getElementById('orderRestaurantCategorySelect');
   const itemSelect = document.getElementById('orderRestaurantItemSelect');
@@ -122,9 +112,6 @@ function onRestaurantCategoryChange() {
   });
 }
 
-/**
- * 加入餐點到購物車
- */
 function addOrderRestaurantMeal() {
   const catSelect = document.getElementById('orderRestaurantCategorySelect');
   const itemSelect = document.getElementById('orderRestaurantItemSelect');
@@ -142,7 +129,6 @@ function addOrderRestaurantMeal() {
   const category = menuCache.categories[parseInt(catIdx)];
   const item = category.items[parseInt(itemIdx)];
 
-  // 檢查購物車有沒有同樣的餐點
   const existing = cart.find(c => c.name === item.name && c.category === category.name);
 
   if (existing) {
@@ -160,9 +146,6 @@ function addOrderRestaurantMeal() {
   showMessageModal('✅ 已加入', `${item.name} x1`);
 }
 
-/**
- * 渲染購物車
- */
 function renderCart() {
   const container = document.getElementById('orderMealsList');
   if (!container) return;
@@ -205,7 +188,6 @@ function renderCart() {
 
   html += '</div>';
 
-  // 總計
   html += `
     <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -217,7 +199,6 @@ function renderCart() {
 
   container.innerHTML = html;
 
-  // 綁定 +/- 事件
   container.querySelectorAll('.meal-adjust-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -228,9 +209,6 @@ function renderCart() {
   });
 }
 
-/**
- * 調整購物車數量
- */
 function adjustCartItem(idx, change) {
   if (idx < 0 || idx >= cart.length) return;
 
@@ -243,11 +221,16 @@ function adjustCartItem(idx, change) {
   renderCart();
 }
 
-/**
- * 確認送出訂單
- */
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
+
+  // ✅ 確保時間限制已載入
+  await ensureTimeLimitsLoaded();
+
+  if (!isUserOrderTime()) {
+    showMessageModal('❌ 非點餐時間', '點餐時間已過，無法送出');
+    return;
+  }
 
   if (cart.length === 0) {
     showMessageModal('❌ 錯誤', '尚未點任何餐點');
@@ -262,7 +245,6 @@ async function submitOrder(event) {
     return;
   }
 
-  // 按鈕轉圈圈
   if (btn) setButtonLoading(btn, true);
 
   const result = await callApi('submitOrder', {
@@ -280,7 +262,6 @@ async function submitOrder(event) {
 
   if (result.success) {
     showMessageModal('✅ 送出成功', result.message || `訂單已送出，總計 $${result.total || 0}`);
-    // 購物車維持（因為已寫入後端）
   } else {
     showMessageModal('❌ 送出失敗', result.message || '請稍後再試');
   }
