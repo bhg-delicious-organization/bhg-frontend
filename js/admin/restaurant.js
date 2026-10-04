@@ -1,19 +1,13 @@
 // ==================== restaurant.js ====================
 // 管理員餐廳管理模組
 // 依賴：api.js、state.js、ui.js、common.js、core.js
-// ====================================================
+// ==================================================
 
-/**
- * 快捷設定截止時間
- */
 function setEndTimeQuick(time) {
   const input = document.getElementById('orderEndTimeInput');
   if (input) input.value = time;
 }
 
-/**
- * 格式化時間
- */
 function formatTimeStr(time) {
   if (Number(time) >= 2400) return '全天候';
   const hour = Math.floor(time / 100);
@@ -21,9 +15,6 @@ function formatTimeStr(time) {
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 }
 
-/**
- * 載入今日餐廳設定狀態
- */
 async function loadTodayRestaurantStatus() {
   const statusDiv = document.getElementById('todayRestaurantStatus');
   const selectContainer = document.getElementById('restaurantSelectContainer');
@@ -31,10 +22,12 @@ async function loadTodayRestaurantStatus() {
 
   if (!statusDiv || !statusText) return;
 
+  // ✅ 確保時間限制已載入
+  await ensureTimeLimitsLoaded();
+
   const result = await callApi('getTodayRestaurant', {});
 
   if (result.success && result.restaurant) {
-    // 已設定 → 顯示餐廳 + 截止時間
     let endTimeStr = '10:00';
     try {
       const limitsResult = await callApi('getTimeLimits', {});
@@ -50,7 +43,6 @@ async function loadTodayRestaurantStatus() {
     statusDiv.style.borderLeftColor = '#10b981';
     if (selectContainer) selectContainer.style.display = 'none';
   } else {
-    // 未設定 → 顯示選擇介面
     statusText.innerHTML = `⏳ 今日餐廳尚未設定，請選擇：`;
     statusDiv.style.backgroundColor = '#fff7ed';
     statusDiv.style.borderLeftColor = '#f97316';
@@ -59,9 +51,6 @@ async function loadTodayRestaurantStatus() {
   }
 }
 
-/**
- * 載入餐廳選項
- */
 async function loadRestaurantOptions() {
   const select = document.getElementById('restaurantSelect');
   if (!select) return;
@@ -83,9 +72,6 @@ async function loadRestaurantOptions() {
   }
 }
 
-/**
- * 設定今日餐廳 + 截止時間
- */
 async function setTodayRestaurant(event) {
   const select = document.getElementById('restaurantSelect');
   const endTimeInput = document.getElementById('orderEndTimeInput');
@@ -112,9 +98,6 @@ async function setTodayRestaurant(event) {
   );
 }
 
-/**
- * 實際執行設定
- */
 async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
@@ -142,9 +125,6 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   }
 }
 
-/**
- * 顯示今日餐廳統計
- */
 async function showTodayRestaurantStats(event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
@@ -180,9 +160,6 @@ async function showTodayRestaurantStats(event) {
   if (resultDiv) resultDiv.innerHTML = html;
 }
 
-/**
- * 複製餐廳統計文字
- */
 async function copyRestaurantStatsList(event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
@@ -203,9 +180,6 @@ async function copyRestaurantStatsList(event) {
   }
 }
 
-/**
- * 管理員截止訂餐
- */
 function cutOffOrder() {
   showConfirmModal(
     '⚠️ 截止訂餐',
