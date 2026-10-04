@@ -287,8 +287,11 @@ async function initApp() {
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
-  await runBasePreload();
+  // ✅ 先設定事件監聽（同步）
   setupPageLoadedListener();
+
+  // ✅ 背景跑完整預載入，不阻塞畫面
+  runFullPreload();
 
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
@@ -310,7 +313,13 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    await navigateTo(getSmartHomePage());
+    // ✅ 直接載入首頁，不等任何 API
+    const studentId = AppState.currentStudentId();
+    if (!studentId) {
+      await navigateTo('user-register');
+    } else {
+      await navigateTo('user-query');
+    }
   }
 
   setTimeout(showTimeModeHint, 100);
