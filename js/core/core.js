@@ -289,13 +289,11 @@ async function initApp() {
 
   setupPageLoadedListener();
 
-  // 背景跑完整預載入，不阻塞畫面
-  runFullPreload();
-
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
 
   if (isLoggedIn) {
+    // ========== 管理員模式 ==========
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
 
@@ -303,8 +301,13 @@ async function initApp() {
     if (statusText) statusText.textContent = '已登入';
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
+
+    // ✅ 等時間限制載入完成，確保管理員頁面判斷正確
+    await ensureTimeLimitsLoaded();
+
     switchToAdminMode();
   } else {
+    // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
 
@@ -312,21 +315,23 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
+    // ✅ 等時間限制 + 今日餐廳載入完成
+    await Promise.all([
+      ensureTimeLimitsLoaded(),
+      ensureTodayRestaurantLoaded()
+    ]);
+
+    // ✅ 根據狀態決定跳哪一頁
     const studentId = AppState.currentStudentId();
     if (!studentId) {
       await navigateTo('user-register');
     } else {
-      await navigateTo('user-query');
+      await navigateTo(getSmartHomePage());
     }
   }
 
-  // ✅ 等時間限制載入完成後，再顯示橫幅（最多等 3 秒）
-  Promise.race([
-    ensureTimeLimitsLoaded(),
-    new Promise(r => setTimeout(r, 3000))
-  ]).then(() => {
-    showTimeModeHint();
-  });
+  // ✅ 顯示橫幅（此時 TIME 已正確）
+  showTimeModeHint();
 
   setTimeout(initEnterKeyBindings, 500);
 
