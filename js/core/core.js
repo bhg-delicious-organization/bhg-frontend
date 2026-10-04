@@ -3,7 +3,7 @@
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js
 // ==================================================
 
-let navHidden = false;
+window.navHidden = false;
 let lastScrollY = window.scrollY;
 
 function bindEnterKey(element, callback) {
@@ -178,9 +178,9 @@ function toggleNav() {
   const btn = document.getElementById('navToggleBtn');
   if (!nav || !btn) return;
 
-  navHidden = !navHidden;
-  nav.classList.toggle('hidden', navHidden);
-  btn.classList.toggle('nav-hidden', navHidden);
+  window.navHidden = !window.navHidden;
+  nav.classList.toggle('hidden', window.navHidden);
+  btn.classList.toggle('nav-hidden', window.navHidden);
 }
 
 function initAutoHideNav() {
@@ -193,14 +193,14 @@ function initAutoHideNav() {
     const btn = document.getElementById('navToggleBtn');
     if (!nav || !btn) return;
 
-    if (currentScrollY > lastScrollY + 10 && !navHidden) {
+    if (currentScrollY > lastScrollY + 10 && !window.navHidden) {
       nav.classList.add('hidden');
       btn.classList.add('nav-hidden');
-      navHidden = true;
-    } else if (currentScrollY < lastScrollY - 10 && navHidden) {
+      window.navHidden = true;
+    } else if (currentScrollY < lastScrollY - 10 && window.navHidden) {
       nav.classList.remove('hidden');
       btn.classList.remove('nav-hidden');
-      navHidden = false;
+      window.navHidden = false;
     }
 
     lastScrollY = currentScrollY;
