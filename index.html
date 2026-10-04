@@ -20,13 +20,20 @@
     <meta name="apple-mobile-web-app-title" content="便當廠">
     <link rel="apple-touch-icon" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
 
-    <!-- OneSignal SDK（指定最新版） -->
+    <!-- OneSignal SDK（非阻斷） -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.es6.js" defer></script>
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Font Awesome（非阻斷載入） -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          media="print"
+          onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </noscript>
 
-    <!-- 樣式表 -->
+    <!-- 主要樣式表（必須阻斷，否則畫面全亂） -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -247,39 +254,39 @@
     </div>
 
     <!-- ==================== JavaScript 核心模組 ==================== -->
-    <script src="api.js"></script>
-    <script src="js/core/state.js"></script>
-    <script src="js/core/ui.js"></script>
-    <script src="js/core/time.js"></script>
-    <script src="js/core/common.js"></script>
-    <script src="js/core/navigation.js"></script>
-    <script src="js/core/preload.js"></script>
-    <script src="js/core/quick-id.js"></script>
-    <script src="js/core/core.js"></script>
-
+    <script src="api.js" defer></script>
+    <script src="js/core/state.js" defer></script>
+    <script src="js/core/ui.js" defer></script>
+    <script src="js/core/time.js" defer></script>
+    <script src="js/core/common.js" defer></script>
+    <script src="js/core/navigation.js" defer></script>
+    <script src="js/core/preload.js" defer></script>
+    <script src="js/core/quick-id.js" defer></script>
+    <script src="js/core/core.js" defer></script>
+    
     <!-- ==================== 使用者模組 ==================== -->
-    <script src="js/user/query.js"></script>
-    <script src="js/user/register.js"></script>
-    <script src="js/user/gift.js"></script>
-    <script src="js/user/changepwd.js"></script>
-    <script src="js/user/account.js"></script>
-    <script src="js/user/meal.js"></script>
-    <script src="js/user/meal-order.js"></script>
-
+    <script src="js/user/query.js" defer></script>
+    <script src="js/user/register.js" defer></script>
+    <script src="js/user/gift.js" defer></script>
+    <script src="js/user/changepwd.js" defer></script>
+    <script src="js/user/account.js" defer></script>
+    <script src="js/user/meal.js" defer></script>
+    <script src="js/user/meal-order.js" defer></script>
+    
     <!-- ==================== 管理員模組 ==================== -->
-    <script src="js/admin/auth.js"></script>
-    <script src="js/admin/restaurant.js"></script>
-    <script src="js/admin/gift.js"></script>
-    <script src="js/admin/recharge.js"></script>
-    <script src="js/admin/query.js"></script>
-    <script src="js/admin/analytics.js"></script>
-    <script src="js/admin/orders.js"></script>
-    <script src="js/admin/users.js"></script>
-    <script src="js/admin/deduct.js"></script>
-
+    <script src="js/admin/auth.js" defer></script>
+    <script src="js/admin/restaurant.js" defer></script>
+    <script src="js/admin/gift.js" defer></script>
+    <script src="js/admin/recharge.js" defer></script>
+    <script src="js/admin/query.js" defer></script>
+    <script src="js/admin/analytics.js" defer></script>
+    <script src="js/admin/orders.js" defer></script>
+    <script src="js/admin/users.js" defer></script>
+    <script src="js/admin/deduct.js" defer></script>
+    
     <!-- ==================== 共用模組 ==================== -->
-    <script src="js/shared/notify.js"></script>
-    <script src="js/shared/tutorial.js"></script>
+    <script src="js/shared/notify.js" defer></script>
+    <script src="js/shared/tutorial.js" defer></script>
 
     <!-- ==================== 新手教學浮層 ==================== -->
     <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
