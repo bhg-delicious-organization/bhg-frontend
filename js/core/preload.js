@@ -3,40 +3,72 @@
 // 依賴：api.js、state.js、time.js、core.js
 // ==================================================
 
+// ==================== 單例保護：時間限制 ====================
+
+let _timeLimitsLoaded = false;
+let _timeLimitsPromise = null;
+
 async function preloadTimeLimits() {
-  console.log('⏰ 預載入時間限制...');
-  try {
-    const result = await callApi('getTimeLimits', {});
-    if (result && result.success && result.limits) {
-      TIME.ORDER_START = result.limits.ORDER_START;
-      TIME.ORDER_END = result.limits.ORDER_END;
-      TIME.ADMIN_START = result.limits.ADMIN_RESTAURANT_START;
-      TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
-      TIME.RATING_START = result.limits.RATING_START;
-      TIME.RATING_END = result.limits.RATING_END;
-      console.log('✅ 時間限制已同步:', TIME);
-      console.log('   點餐時間範圍:', getOrderTimeRange());
+  if (_timeLimitsLoaded) return;
+  if (_timeLimitsPromise) return _timeLimitsPromise;
+
+  _timeLimitsPromise = (async () => {
+    console.log('⏰ 預載入時間限制...');
+    try {
+      const result = await callApi('getTimeLimits', {});
+      if (result && result.success && result.limits) {
+        TIME.ORDER_START = result.limits.ORDER_START;
+        TIME.ORDER_END = result.limits.ORDER_END;
+        TIME.ADMIN_START = result.limits.ADMIN_RESTAURANT_START;
+        TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
+        TIME.RATING_START = result.limits.RATING_START;
+        TIME.RATING_END = result.limits.RATING_END;
+        console.log('✅ 時間限制已同步:', TIME);
+        console.log('   點餐時間範圍:', getOrderTimeRange());
+        _timeLimitsLoaded = true;
+      }
+    } catch (error) {
+      console.warn('預載入時間限制失敗，使用預設值:', error);
+    } finally {
+      _timeLimitsPromise = null;
     }
-  } catch (error) {
-    console.warn('預載入時間限制失敗，使用預設值:', error);
-  }
+  })();
+
+  return _timeLimitsPromise;
 }
 
+// ==================== 單例保護：今日餐廳 ====================
+
+let _todayRestaurantLoaded = false;
+let _todayRestaurantPromise = null;
+
 async function preloadTodayRestaurant() {
-  console.log('📡 預載入今日餐廳...');
-  try {
-    const result = await callApi('getTodayRestaurant', {});
-    if (result && result.success) {
-      AppState.setCurrentRestaurantName(result.restaurant);
-      console.log('✅ 今日餐廳已快取:', result.restaurant);
-    } else {
-      console.log('ℹ️ 今日餐廳尚未設定');
-      AppState.setCurrentRestaurantName('');
+  if (_todayRestaurantLoaded) return;
+  if (_todayRestaurantPromise) return _todayRestaurantPromise;
+
+  _todayRestaurantPromise = (async () => {
+    console.log('📡 預載入今日餐廳...');
+    try {
+      const result = await callApi('getTodayRestaurant', {});
+      if (result && result.success) {
+        AppState.setCurrentRestaurantName(result.restaurant);
+        console.log('✅ 今日餐廳已快取:', result.restaurant);
+      } else {
+        console.log('ℹ️ 今日餐廳尚未設定');
+        AppState.setCurrentRestaurantName('');
+      }
+      _todayRestaurantLoaded = true;
+    } catch (error) {
+      console.warn('預載入今日餐廳失敗:', error);
+    } finally {
+      _todayRestaurantPromise = null;
     }
-  } catch (error) {
-    console.warn('預載入今日餐廳失敗:', error);
-  }
+  })();
+
+  return _todayRestaurantPromise;
 }
+
+// ==================== 其他工具 ====================
 
 function waitForElement(elementId, timeout = 3000) {
   return new Promise((resolve, reject) => {
@@ -59,30 +91,21 @@ function waitForElement(elementId, timeout = 3000) {
   });
 }
 
-/**
- * 基礎預載入（只等今日餐廳，時間限制背景跑）
- */
+// ==================== 預載入流程 ====================
+
 async function runBasePreload() {
   console.log('🚀 開始基礎預載入...');
-
   await preloadTodayRestaurant();
   preloadTimeLimits();
-
   console.log('✅ 基礎預載入完成');
 }
 
-/**
- * 完整預載入（會等全部完成）
- * 用於背景執行，不阻塞畫面
- */
 async function runFullPreload() {
   console.log('🚀 開始完整預載入...');
-
   await Promise.all([
     preloadTimeLimits(),
     preloadTodayRestaurant()
   ]);
-
   console.log('✅ 完整預載入完成');
 }
 
@@ -134,29 +157,14 @@ function setupPageLoadedListener() {
   console.log('✅ 已監聽 pageLoaded 事件');
 }
 
-// ==================== 確保時間限制已載入 ====================
+// ==================== 對外接口 ====================
 
-let _timeLimitsLoaded = false;
-let _timeLimitsPromise = null;
-
-/**
- * 確保時間限制已載入（只會載入一次）
- * 用於需要「精確時間判斷」的地方
- */
 async function ensureTimeLimitsLoaded() {
-  if (_timeLimitsLoaded) return;
-  if (_timeLimitsPromise) return _timeLimitsPromise;
+  await preloadTimeLimits();
+}
 
-  _timeLimitsPromise = (async () => {
-    try {
-      await preloadTimeLimits();
-      _timeLimitsLoaded = true;
-    } catch (e) {
-      console.warn('載入時間限制失敗:', e);
-    }
-  })();
-
-  return _timeLimitsPromise;
+async function ensureTodayRestaurantLoaded() {
+  await preloadTodayRestaurant();
 }
 
 window.preloadTimeLimits = preloadTimeLimits;
@@ -167,5 +175,6 @@ window.runPagePreload = runPagePreload;
 window.setupPageLoadedListener = setupPageLoadedListener;
 window.waitForElement = waitForElement;
 window.ensureTimeLimitsLoaded = ensureTimeLimitsLoaded;
+window.ensureTodayRestaurantLoaded = ensureTodayRestaurantLoaded;
 
 console.log('📦 預載入模組已載入');
