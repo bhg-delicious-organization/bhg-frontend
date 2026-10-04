@@ -25,7 +25,7 @@ function getSmartHomePage() {
     return 'user-register';
   }
 
-  // ✅ 三個 AND 條件
+  // 三個 AND 條件
   const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
   const hasRestaurant = !!AppState.currentRestaurantName();
 
@@ -175,7 +175,7 @@ function switchToAdminMode() {
   if (adminNav) { adminNav.style.display = 'flex'; adminNav.classList.remove('hidden'); }
   if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
 
-  if (typeof navHidden !== 'undefined') window.navHidden = false;
+  window.navHidden = false;
 
   navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 }
@@ -196,7 +196,7 @@ function switchToUserMode() {
   if (userNav) { userNav.style.display = 'flex'; userNav.classList.remove('hidden'); }
   if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
 
-  if (typeof navHidden !== 'undefined') window.navHidden = false;
+  window.navHidden = false;
 
   navigateTo(getSmartHomePage());
 }
