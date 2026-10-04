@@ -22,7 +22,42 @@ const URLS_TO_CACHE = [
   './js/core/quick-id.js',
   './js/core/core.js',
   './js/shared/notify.js',
-  './js/shared/tutorial.js'
+  './js/shared/tutorial.js',
+  // 頁面片段
+  './pages/admin-account.html',
+  './pages/admin-analytics.html',
+  './pages/admin-batch-deduct.html',
+  './pages/admin-giftcode.html',
+  './pages/admin-orders.html',
+  './pages/admin-query.html',
+  './pages/admin-restaurant.html',
+  './pages/admin-users.html',
+  './pages/user-account.html',
+  './pages/user-changepwd.html',
+  './pages/user-meal-order.html',
+  './pages/user-meal.html',
+  './pages/user-query.html',
+  './pages/user-recharge.html',
+  './pages/user-register.html',
+  './pages/user-system.html',
+  // 使用者模組
+  './js/user/query.js',
+  './js/user/register.js',
+  './js/user/gift.js',
+  './js/user/changepwd.js',
+  './js/user/account.js',
+  './js/user/meal.js',
+  './js/user/meal-order.js',
+  // 管理員模組
+  './js/admin/auth.js',
+  './js/admin/restaurant.js',
+  './js/admin/gift.js',
+  './js/admin/recharge.js',
+  './js/admin/query.js',
+  './js/admin/analytics.js',
+  './js/admin/orders.js',
+  './js/admin/users.js',
+  './js/admin/deduct.js'
 ];
 
 // ==================== 判斷是否為大改 ====================
@@ -107,8 +142,6 @@ self.addEventListener('fetch', function(event) {
   if (url.includes('OneSignalSDKWorker.js')) return;
   if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
-
-  // ✅ 新增：跳過 onesignal 目錄
   if (url.includes('/onesignal/')) return;
 
   event.respondWith(
