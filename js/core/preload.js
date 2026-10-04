@@ -61,15 +61,11 @@ function waitForElement(elementId, timeout = 3000) {
 
 /**
  * 基礎預載入（只等今日餐廳，時間限制背景跑）
- * 用於需要「等今日餐廳才能決定首頁」的場景
  */
 async function runBasePreload() {
   console.log('🚀 開始基礎預載入...');
 
-  // 只等今日餐廳
   await preloadTodayRestaurant();
-
-  // 時間限制背景跑，不阻塞
   preloadTimeLimits();
 
   console.log('✅ 基礎預載入完成');
@@ -138,6 +134,31 @@ function setupPageLoadedListener() {
   console.log('✅ 已監聽 pageLoaded 事件');
 }
 
+// ==================== 確保時間限制已載入 ====================
+
+let _timeLimitsLoaded = false;
+let _timeLimitsPromise = null;
+
+/**
+ * 確保時間限制已載入（只會載入一次）
+ * 用於需要「精確時間判斷」的地方
+ */
+async function ensureTimeLimitsLoaded() {
+  if (_timeLimitsLoaded) return;
+  if (_timeLimitsPromise) return _timeLimitsPromise;
+
+  _timeLimitsPromise = (async () => {
+    try {
+      await preloadTimeLimits();
+      _timeLimitsLoaded = true;
+    } catch (e) {
+      console.warn('載入時間限制失敗:', e);
+    }
+  })();
+
+  return _timeLimitsPromise;
+}
+
 window.preloadTimeLimits = preloadTimeLimits;
 window.preloadTodayRestaurant = preloadTodayRestaurant;
 window.runBasePreload = runBasePreload;
@@ -145,5 +166,6 @@ window.runFullPreload = runFullPreload;
 window.runPagePreload = runPagePreload;
 window.setupPageLoadedListener = setupPageLoadedListener;
 window.waitForElement = waitForElement;
+window.ensureTimeLimitsLoaded = ensureTimeLimitsLoaded;
 
 console.log('📦 預載入模組已載入');
