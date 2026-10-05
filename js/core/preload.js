@@ -68,6 +68,78 @@ async function preloadTodayRestaurant() {
   return _todayRestaurantPromise;
 }
 
+// ==================== 單例保護：餐廳菜單 ====================
+
+let _menuCache = null;
+let _menuCacheKey = null;
+let _menuLoadingPromise = null;
+
+/**
+ * 載入餐廳菜單（含快取）
+ * @param {string} restaurantName - 餐廳名稱
+ * @returns {Promise<Object>} 菜單資料
+ */
+async function loadRestaurantMenu(restaurantName) {
+  if (!restaurantName) {
+    return { success: false, message: '缺少餐廳名稱' };
+  }
+
+  // 快取命中（同一個餐廳）
+  if (_menuCache && _menuCacheKey === restaurantName) {
+    console.log('📦 使用快取菜單:', restaurantName);
+    return _menuCache;
+  }
+
+  // 正在載入中（同一個餐廳）
+  if (_menuLoadingPromise && _menuCacheKey === restaurantName) {
+    return _menuLoadingPromise;
+  }
+
+  // 開始載入
+  _menuCacheKey = restaurantName;
+  _menuLoadingPromise = (async () => {
+    console.log('📥 載入餐廳菜單:', restaurantName);
+    try {
+      const result = await callApi('getRestaurantMenu', {
+        restaurantName: restaurantName
+      });
+
+      if (result && result.success) {
+        _menuCache = result;
+        console.log('✅ 餐廳菜單已快取:', restaurantName, `(${result.categories.length} 個分類)`);
+      } else {
+        console.warn('⚠️ 載入菜單失敗:', result?.message);
+      }
+
+      return result;
+    } catch (error) {
+      console.warn('載入菜單失敗:', error);
+      return { success: false, message: '載入失敗' };
+    } finally {
+      _menuLoadingPromise = null;
+    }
+  })();
+
+  return _menuLoadingPromise;
+}
+
+/**
+ * 清除餐廳菜單快取（例如餐廳換了）
+ */
+function clearRestaurantMenuCache() {
+  _menuCache = null;
+  _menuCacheKey = null;
+  _menuLoadingPromise = null;
+  console.log('🗑️ 餐廳菜單快取已清除');
+}
+
+/**
+ * 取得快取的菜單（同步）
+ */
+function getCachedRestaurantMenu() {
+  return _menuCache;
+}
+
 // ==================== 其他工具 ====================
 
 function waitForElement(elementId, timeout = 3000) {
@@ -169,6 +241,9 @@ async function ensureTodayRestaurantLoaded() {
 
 window.preloadTimeLimits = preloadTimeLimits;
 window.preloadTodayRestaurant = preloadTodayRestaurant;
+window.loadRestaurantMenu = loadRestaurantMenu;
+window.clearRestaurantMenuCache = clearRestaurantMenuCache;
+window.getCachedRestaurantMenu = getCachedRestaurantMenu;
 window.runBasePreload = runBasePreload;
 window.runFullPreload = runFullPreload;
 window.runPagePreload = runPagePreload;
