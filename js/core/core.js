@@ -10,7 +10,6 @@ let lastScrollY = window.scrollY;
 
 let _loaderProgress = 0;
 
-// 所有階段標籤定義
 const LOADER_STEPS = [
   { percent: 5,   label: '初始化系統核心',       key: 'init' },
   { percent: 15,  label: '載入前端模組',         key: 'modules' },
@@ -22,7 +21,6 @@ const LOADER_STEPS = [
   { percent: 100, label: '系統啟動完成',         key: 'done' }
 ];
 
-// 已完成的階段
 let _completedSteps = [];
 
 function updateLoaderProgress(percent, statusText) {
@@ -39,14 +37,12 @@ function updateLoaderProgress(percent, statusText) {
 
   if (!logsEl) return;
 
-  // 更新已完成的階段
   LOADER_STEPS.forEach(step => {
     if (percent >= step.percent && !_completedSteps.includes(step.key)) {
       _completedSteps.push(step.key);
     }
   });
 
-  // 找出目前進行中的階段
   let currentStep = null;
   for (let i = 0; i < LOADER_STEPS.length; i++) {
     if (percent < LOADER_STEPS[i].percent) {
@@ -55,22 +51,18 @@ function updateLoaderProgress(percent, statusText) {
     }
   }
 
-  // 重繪終端機
   logsEl.innerHTML = '';
 
   LOADER_STEPS.forEach(step => {
     const div = document.createElement('div');
 
     if (_completedSteps.includes(step.key)) {
-      // 已完成
       div.style.color = '#4ade80';
       div.innerHTML = `<span style="color: #22c55e;">[✓]</span> ${step.label}`;
     } else if (currentStep && currentStep.key === step.key) {
-      // 進行中
       div.style.color = '#60a5fa';
       div.innerHTML = `<span style="color: #3b82f6;">[&gt;]</span> ${step.label}<span style="animation: blink 1s infinite;">_</span>`;
     } else {
-      // 未開始
       div.style.color = '#475569';
       div.innerHTML = `<span style="color: #334155;">[ ]</span> ${step.label}`;
     }
@@ -393,38 +385,35 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    // 1. 初始化系統核心
     updateLoaderProgress(5, '初始化系統核心...');
     await new Promise(r => setTimeout(r, 200));
 
-    // 2. 載入前端模組
     updateLoaderProgress(15, '載入前端模組...');
     await new Promise(r => setTimeout(r, 250));
 
-    // 3. 同步時間限制
     updateLoaderProgress(30, '同步時間限制...');
     await ensureTimeLimitsLoaded();
     await new Promise(r => setTimeout(r, 300));
 
-    // 4. 讀取今日餐廳
     updateLoaderProgress(45, '讀取今日餐廳...');
-    await ensureTodayRestaurantLoaded();
-    await new Promise(r => setTimeout(r, 300));
+    ensureTodayRestaurantLoaded().then(() => {
+      const restaurantName = AppState.currentRestaurantName();
+      if (restaurantName) {
+        loadRestaurantMenu(restaurantName);
+      }
+    });
+    await new Promise(r => setTimeout(r, 200));
 
-    // 5. 檢查使用者狀態
     updateLoaderProgress(60, '檢查使用者狀態...');
     await new Promise(r => setTimeout(r, 250));
 
-    // 6. 準備使用者介面
     updateLoaderProgress(75, '準備使用者介面...');
     showTimeModeHint();
     await new Promise(r => setTimeout(r, 300));
 
-    // 7. 即將進入系統
     updateLoaderProgress(90, '即將進入系統...');
     await new Promise(r => setTimeout(r, 300));
 
-    // 8. 完成
     switchToAdminMode();
     updateLoaderProgress(100, '系統啟動完成');
   } else {
@@ -444,15 +433,21 @@ async function initApp() {
     updateLoaderProgress(15, '載入前端模組...');
     await new Promise(r => setTimeout(r, 250));
 
-    // 3. 同步時間限制
+    // 3. 同步時間限制（必須等）
     updateLoaderProgress(30, '同步時間限制...');
     await ensureTimeLimitsLoaded();
     await new Promise(r => setTimeout(r, 300));
 
-    // 4. 讀取今日餐廳
+    // 4. 讀取今日餐廳 → 背景跑
     updateLoaderProgress(45, '讀取今日餐廳...');
-    await ensureTodayRestaurantLoaded();
-    await new Promise(r => setTimeout(r, 300));
+    ensureTodayRestaurantLoaded().then(() => {
+      // ✅ 有餐廳就背景預載菜單
+      const restaurantName = AppState.currentRestaurantName();
+      if (restaurantName) {
+        loadRestaurantMenu(restaurantName);
+      }
+    });
+    await new Promise(r => setTimeout(r, 200));
 
     // 5. 檢查使用者狀態
     updateLoaderProgress(60, '檢查使用者狀態...');
@@ -472,7 +467,7 @@ async function initApp() {
     if (!studentId) {
       await navigateTo('user-register');
     } else {
-      await navigateTo(getSmartHomePage());
+      await navigateTo('user-query');
     }
 
     // 8. 完成
