@@ -396,12 +396,11 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
+    // ✅ 移除人為延遲
     markStepStart('init');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('init');
 
     markStepStart('modules');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('modules');
 
     const timePromise = ensureTimeLimitsLoaded();
@@ -419,24 +418,23 @@ async function initApp() {
     markStepDone('restaurant');
 
     markStepStart('user');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('user');
 
     markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('ui');
 
     markStepStart('ready');
     switchToAdminMode();
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('ready');
 
     markStepStart('done');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('done');
 
-    preloadAllPages();
+    // ✅ 延後 3 秒預載入頁面
+    setTimeout(() => {
+      preloadAllPages();
+    }, 3000);
 
   } else {
     // ========== 使用者模式 ==========
@@ -447,12 +445,11 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
+    // ✅ 移除人為延遲
     markStepStart('init');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('init');
 
     markStepStart('modules');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('modules');
 
     const timePromise = ensureTimeLimitsLoaded();
@@ -470,12 +467,10 @@ async function initApp() {
     markStepDone('restaurant');
 
     markStepStart('user');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('user');
 
     markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('ui');
 
     markStepStart('ready');
@@ -483,16 +478,17 @@ async function initApp() {
     if (!studentId) {
       await navigateTo('user-register');
     } else {
-      await navigateTo(getSmartHomePage());   // ✅ 智慧跳轉
+      await navigateTo(getSmartHomePage());
     }
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('ready');
 
     markStepStart('done');
-    await new Promise(r => setTimeout(r, 50));
     markStepDone('done');
 
-    preloadAllPages();
+    // ✅ 延後 3 秒預載入頁面
+    setTimeout(() => {
+      preloadAllPages();
+    }, 3000);
   }
 
   setTimeout(initEnterKeyBindings, 500);
