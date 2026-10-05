@@ -10,16 +10,73 @@ let lastScrollY = window.scrollY;
 
 let _loaderProgress = 0;
 
+// 所有階段標籤定義
+const LOADER_STEPS = [
+  { percent: 5,   label: '初始化系統核心',       key: 'init' },
+  { percent: 15,  label: '載入前端模組',         key: 'modules' },
+  { percent: 30,  label: '同步時間限制',         key: 'time' },
+  { percent: 45,  label: '讀取今日餐廳',         key: 'restaurant' },
+  { percent: 60,  label: '檢查使用者狀態',       key: 'user' },
+  { percent: 75,  label: '準備使用者介面',       key: 'ui' },
+  { percent: 90,  label: '即將進入系統',         key: 'ready' },
+  { percent: 100, label: '系統啟動完成',         key: 'done' }
+];
+
+// 已完成的階段
+let _completedSteps = [];
+
 function updateLoaderProgress(percent, statusText) {
   _loaderProgress = percent;
 
   const bar = document.getElementById('loaderBar');
   const percentEl = document.getElementById('loaderPercent');
   const statusEl = document.getElementById('loaderStatus');
+  const logsEl = document.getElementById('loaderLogs');
 
   if (bar) bar.style.width = `${percent}%`;
   if (percentEl) percentEl.textContent = `${percent}%`;
   if (statusEl && statusText) statusEl.textContent = statusText;
+
+  if (!logsEl) return;
+
+  // 更新已完成的階段
+  LOADER_STEPS.forEach(step => {
+    if (percent >= step.percent && !_completedSteps.includes(step.key)) {
+      _completedSteps.push(step.key);
+    }
+  });
+
+  // 找出目前進行中的階段
+  let currentStep = null;
+  for (let i = 0; i < LOADER_STEPS.length; i++) {
+    if (percent < LOADER_STEPS[i].percent) {
+      currentStep = LOADER_STEPS[i];
+      break;
+    }
+  }
+
+  // 重繪終端機
+  logsEl.innerHTML = '';
+
+  LOADER_STEPS.forEach(step => {
+    const div = document.createElement('div');
+
+    if (_completedSteps.includes(step.key)) {
+      // 已完成
+      div.style.color = '#4ade80';
+      div.innerHTML = `<span style="color: #22c55e;">[✓]</span> ${step.label}`;
+    } else if (currentStep && currentStep.key === step.key) {
+      // 進行中
+      div.style.color = '#60a5fa';
+      div.innerHTML = `<span style="color: #3b82f6;">[&gt;]</span> ${step.label}<span style="animation: blink 1s infinite;">_</span>`;
+    } else {
+      // 未開始
+      div.style.color = '#475569';
+      div.innerHTML = `<span style="color: #334155;">[ ]</span> ${step.label}`;
+    }
+
+    logsEl.appendChild(div);
+  });
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -324,6 +381,8 @@ async function initApp() {
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
 
+  const startTime = Date.now();
+
   if (isLoggedIn) {
     // ========== 管理員模式 ==========
     if (userNav) userNav.style.display = 'none';
@@ -334,17 +393,40 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    updateLoaderProgress(20, '正在載入時間限制...');
-    await ensureTimeLimitsLoaded();
-    updateLoaderProgress(80, '正在準備管理員頁面...');
-
-    showTimeModeHint();
-
-    updateLoaderProgress(90, '即將進入...');
+    // 1. 初始化系統核心
+    updateLoaderProgress(5, '初始化系統核心...');
     await new Promise(r => setTimeout(r, 200));
 
+    // 2. 載入前端模組
+    updateLoaderProgress(15, '載入前端模組...');
+    await new Promise(r => setTimeout(r, 250));
+
+    // 3. 同步時間限制
+    updateLoaderProgress(30, '同步時間限制...');
+    await ensureTimeLimitsLoaded();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 4. 讀取今日餐廳
+    updateLoaderProgress(45, '讀取今日餐廳...');
+    await ensureTodayRestaurantLoaded();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 5. 檢查使用者狀態
+    updateLoaderProgress(60, '檢查使用者狀態...');
+    await new Promise(r => setTimeout(r, 250));
+
+    // 6. 準備使用者介面
+    updateLoaderProgress(75, '準備使用者介面...');
+    showTimeModeHint();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 7. 即將進入系統
+    updateLoaderProgress(90, '即將進入系統...');
+    await new Promise(r => setTimeout(r, 300));
+
+    // 8. 完成
     switchToAdminMode();
-    updateLoaderProgress(100, '完成！');
+    updateLoaderProgress(100, '系統啟動完成');
   } else {
     // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
@@ -354,23 +436,38 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    updateLoaderProgress(10, '正在載入時間限制...');
-
-    const timeLimitsPromise = ensureTimeLimitsLoaded().then(() => {
-      updateLoaderProgress(50, '正在載入今日餐廳...');
-    });
-
-    const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
-      updateLoaderProgress(80, '正在準備頁面...');
-    });
-
-    await Promise.all([timeLimitsPromise, restaurantPromise]);
-
-    updateLoaderProgress(90, '即將進入...');
-    showTimeModeHint();
-
+    // 1. 初始化系統核心
+    updateLoaderProgress(5, '初始化系統核心...');
     await new Promise(r => setTimeout(r, 200));
 
+    // 2. 載入前端模組
+    updateLoaderProgress(15, '載入前端模組...');
+    await new Promise(r => setTimeout(r, 250));
+
+    // 3. 同步時間限制
+    updateLoaderProgress(30, '同步時間限制...');
+    await ensureTimeLimitsLoaded();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 4. 讀取今日餐廳
+    updateLoaderProgress(45, '讀取今日餐廳...');
+    await ensureTodayRestaurantLoaded();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 5. 檢查使用者狀態
+    updateLoaderProgress(60, '檢查使用者狀態...');
+    await new Promise(r => setTimeout(r, 250));
+
+    // 6. 準備使用者介面
+    updateLoaderProgress(75, '準備使用者介面...');
+    showTimeModeHint();
+    await new Promise(r => setTimeout(r, 300));
+
+    // 7. 即將進入系統
+    updateLoaderProgress(90, '即將進入系統...');
+    await new Promise(r => setTimeout(r, 300));
+
+    // 導航
     const studentId = AppState.currentStudentId();
     if (!studentId) {
       await navigateTo('user-register');
@@ -378,7 +475,14 @@ async function initApp() {
       await navigateTo(getSmartHomePage());
     }
 
-    updateLoaderProgress(100, '完成！');
+    // 8. 完成
+    updateLoaderProgress(100, '系統啟動完成');
+  }
+
+  // 確保至少顯示 1500ms
+  const elapsed = Date.now() - startTime;
+  if (elapsed < 1500) {
+    await new Promise(r => setTimeout(r, 1500 - elapsed));
   }
 
   setTimeout(initEnterKeyBindings, 500);
