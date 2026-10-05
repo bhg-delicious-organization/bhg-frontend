@@ -44,8 +44,9 @@ async function loadMealOrderPage() {
 
   showConanLoading('orderMealsList', 'getRestaurantMenu');
 
+  // ✅ 用快取菜單 + 已點餐點
   const [menuResult, mealsResult] = await Promise.all([
-    callApi('getRestaurantMenu', { restaurantName: restaurantName }),
+    loadRestaurantMenu(restaurantName),   // ← 用快取
     callApi('getUserTodayMeals', { userId: studentId })
   ]);
 
@@ -224,7 +225,6 @@ function adjustCartItem(idx, change) {
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
 
-  // ✅ 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   if (!isUserOrderTime()) {
