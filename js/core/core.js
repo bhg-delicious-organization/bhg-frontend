@@ -302,10 +302,11 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    // ✅ 等時間限制載入完成，確保管理員頁面判斷正確
-    await ensureTimeLimitsLoaded();
-
-    switchToAdminMode();
+    // 背景載入時間限制，不阻塞
+    ensureTimeLimitsLoaded().then(() => {
+      showTimeModeHint();
+      switchToAdminMode();
+    });
   } else {
     // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
@@ -315,24 +316,31 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // ✅ 等時間限制 + 今日餐廳載入完成
-    await Promise.all([
+    // ✅ 背景載入時間限制 + 今日餐廳
+    const preloadPromise = Promise.all([
       ensureTimeLimitsLoaded(),
       ensureTodayRestaurantLoaded()
     ]);
 
-    // ✅ 根據狀態決定跳哪一頁
-    const studentId = AppState.currentStudentId();
-    if (!studentId) {
-      await navigateTo('user-register');
-    } else {
-      await navigateTo(getSmartHomePage());
-    }
+    // ✅ 預載入完成後：顯示橫幅 → 稍等 → 導航
+    preloadPromise.then(async () => {
+      // 1. 顯示橫幅
+      showTimeModeHint();
+
+      // 2. 等 200ms（讓橫幅動畫跑完）
+      await new Promise(r => setTimeout(r, 200));
+
+      // 3. 導航到正確頁面
+      const studentId = AppState.currentStudentId();
+      if (!studentId) {
+        await navigateTo('user-register');
+      } else {
+        await navigateTo(getSmartHomePage());
+      }
+    });
   }
 
-  // ✅ 顯示橫幅（此時 TIME 已正確）
-  showTimeModeHint();
-
+  // Enter 鍵綁定（等頁面載入後再綁）
   setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
