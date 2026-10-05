@@ -391,4 +391,10 @@ window.initApp = initApp;
 window.toggleNav = toggleNav;
 window.copyToClipboard = copyToClipboard;
 window.handleFrontendError = handleFrontendError;
-window.fillAllStudentIdInputs = fillAllStudentId
+window.fillAllStudentIdInputs = fillAllStudentIdInputs;
+window.showTimeModeHint = showTimeModeHint;
+window.updateTimeModeHint = updateTimeModeHint;
+window.loadSystemInfo = loadSystemInfo;
+window.updateLoaderProgress = updateLoaderProgress;
+
+console.log('⚙️ core.js 已載入');
