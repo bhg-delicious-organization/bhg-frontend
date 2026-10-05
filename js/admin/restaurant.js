@@ -22,7 +22,6 @@ async function loadTodayRestaurantStatus() {
 
   if (!statusDiv || !statusText) return;
 
-  // ✅ 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   const result = await callApi('getTodayRestaurant', {});
@@ -116,6 +115,16 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
     AppState.setCurrentRestaurantName(restaurantName);
     TIME.ORDER_END = parseInt(orderEndTime);
 
+    // ✅ 清除今日餐廳快取
+    if (typeof clearTodayRestaurantCache === 'function') {
+      clearTodayRestaurantCache();
+    }
+
+    // ✅ 清除菜單快取
+    if (typeof clearRestaurantMenuCache === 'function') {
+      clearRestaurantMenuCache();
+    }
+
     if (resultDiv) {
       resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
     }
@@ -198,6 +207,17 @@ function cutOffOrder() {
       if (result.success) {
         showMessageModal('✅ 截止訂餐', result.message);
         AppState.setCurrentRestaurantName('');
+
+        // ✅ 清除今日餐廳快取
+        if (typeof clearTodayRestaurantCache === 'function') {
+          clearTodayRestaurantCache();
+        }
+
+        // ✅ 清除菜單快取
+        if (typeof clearRestaurantMenuCache === 'function') {
+          clearRestaurantMenuCache();
+        }
+
         loadTodayRestaurantStatus();
       } else {
         showMessageModal('❌ 截止失敗', result.message);
