@@ -11,25 +11,25 @@
   "lang": "zh-TW",
   "icons": [
     {
-      "src": "https://i.ibb.co/1JJzGkTw/BHG-logo1.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/1JJzGkTw/BHG-logo1.png",
+      "src": "icon-192.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/1JJzGkTw/BHG-logo1.png",
+      "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "https://i.ibb.co/1JJzGkTw/BHG-logo1.png",
+      "src": "icon-192.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
