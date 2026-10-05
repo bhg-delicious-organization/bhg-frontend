@@ -73,7 +73,6 @@ function markStepDone(key) {
   updateLoaderProgressBar(percent);
 }
 
-// 相容舊版
 function updateLoaderProgress(percent, statusText) {
   updateLoaderProgressBar(percent);
   const statusEl = document.getElementById('loaderStatus');
@@ -394,15 +393,15 @@ async function initApp() {
 
     // 1. 初始化系統核心
     markStepStart('init');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('init');
 
     // 2. 載入前端模組
     markStepStart('modules');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('modules');
 
-    // 3+4. 並行啟動時間限制 + 今日餐廳
+    // 3+4. 並行啟動
     const timePromise = ensureTimeLimitsLoaded();
     const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
@@ -421,25 +420,28 @@ async function initApp() {
 
     // 5. 檢查使用者狀態
     markStepStart('user');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('user');
 
     // 6. 準備使用者介面
     markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('ui');
 
     // 7. 即將進入系統
     markStepStart('ready');
     switchToAdminMode();
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('ready');
 
     // 8. 完成
     markStepStart('done');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('done');
+
+    // ✅ 背景預載入所有頁面
+    preloadAllPages();
 
   } else {
     // ========== 使用者模式 ==========
@@ -452,15 +454,15 @@ async function initApp() {
 
     // 1. 初始化系統核心
     markStepStart('init');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('init');
 
     // 2. 載入前端模組
     markStepStart('modules');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('modules');
 
-    // 3+4. 並行啟動時間限制 + 今日餐廳
+    // 3+4. 並行啟動
     const timePromise = ensureTimeLimitsLoaded();
     const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
@@ -479,13 +481,13 @@ async function initApp() {
 
     // 5. 檢查使用者狀態
     markStepStart('user');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('user');
 
     // 6. 準備使用者介面
     markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('ui');
 
     // 7. 即將進入系統
@@ -496,13 +498,16 @@ async function initApp() {
     } else {
       await navigateTo('user-query');
     }
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('ready');
 
     // 8. 完成
     markStepStart('done');
-    await new Promise(r => setTimeout(r, 100));
+    await new Promise(r => setTimeout(r, 50));
     markStepDone('done');
+
+    // ✅ 背景預載入所有頁面
+    preloadAllPages();
   }
 
   setTimeout(initEnterKeyBindings, 500);
