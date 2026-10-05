@@ -1141,3 +1141,9 @@ body.tutorial-active {
   left: 0;
   right: 0;
 }
+
+/* ==================== 載入終端機閃爍 ==================== */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
