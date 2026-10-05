@@ -68,15 +68,43 @@
     <!-- ==================== 頁面容器 ==================== -->
     <div id="pageContent">
         <div id="page-loader" style="padding: 40px 20px; text-align: center;">
-            <div style="max-width: 320px; margin: 0 auto;">
-                <div style="font-size: 2.5rem; margin-bottom: 16px;">🍱</div>
-                <div id="loaderStatus" style="color: var(--gray); font-size: 0.95rem; margin-bottom: 16px;">
-                    正在啟動系統...
+            <div style="max-width: 380px; margin: 0 auto;">
+
+                <!-- 標題 -->
+                <div style="font-size: 2.5rem; margin-bottom: 8px;">🍱</div>
+                <div style="font-family: monospace; font-size: 0.75rem; color: var(--gray); letter-spacing: 2px; margin-bottom: 20px;">
+                    BHG SYSTEM v2.5.0
                 </div>
+
+                <!-- 終端機風格標籤 -->
+                <div id="loaderLogs" style="
+                    font-family: monospace;
+                    font-size: 0.72rem;
+                    text-align: left;
+                    background: #0f172a;
+                    color: #94a3b8;
+                    padding: 16px 14px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    min-height: 220px;
+                    line-height: 1.8;
+                    border: 1px solid #1e293b;
+                    overflow: hidden;
+                ">
+                    <div style="color: #64748b;">&gt; 系統啟動中...</div>
+                </div>
+
+                <!-- 進度條 -->
                 <div style="background: #e5e7eb; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 8px;">
-                    <div id="loaderBar" style="background: linear-gradient(90deg, var(--secondary), var(--primary)); height: 100%; width: 0%; transition: width 0.3s ease; border-radius: 999px;"></div>
+                    <div id="loaderBar" style="background: linear-gradient(90deg, var(--secondary), var(--primary)); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 999px;"></div>
                 </div>
-                <div id="loaderPercent" style="color: var(--gray); font-size: 0.85rem;">0%</div>
+
+                <!-- 百分比 + 狀態 -->
+                <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 0.8rem; color: var(--gray);">
+                    <span id="loaderStatus">正在啟動...</span>
+                    <span id="loaderPercent">0%</span>
+                </div>
+
             </div>
         </div>
     </div>
