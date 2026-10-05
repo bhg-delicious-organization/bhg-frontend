@@ -6,6 +6,24 @@
 window.navHidden = false;
 let lastScrollY = window.scrollY;
 
+// ==================== 載入進度控制 ====================
+
+let _loaderProgress = 0;
+
+function updateLoaderProgress(percent, statusText) {
+  _loaderProgress = percent;
+
+  const bar = document.getElementById('loaderBar');
+  const percentEl = document.getElementById('loaderPercent');
+  const statusEl = document.getElementById('loaderStatus');
+
+  if (bar) bar.style.width = `${percent}%`;
+  if (percentEl) percentEl.textContent = `${percent}%`;
+  if (statusEl && statusText) statusEl.textContent = statusText;
+}
+
+// ==================== Enter 鍵綁定 ====================
+
 function bindEnterKey(element, callback) {
   if (!element) return;
   element.addEventListener('keypress', function(e) {
@@ -99,6 +117,8 @@ function initEnterKeyBindings() {
   console.log('✅ Enter 鍵綁定完成');
 }
 
+// ==================== 剪貼簿 ====================
+
 function copyToClipboard(text) {
   return new Promise((resolve, reject) => {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -130,6 +150,8 @@ function fallbackCopyToClipboard(text, resolve, reject) {
   }
 }
 
+// ==================== 錯誤處理 ====================
+
 function reportFrontendError(functionName, error, description = '') {
   const errorMsg = error?.message || error;
   callApi('reportFrontendError', {
@@ -155,6 +177,8 @@ function handleFrontendError(functionName, error, userMessage = '操作失敗，
   showMessageModal('❌ 錯誤', userMessage);
 }
 
+// ==================== 學號相關 ====================
+
 function initRememberedId() {
   const studentId = AppState.currentStudentId();
   const btnText = document.getElementById('quickIdBtnText');
@@ -171,6 +195,8 @@ function fillAllStudentIdInputs(studentId, setAsCurrent = false) {
     AppState.setCurrentStudentId(studentId);
   }
 }
+
+// ==================== 導覽列 ====================
 
 function toggleNav() {
   const activeNav = AppState.isAdminMode() ? '.admin-nav' : '.user-nav';
@@ -207,6 +233,8 @@ function initAutoHideNav() {
   }, { passive: true });
 }
 
+// ==================== 系統資訊 ====================
+
 async function loadSystemInfo() {
   const el = document.getElementById('systemInfo');
   if (!el) return;
@@ -226,6 +254,8 @@ async function loadSystemInfo() {
     el.innerHTML = `<div class="message error">❌ ${escapeHtml(result?.message || '載入失敗')}</div>`;
   }
 }
+
+// ==================== 時間橫幅 ====================
 
 function showTimeModeHint() {
   if (document.querySelector('.time-hint')) return;
@@ -253,6 +283,8 @@ function updateTimeModeHint() {
   if (existingHint) existingHint.remove();
   showTimeModeHint();
 }
+
+// ==================== 系統初始化 ====================
 
 async function initApp() {
   console.log('🚀 系統初始化開始');
@@ -302,11 +334,17 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    // 背景載入時間限制，不阻塞
-    ensureTimeLimitsLoaded().then(() => {
-      showTimeModeHint();
-      switchToAdminMode();
-    });
+    updateLoaderProgress(20, '正在載入時間限制...');
+    await ensureTimeLimitsLoaded();
+    updateLoaderProgress(80, '正在準備管理員頁面...');
+
+    showTimeModeHint();
+
+    updateLoaderProgress(90, '即將進入...');
+    await new Promise(r => setTimeout(r, 200));
+
+    switchToAdminMode();
+    updateLoaderProgress(100, '完成！');
   } else {
     // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
@@ -316,33 +354,34 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // ✅ 背景載入時間限制 + 今日餐廳
-    const preloadPromise = Promise.all([
-      ensureTimeLimitsLoaded(),
-      ensureTodayRestaurantLoaded()
-    ]);
+    updateLoaderProgress(10, '正在載入時間限制...');
 
-    // ✅ 預載入完成後：顯示橫幅 → 稍等 → 導航
-    preloadPromise.then(async () => {
-      // 1. 顯示橫幅
-      showTimeModeHint();
-
-      // 2. 等 200ms（讓橫幅動畫跑完）
-      await new Promise(r => setTimeout(r, 200));
-
-      // 3. 導航到正確頁面
-      const studentId = AppState.currentStudentId();
-      if (!studentId) {
-        await navigateTo('user-register');
-      } else {
-        await navigateTo(getSmartHomePage());
-      }
+    const timeLimitsPromise = ensureTimeLimitsLoaded().then(() => {
+      updateLoaderProgress(50, '正在載入今日餐廳...');
     });
+
+    const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
+      updateLoaderProgress(80, '正在準備頁面...');
+    });
+
+    await Promise.all([timeLimitsPromise, restaurantPromise]);
+
+    updateLoaderProgress(90, '即將進入...');
+    showTimeModeHint();
+
+    await new Promise(r => setTimeout(r, 200));
+
+    const studentId = AppState.currentStudentId();
+    if (!studentId) {
+      await navigateTo('user-register');
+    } else {
+      await navigateTo(getSmartHomePage());
+    }
+
+    updateLoaderProgress(100, '完成！');
   }
 
-  // Enter 鍵綁定（等頁面載入後再綁）
   setTimeout(initEnterKeyBindings, 500);
-
   console.log('✅ 系統初始化完成');
 }
 
@@ -352,9 +391,4 @@ window.initApp = initApp;
 window.toggleNav = toggleNav;
 window.copyToClipboard = copyToClipboard;
 window.handleFrontendError = handleFrontendError;
-window.fillAllStudentIdInputs = fillAllStudentIdInputs;
-window.showTimeModeHint = showTimeModeHint;
-window.updateTimeModeHint = updateTimeModeHint;
-window.loadSystemInfo = loadSystemInfo;
-
-console.log('⚙️ core.js 已載入');
+window.fillAllStudentIdInputs = fillAllStudentId
