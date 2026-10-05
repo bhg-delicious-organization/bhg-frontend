@@ -8,58 +8,33 @@ let lastScrollY = window.scrollY;
 
 // ==================== 載入進度控制 ====================
 
-let _loaderProgress = 0;
-
 const LOADER_STEPS = [
-  { percent: 5,   label: '初始化系統核心',       key: 'init' },
-  { percent: 15,  label: '載入前端模組',         key: 'modules' },
-  { percent: 30,  label: '同步時間限制',         key: 'time' },
-  { percent: 45,  label: '讀取今日餐廳',         key: 'restaurant' },
-  { percent: 60,  label: '檢查使用者狀態',       key: 'user' },
-  { percent: 75,  label: '準備使用者介面',       key: 'ui' },
-  { percent: 90,  label: '即將進入系統',         key: 'ready' },
-  { percent: 100, label: '系統啟動完成',         key: 'done' }
+  { key: 'init',       label: '初始化系統核心' },
+  { key: 'modules',    label: '載入前端模組' },
+  { key: 'time',       label: '同步時間限制' },
+  { key: 'restaurant', label: '讀取今日餐廳' },
+  { key: 'user',       label: '檢查使用者狀態' },
+  { key: 'ui',         label: '準備使用者介面' },
+  { key: 'ready',      label: '即將進入系統' },
+  { key: 'done',       label: '系統啟動完成' }
 ];
 
-let _completedSteps = [];
+let _stepStatus = {};
 
-function updateLoaderProgress(percent, statusText) {
-  _loaderProgress = percent;
-
-  const bar = document.getElementById('loaderBar');
-  const percentEl = document.getElementById('loaderPercent');
-  const statusEl = document.getElementById('loaderStatus');
+function renderLoaderLogs() {
   const logsEl = document.getElementById('loaderLogs');
-
-  if (bar) bar.style.width = `${percent}%`;
-  if (percentEl) percentEl.textContent = `${percent}%`;
-  if (statusEl && statusText) statusEl.textContent = statusText;
-
   if (!logsEl) return;
-
-  LOADER_STEPS.forEach(step => {
-    if (percent >= step.percent && !_completedSteps.includes(step.key)) {
-      _completedSteps.push(step.key);
-    }
-  });
-
-  let currentStep = null;
-  for (let i = 0; i < LOADER_STEPS.length; i++) {
-    if (percent < LOADER_STEPS[i].percent) {
-      currentStep = LOADER_STEPS[i];
-      break;
-    }
-  }
 
   logsEl.innerHTML = '';
 
   LOADER_STEPS.forEach(step => {
+    const status = _stepStatus[step.key] || 'pending';
     const div = document.createElement('div');
 
-    if (_completedSteps.includes(step.key)) {
+    if (status === 'done') {
       div.style.color = '#4ade80';
       div.innerHTML = `<span style="color: #22c55e;">[✓]</span> ${step.label}`;
-    } else if (currentStep && currentStep.key === step.key) {
+    } else if (status === 'running') {
       div.style.color = '#60a5fa';
       div.innerHTML = `<span style="color: #3b82f6;">[&gt;]</span> ${step.label}<span style="animation: blink 1s infinite;">_</span>`;
     } else {
@@ -69,6 +44,40 @@ function updateLoaderProgress(percent, statusText) {
 
     logsEl.appendChild(div);
   });
+}
+
+function updateLoaderProgressBar(percent) {
+  const bar = document.getElementById('loaderBar');
+  const percentEl = document.getElementById('loaderPercent');
+
+  if (bar) bar.style.width = `${percent}%`;
+  if (percentEl) percentEl.textContent = `${percent}%`;
+}
+
+function markStepStart(key) {
+  _stepStatus[key] = 'running';
+  renderLoaderLogs();
+
+  const step = LOADER_STEPS.find(s => s.key === key);
+  const statusEl = document.getElementById('loaderStatus');
+  if (statusEl && step) statusEl.textContent = `${step.label}...`;
+}
+
+function markStepDone(key) {
+  _stepStatus[key] = 'done';
+  renderLoaderLogs();
+
+  const doneCount = Object.values(_stepStatus).filter(s => s === 'done').length;
+  const totalCount = LOADER_STEPS.length;
+  const percent = Math.round((doneCount / totalCount) * 100);
+  updateLoaderProgressBar(percent);
+}
+
+// 相容舊版
+function updateLoaderProgress(percent, statusText) {
+  updateLoaderProgressBar(percent);
+  const statusEl = document.getElementById('loaderStatus');
+  if (statusEl && statusText) statusEl.textContent = statusText;
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -373,8 +382,6 @@ async function initApp() {
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
 
-  const startTime = Date.now();
-
   if (isLoggedIn) {
     // ========== 管理員模式 ==========
     if (userNav) userNav.style.display = 'none';
@@ -385,37 +392,55 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    updateLoaderProgress(5, '初始化系統核心...');
-    await new Promise(r => setTimeout(r, 200));
+    // 1. 初始化系統核心
+    markStepStart('init');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('init');
 
-    updateLoaderProgress(15, '載入前端模組...');
-    await new Promise(r => setTimeout(r, 250));
+    // 2. 載入前端模組
+    markStepStart('modules');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('modules');
 
-    updateLoaderProgress(30, '同步時間限制...');
-    await ensureTimeLimitsLoaded();
-    await new Promise(r => setTimeout(r, 300));
-
-    updateLoaderProgress(45, '讀取今日餐廳...');
-    ensureTodayRestaurantLoaded().then(() => {
+    // 3+4. 並行啟動時間限制 + 今日餐廳
+    const timePromise = ensureTimeLimitsLoaded();
+    const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
-      if (restaurantName) {
-        loadRestaurantMenu(restaurantName);
-      }
+      if (restaurantName) loadRestaurantMenu(restaurantName);
     });
-    await new Promise(r => setTimeout(r, 200));
 
-    updateLoaderProgress(60, '檢查使用者狀態...');
-    await new Promise(r => setTimeout(r, 250));
+    // 3. 同步時間限制
+    markStepStart('time');
+    await timePromise;
+    markStepDone('time');
 
-    updateLoaderProgress(75, '準備使用者介面...');
+    // 4. 讀取今日餐廳
+    markStepStart('restaurant');
+    await restaurantPromise;
+    markStepDone('restaurant');
+
+    // 5. 檢查使用者狀態
+    markStepStart('user');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('user');
+
+    // 6. 準備使用者介面
+    markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('ui');
 
-    updateLoaderProgress(90, '即將進入系統...');
-    await new Promise(r => setTimeout(r, 300));
-
+    // 7. 即將進入系統
+    markStepStart('ready');
     switchToAdminMode();
-    updateLoaderProgress(100, '系統啟動完成');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('ready');
+
+    // 8. 完成
+    markStepStart('done');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('done');
+
   } else {
     // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
@@ -426,58 +451,58 @@ async function initApp() {
     updateAdminUI();
 
     // 1. 初始化系統核心
-    updateLoaderProgress(5, '初始化系統核心...');
-    await new Promise(r => setTimeout(r, 200));
+    markStepStart('init');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('init');
 
     // 2. 載入前端模組
-    updateLoaderProgress(15, '載入前端模組...');
-    await new Promise(r => setTimeout(r, 250));
+    markStepStart('modules');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('modules');
 
-    // 3. 同步時間限制（必須等）
-    updateLoaderProgress(30, '同步時間限制...');
-    await ensureTimeLimitsLoaded();
-    await new Promise(r => setTimeout(r, 300));
-
-    // 4. 讀取今日餐廳 → 背景跑
-    updateLoaderProgress(45, '讀取今日餐廳...');
-    ensureTodayRestaurantLoaded().then(() => {
-      // ✅ 有餐廳就背景預載菜單
+    // 3+4. 並行啟動時間限制 + 今日餐廳
+    const timePromise = ensureTimeLimitsLoaded();
+    const restaurantPromise = ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
-      if (restaurantName) {
-        loadRestaurantMenu(restaurantName);
-      }
+      if (restaurantName) loadRestaurantMenu(restaurantName);
     });
-    await new Promise(r => setTimeout(r, 200));
+
+    // 3. 同步時間限制
+    markStepStart('time');
+    await timePromise;
+    markStepDone('time');
+
+    // 4. 讀取今日餐廳
+    markStepStart('restaurant');
+    await restaurantPromise;
+    markStepDone('restaurant');
 
     // 5. 檢查使用者狀態
-    updateLoaderProgress(60, '檢查使用者狀態...');
-    await new Promise(r => setTimeout(r, 250));
+    markStepStart('user');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('user');
 
     // 6. 準備使用者介面
-    updateLoaderProgress(75, '準備使用者介面...');
+    markStepStart('ui');
     showTimeModeHint();
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('ui');
 
     // 7. 即將進入系統
-    updateLoaderProgress(90, '即將進入系統...');
-    await new Promise(r => setTimeout(r, 300));
-
-    // 導航
+    markStepStart('ready');
     const studentId = AppState.currentStudentId();
     if (!studentId) {
       await navigateTo('user-register');
     } else {
       await navigateTo('user-query');
     }
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('ready');
 
     // 8. 完成
-    updateLoaderProgress(100, '系統啟動完成');
-  }
-
-  // 確保至少顯示 1500ms
-  const elapsed = Date.now() - startTime;
-  if (elapsed < 1500) {
-    await new Promise(r => setTimeout(r, 1500 - elapsed));
+    markStepStart('done');
+    await new Promise(r => setTimeout(r, 100));
+    markStepDone('done');
   }
 
   setTimeout(initEnterKeyBindings, 500);
@@ -495,5 +520,7 @@ window.showTimeModeHint = showTimeModeHint;
 window.updateTimeModeHint = updateTimeModeHint;
 window.loadSystemInfo = loadSystemInfo;
 window.updateLoaderProgress = updateLoaderProgress;
+window.markStepStart = markStepStart;
+window.markStepDone = markStepDone;
 
 console.log('⚙️ core.js 已載入');
