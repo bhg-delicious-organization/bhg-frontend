@@ -3,7 +3,11 @@
 // 依賴：api.js、state.js、time.js、core.js
 // ==================================================
 
-// ==================== 單例保護：時間限制 ====================
+// ==================== 單例保護：時間限制（含 localStorage 快取） ====================
+
+const TIME_LIMITS_CACHE_KEY = 'bhg_timeLimits';
+const TIME_LIMITS_CACHE_TIME_KEY = 'bhg_timeLimitsTime';
+const TIME_LIMITS_CACHE_TTL = 60 * 60 * 1000; // 1 小時
 
 let _timeLimitsLoaded = false;
 let _timeLimitsPromise = null;
@@ -13,6 +17,56 @@ async function preloadTimeLimits() {
   if (_timeLimitsPromise) return _timeLimitsPromise;
 
   _timeLimitsPromise = (async () => {
+    // ✅ 先讀 localStorage 快取
+    const cached = localStorage.getItem(TIME_LIMITS_CACHE_KEY);
+    const cachedTime = localStorage.getItem(TIME_LIMITS_CACHE_TIME_KEY);
+    const now = Date.now();
+
+    if (cached && cachedTime && (now - parseInt(cachedTime)) < TIME_LIMITS_CACHE_TTL) {
+      try {
+        const parsed = JSON.parse(cached);
+        TIME.ORDER_START = parsed.ORDER_START;
+        TIME.ORDER_END = parsed.ORDER_END;
+        TIME.ADMIN_START = parsed.ADMIN_START;
+        TIME.ADMIN_END = parsed.ADMIN_END;
+        TIME.RATING_START = parsed.RATING_START;
+        TIME.RATING_END = parsed.RATING_END;
+        console.log('📦 使用快取時間限制:', TIME);
+        _timeLimitsLoaded = true;
+
+        // ✅ 背景更新（不阻塞）
+        callApi('getTimeLimits', {}).then(result => {
+          if (result && result.success && result.limits) {
+            const newLimits = {
+              ORDER_START: result.limits.ORDER_START,
+              ORDER_END: result.limits.ORDER_END,
+              ADMIN_START: result.limits.ADMIN_RESTAURANT_START,
+              ADMIN_END: result.limits.ADMIN_RESTAURANT_END,
+              RATING_START: result.limits.RATING_START,
+              RATING_END: result.limits.RATING_END
+            };
+
+            // 檢查是否有變
+            const hasChanged = JSON.stringify(newLimits) !== JSON.stringify(parsed);
+            if (hasChanged) {
+              localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(newLimits));
+              localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
+              console.log('🔄 背景更新時間限制（有變）:', newLimits);
+            } else {
+              // 更新時間戳，延長 TTL
+              localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
+              console.log('✅ 背景確認時間限制無變');
+            }
+          }
+        });
+
+        return;
+      } catch (e) {
+        console.warn('快取解析失敗，重新載入:', e);
+      }
+    }
+
+    // 沒快取或過期 → 呼叫 API
     console.log('⏰ 預載入時間限制...');
     try {
       const result = await callApi('getTimeLimits', {});
@@ -23,7 +77,20 @@ async function preloadTimeLimits() {
         TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
         TIME.RATING_START = result.limits.RATING_START;
         TIME.RATING_END = result.limits.RATING_END;
-        console.log('✅ 時間限制已同步:', TIME);
+
+        // ✅ 存到 localStorage
+        const limitsToCache = {
+          ORDER_START: result.limits.ORDER_START,
+          ORDER_END: result.limits.ORDER_END,
+          ADMIN_START: result.limits.ADMIN_RESTAURANT_START,
+          ADMIN_END: result.limits.ADMIN_RESTAURANT_END,
+          RATING_START: result.limits.RATING_START,
+          RATING_END: result.limits.RATING_END
+        };
+        localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(limitsToCache));
+        localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
+
+        console.log('✅ 時間限制已同步並快取:', TIME);
         console.log('   點餐時間範圍:', getOrderTimeRange());
         _timeLimitsLoaded = true;
       }
@@ -74,28 +141,20 @@ let _menuCache = null;
 let _menuCacheKey = null;
 let _menuLoadingPromise = null;
 
-/**
- * 載入餐廳菜單（含快取）
- * @param {string} restaurantName - 餐廳名稱
- * @returns {Promise<Object>} 菜單資料
- */
 async function loadRestaurantMenu(restaurantName) {
   if (!restaurantName) {
     return { success: false, message: '缺少餐廳名稱' };
   }
 
-  // 快取命中（同一個餐廳）
   if (_menuCache && _menuCacheKey === restaurantName) {
     console.log('📦 使用快取菜單:', restaurantName);
     return _menuCache;
   }
 
-  // 正在載入中（同一個餐廳）
   if (_menuLoadingPromise && _menuCacheKey === restaurantName) {
     return _menuLoadingPromise;
   }
 
-  // 開始載入
   _menuCacheKey = restaurantName;
   _menuLoadingPromise = (async () => {
     console.log('📥 載入餐廳菜單:', restaurantName);
@@ -123,9 +182,6 @@ async function loadRestaurantMenu(restaurantName) {
   return _menuLoadingPromise;
 }
 
-/**
- * 清除餐廳菜單快取（例如餐廳換了）
- */
 function clearRestaurantMenuCache() {
   _menuCache = null;
   _menuCacheKey = null;
@@ -133,11 +189,51 @@ function clearRestaurantMenuCache() {
   console.log('🗑️ 餐廳菜單快取已清除');
 }
 
-/**
- * 取得快取的菜單（同步）
- */
 function getCachedRestaurantMenu() {
   return _menuCache;
+}
+
+// ==================== 預載入所有頁面 ====================
+
+async function preloadAllPages() {
+  const pages = [
+    'user-query', 'user-recharge', 'user-meal', 'user-register',
+    'user-account', 'user-system', 'user-changepwd', 'user-meal-order',
+    'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
+    'admin-query', 'admin-account', 'admin-analytics',
+    'admin-orders', 'admin-users'
+  ];
+
+  const pageContent = document.getElementById('pageContent');
+  if (!pageContent) return;
+
+  console.log('📚 開始預載入所有頁面...');
+
+  const results = await Promise.allSettled(
+    pages.map(name =>
+      fetch(`pages/${name}.html`)
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.text();
+        })
+        .then(html => ({ name, html }))
+    )
+  );
+
+  let successCount = 0;
+  results.forEach(result => {
+    if (result.status === 'fulfilled') {
+      const { name, html } = result.value;
+      if (!document.getElementById('page-' + name)) {
+        pageContent.insertAdjacentHTML('beforeend', html);
+        successCount++;
+      }
+    } else {
+      console.warn('⚠️ 頁面預載入失敗:', result.reason);
+    }
+  });
+
+  console.log(`✅ 頁面預載入完成：${successCount}/${pages.length}`);
 }
 
 // ==================== 其他工具 ====================
@@ -244,6 +340,7 @@ window.preloadTodayRestaurant = preloadTodayRestaurant;
 window.loadRestaurantMenu = loadRestaurantMenu;
 window.clearRestaurantMenuCache = clearRestaurantMenuCache;
 window.getCachedRestaurantMenu = getCachedRestaurantMenu;
+window.preloadAllPages = preloadAllPages;
 window.runBasePreload = runBasePreload;
 window.runFullPreload = runFullPreload;
 window.runPagePreload = runPagePreload;
