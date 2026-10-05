@@ -483,7 +483,7 @@ async function initApp() {
     if (!studentId) {
       await navigateTo('user-register');
     } else {
-      await navigateTo('user-query');
+      await navigateTo(getSmartHomePage());   // ✅ 智慧跳轉
     }
     await new Promise(r => setTimeout(r, 50));
     markStepDone('ready');
