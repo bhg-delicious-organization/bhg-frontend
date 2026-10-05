@@ -273,14 +273,15 @@ function showTutorialStep(stepIndex) {
     if (step.forceVisibleParent) {
       const parentElement = document.querySelector(step.forceVisibleParent);
       if (parentElement) {
-        const originalDisplay = window.getComputedStyle(parentElement).display;
-        console.log('🔍 強制顯示父容器:', step.forceVisibleParent, '原始顯示:', originalDisplay);
+        const originalInlineDisplay = parentElement.style.display;
+        const computedDisplay = window.getComputedStyle(parentElement).display;
+        console.log('🔍 強制顯示父容器:', step.forceVisibleParent, '原始顯示:', computedDisplay);
 
-        if (originalDisplay === 'none') {
+        if (computedDisplay === 'none') {
           tutorialModifications.push({
             type: 'forceVisible',
             element: parentElement,
-            originalDisplay: originalDisplay
+            originalInlineDisplay: originalInlineDisplay
           });
           parentElement.style.display = 'flex';
           console.log('✅ 已強制顯示父容器');
@@ -367,7 +368,7 @@ function restoreModifications() {
       mod.element.style.opacity = '';
       mod.element.style.cursor = '';
     } else if (mod.type === 'forceVisible') {
-      mod.element.style.display = mod.originalDisplay;
+      mod.element.style.display = mod.originalInlineDisplay;
     }
   }
   tutorialModifications = [];
