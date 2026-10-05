@@ -10,6 +10,8 @@ console.log(`📦 Service Worker 版本: ${VERSION}`);
 const URLS_TO_CACHE = [
   './',
   './index.html',
+  './manifest.json',
+  './icon-192.png',
   './api.js',
   './styles.css',
   './assets/conan.png',
