@@ -17,7 +17,6 @@ async function preloadTimeLimits() {
   if (_timeLimitsPromise) return _timeLimitsPromise;
 
   _timeLimitsPromise = (async () => {
-    // ✅ 先讀 localStorage 快取
     const cached = localStorage.getItem(TIME_LIMITS_CACHE_KEY);
     const cachedTime = localStorage.getItem(TIME_LIMITS_CACHE_TIME_KEY);
     const now = Date.now();
@@ -34,7 +33,6 @@ async function preloadTimeLimits() {
         console.log('📦 使用快取時間限制:', TIME);
         _timeLimitsLoaded = true;
 
-        // ✅ 背景更新（不阻塞）
         callApi('getTimeLimits', {}).then(result => {
           if (result && result.success && result.limits) {
             const newLimits = {
@@ -46,14 +44,12 @@ async function preloadTimeLimits() {
               RATING_END: result.limits.RATING_END
             };
 
-            // 檢查是否有變
             const hasChanged = JSON.stringify(newLimits) !== JSON.stringify(parsed);
             if (hasChanged) {
               localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(newLimits));
               localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
               console.log('🔄 背景更新時間限制（有變）:', newLimits);
             } else {
-              // 更新時間戳，延長 TTL
               localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
               console.log('✅ 背景確認時間限制無變');
             }
@@ -66,7 +62,6 @@ async function preloadTimeLimits() {
       }
     }
 
-    // 沒快取或過期 → 呼叫 API
     console.log('⏰ 預載入時間限制...');
     try {
       const result = await callApi('getTimeLimits', {});
@@ -78,7 +73,6 @@ async function preloadTimeLimits() {
         TIME.RATING_START = result.limits.RATING_START;
         TIME.RATING_END = result.limits.RATING_END;
 
-        // ✅ 存到 localStorage
         const limitsToCache = {
           ORDER_START: result.limits.ORDER_START,
           ORDER_END: result.limits.ORDER_END,
@@ -104,25 +98,67 @@ async function preloadTimeLimits() {
   return _timeLimitsPromise;
 }
 
-// ==================== 單例保護：今日餐廳 ====================
+// ==================== 單例保護：今日餐廳（含日期快取） ====================
 
 let _todayRestaurantLoaded = false;
 let _todayRestaurantPromise = null;
+
+function getTodayDateKey() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 async function preloadTodayRestaurant() {
   if (_todayRestaurantLoaded) return;
   if (_todayRestaurantPromise) return _todayRestaurantPromise;
 
   _todayRestaurantPromise = (async () => {
+    const today = getTodayDateKey();
+    const cacheKey = `bhg_todayRestaurant_${today}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached !== null) {
+      console.log('📦 使用今日餐廳快取:', cached || '（未設定）');
+      AppState.setCurrentRestaurantName(cached || '');
+      _todayRestaurantLoaded = true;
+
+      callApi('getTodayRestaurant', {}).then(result => {
+        if (result && result.success) {
+          const newRestaurant = result.restaurant || '';
+          if (newRestaurant !== cached) {
+            AppState.setCurrentRestaurantName(newRestaurant);
+            localStorage.setItem(cacheKey, newRestaurant);
+            console.log('🔄 背景更新今日餐廳:', newRestaurant || '（未設定）');
+
+            if (AppState.currentPage() === 'user-meal') {
+              if (typeof loadMealInfo === 'function') {
+                loadMealInfo();
+              }
+            }
+          } else {
+            console.log('✅ 背景確認今日餐廳無變');
+          }
+        }
+      });
+
+      return;
+    }
+
     console.log('📡 預載入今日餐廳...');
     try {
       const result = await callApi('getTodayRestaurant', {});
       if (result && result.success) {
-        AppState.setCurrentRestaurantName(result.restaurant);
-        console.log('✅ 今日餐廳已快取:', result.restaurant);
+        const restaurant = result.restaurant || '';
+        AppState.setCurrentRestaurantName(restaurant);
+        localStorage.setItem(cacheKey, restaurant);
+        console.log('✅ 今日餐廳已快取:', restaurant || '（未設定）');
       } else {
         console.log('ℹ️ 今日餐廳尚未設定');
         AppState.setCurrentRestaurantName('');
+        localStorage.setItem(cacheKey, '');
       }
       _todayRestaurantLoaded = true;
     } catch (error) {
@@ -133,6 +169,27 @@ async function preloadTodayRestaurant() {
   })();
 
   return _todayRestaurantPromise;
+}
+
+function clearTodayRestaurantCache() {
+  const today = getTodayDateKey();
+  const cacheKey = `bhg_todayRestaurant_${today}`;
+  localStorage.removeItem(cacheKey);
+  _todayRestaurantLoaded = false;
+  _todayRestaurantPromise = null;
+  console.log('🗑️ 今日餐廳快取已清除');
+}
+
+function cleanupOldRestaurantCache() {
+  const today = getTodayDateKey();
+  const keys = Object.keys(localStorage);
+
+  keys.forEach(key => {
+    if (key.startsWith('bhg_todayRestaurant_') && !key.endsWith(today)) {
+      localStorage.removeItem(key);
+      console.log('🗑️ 清除舊的今日餐廳快取:', key);
+    }
+  });
 }
 
 // ==================== 單例保護：餐廳菜單 ====================
@@ -340,6 +397,9 @@ window.preloadTodayRestaurant = preloadTodayRestaurant;
 window.loadRestaurantMenu = loadRestaurantMenu;
 window.clearRestaurantMenuCache = clearRestaurantMenuCache;
 window.getCachedRestaurantMenu = getCachedRestaurantMenu;
+window.clearTodayRestaurantCache = clearTodayRestaurantCache;
+window.cleanupOldRestaurantCache = cleanupOldRestaurantCache;
+window.getTodayDateKey = getTodayDateKey;
 window.preloadAllPages = preloadAllPages;
 window.runBasePreload = runBasePreload;
 window.runFullPreload = runFullPreload;
