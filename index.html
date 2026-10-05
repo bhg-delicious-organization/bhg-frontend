@@ -20,7 +20,7 @@
     <meta name="apple-mobile-web-app-title" content="便當廠">
     <link rel="apple-touch-icon" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
 
-    <!-- OneSignal SDK（非阻斷） -->
+    <!-- OneSignal SDK（defer，非阻斷） -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.es6.js" defer></script>
 
     <!-- Font Awesome（非阻斷載入） -->
@@ -66,10 +66,18 @@
     </header>
 
     <!-- ==================== 頁面容器 ==================== -->
-    <div id="pageContent" role="main">
-        <div id="page-loader" class="loading" style="padding: 40px;">
-            <div class="spinner"></div>
-            <p>載入中...</p>
+    <div id="pageContent">
+        <div id="page-loader" style="padding: 40px 20px; text-align: center;">
+            <div style="max-width: 320px; margin: 0 auto;">
+                <div style="font-size: 2.5rem; margin-bottom: 16px;">🍱</div>
+                <div id="loaderStatus" style="color: var(--gray); font-size: 0.95rem; margin-bottom: 16px;">
+                    正在啟動系統...
+                </div>
+                <div style="background: #e5e7eb; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 8px;">
+                    <div id="loaderBar" style="background: linear-gradient(90deg, var(--secondary), var(--primary)); height: 100%; width: 0%; transition: width 0.3s ease; border-radius: 999px;"></div>
+                </div>
+                <div id="loaderPercent" style="color: var(--gray); font-size: 0.85rem;">0%</div>
+            </div>
         </div>
     </div>
 
@@ -213,7 +221,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="hideAdminModal()">取消</button>
-                <button class="btn btn-primary" onclick="adminLogin()">
+                <button class="btn btn-primary" onclick="adminLogin(event)">
                     <i class="fas fa-sign-in-alt"></i> 登入
                 </button>
             </div>
@@ -263,7 +271,7 @@
     <script src="js/core/preload.js" defer></script>
     <script src="js/core/quick-id.js" defer></script>
     <script src="js/core/core.js" defer></script>
-    
+
     <!-- ==================== 使用者模組 ==================== -->
     <script src="js/user/query.js" defer></script>
     <script src="js/user/register.js" defer></script>
@@ -272,7 +280,7 @@
     <script src="js/user/account.js" defer></script>
     <script src="js/user/meal.js" defer></script>
     <script src="js/user/meal-order.js" defer></script>
-    
+
     <!-- ==================== 管理員模組 ==================== -->
     <script src="js/admin/auth.js" defer></script>
     <script src="js/admin/restaurant.js" defer></script>
@@ -283,10 +291,9 @@
     <script src="js/admin/orders.js" defer></script>
     <script src="js/admin/users.js" defer></script>
     <script src="js/admin/deduct.js" defer></script>
-    
+
     <!-- ==================== 共用模組 ==================== -->
     <script src="js/shared/notify.js" defer></script>
-    <script src="js/shared/tutorial.js" defer></script>
 
     <!-- ==================== 新手教學浮層 ==================== -->
     <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
@@ -310,7 +317,7 @@
         </div>
     </div>
 
-    <!-- ==================== PWA Service Worker 註冊（自動判斷大改/小改） ==================== -->
+    <!-- ==================== PWA Service Worker 註冊 ==================== -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
@@ -400,7 +407,7 @@
       }
     </script>
 
-    <!-- ==================== OneSignal 初始化（新版 App ID） ==================== -->
+    <!-- ==================== OneSignal 初始化 ==================== -->
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
