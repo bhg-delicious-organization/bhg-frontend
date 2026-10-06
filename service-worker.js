@@ -2,7 +2,7 @@
 // PWA Service Worker（自動判斷大改/小改）
 // ==========================================================
 
-const VERSION = '2.9.7';  // ⚠️ 只改這行
+const VERSION = '3.0.0';  // 2.9.7 → 3.0.0
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -12,6 +12,9 @@ const URLS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
+  './fontawesome.min.css',
+  './fa-solid-900.woff2',
+  './fa-regular-400.woff2',
   './api.js',
   './styles.css',
   './assets/conan.png',
@@ -139,6 +142,27 @@ self.addEventListener('fetch', function(event) {
 
   const url = event.request.url;
 
+  // ✅ 只處理 http/https 請求（排除 chrome-extension、data:、blob: 等）
+  if (!url.startsWith('http://') && !url.startsWith('https://')) return;
+
+  // ✅ 只處理允許的來源
+  try {
+    const requestUrl = new URL(url);
+    const ALLOWED_HOSTS = [
+      'bhg-delicious-organization.github.io',
+      'cdn.onesignal.com',
+      'cdnjs.cloudflare.com',
+      'i.ibb.co'
+    ];
+
+    if (!ALLOWED_HOSTS.includes(requestUrl.hostname)) {
+      return;
+    }
+  } catch (e) {
+    return;
+  }
+
+  // ✅ 排除特定的 URL
   if (url.includes('script.google.com')) return;
   if (url.includes('onesignal.com')) return;
   if (url.includes('OneSignalSDKWorker.js')) return;
@@ -154,10 +178,17 @@ self.addEventListener('fetch', function(event) {
         if (!networkResponse || networkResponse.status !== 200) {
           return networkResponse;
         }
+
+        // ✅ 先 clone，避免 request 被釋放
         const responseToCache = networkResponse.clone();
+        const requestToCache = event.request.clone();
+
         caches.open(CACHE_NAME).then(function(cache) {
-          cache.put(event.request, responseToCache);
+          return cache.put(requestToCache, responseToCache);
+        }).catch(function() {
+          // ✅ 完全忽略快取失敗（例如 chrome-extension）
         });
+
         return networkResponse;
       }).catch(function() {
         if (event.request.mode === 'navigate') {
