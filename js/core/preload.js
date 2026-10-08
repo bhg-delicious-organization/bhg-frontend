@@ -133,27 +133,62 @@ async function preloadTodayRestaurant() {
       AppState.setCurrentRestaurantName(cached || '');
       _todayRestaurantLoaded = true;
 
-      callApi('getTodayRestaurant', {}).then(result => {
-        if (result && result.success) {
-          const newRestaurant = result.restaurant || '';
-          if (newRestaurant !== cached) {
-            AppState.setCurrentRestaurantName(newRestaurant);
-            localStorage.setItem(cacheKey, newRestaurant);
-            console.log('🔄 背景更新今日餐廳:', newRestaurant || '（未設定）');
-
-            if (AppState.currentPage() === 'user-meal') {
-              if (typeof loadMealInfo === 'function') {
-                loadMealInfo();
-              }
-            }
-          } else {
-            console.log('✅ 背景確認今日餐廳無變');
-          }
-        }
-      });
+      // 背景更新
+      updateTodayRestaurantFromSupabase(cacheKey, cached);
 
       return;
     }
+
+    console.log('📡 從 Supabase 預載入今日餐廳...');
+    try {
+      await updateTodayRestaurantFromSupabase(cacheKey, null);
+      _todayRestaurantLoaded = true;
+    } catch (error) {
+      console.warn('預載入今日餐廳失敗:', error);
+    } finally {
+      _todayRestaurantPromise = null;
+    }
+  })();
+
+  return _todayRestaurantPromise;
+}
+
+/**
+ * 從 Supabase 讀取今日餐廳
+ */
+async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
+  const sb = await initSupabase();
+
+  const { data, error } = await sb
+    .from('system_settings')
+    .select('value')
+    .eq('key', 'today_restaurant')
+    .single();
+
+  if (error) {
+    console.error('讀取今日餐廳失敗:', error);
+    return;
+  }
+
+  const restaurant = data?.value || '';
+
+  AppState.setCurrentRestaurantName(restaurant);
+  localStorage.setItem(cacheKey, restaurant);
+
+  if (oldValue === null) {
+    console.log('✅ 今日餐廳已載入:', restaurant || '（未設定）');
+  } else if (restaurant !== oldValue) {
+    console.log('🔄 背景更新今日餐廳:', restaurant || '（未設定）');
+
+    if (AppState.currentPage() === 'user-meal') {
+      if (typeof loadMealInfo === 'function') {
+        loadMealInfo();
+      }
+    }
+  } else {
+    console.log('✅ 背景確認今日餐廳無變');
+  }
+}
 
     console.log('📡 預載入今日餐廳...');
     try {
