@@ -5,13 +5,6 @@
 
 // ==================== 單例保護：時間限制（含 localStorage 快取） ====================
 
-const TIME_LIMITS_CACHE_KEY = 'bhg_timeLimits';
-const TIME_LIMITS_CACHE_TIME_KEY = 'bhg_timeLimitsTime';
-const TIME_LIMITS_CACHE_TTL = 60 * 60 * 1000; // 1 小時
-
-let _timeLimitsLoaded = false;
-let _timeLimitsPromise = null;
-
 async function preloadTimeLimits() {
   if (_timeLimitsLoaded) return;
   if (_timeLimitsPromise) return _timeLimitsPromise;
@@ -21,6 +14,7 @@ async function preloadTimeLimits() {
     const cachedTime = localStorage.getItem(TIME_LIMITS_CACHE_TIME_KEY);
     const now = Date.now();
 
+    // 快取有效（1 小時）
     if (cached && cachedTime && (now - parseInt(cachedTime)) < TIME_LIMITS_CACHE_TTL) {
       try {
         const parsed = JSON.parse(cached);
@@ -33,28 +27,8 @@ async function preloadTimeLimits() {
         console.log('📦 使用快取時間限制:', TIME);
         _timeLimitsLoaded = true;
 
-        callApi('getTimeLimits', {}).then(result => {
-          if (result && result.success && result.limits) {
-            const newLimits = {
-              ORDER_START: result.limits.ORDER_START,
-              ORDER_END: result.limits.ORDER_END,
-              ADMIN_START: result.limits.ADMIN_RESTAURANT_START,
-              ADMIN_END: result.limits.ADMIN_RESTAURANT_END,
-              RATING_START: result.limits.RATING_START,
-              RATING_END: result.limits.RATING_END
-            };
-
-            const hasChanged = JSON.stringify(newLimits) !== JSON.stringify(parsed);
-            if (hasChanged) {
-              localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(newLimits));
-              localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
-              console.log('🔄 背景更新時間限制（有變）:', newLimits);
-            } else {
-              localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
-              console.log('✅ 背景確認時間限制無變');
-            }
-          }
-        });
+        // 背景更新
+        updateTimeLimitsFromSupabase();
 
         return;
       } catch (e) {
@@ -62,32 +36,11 @@ async function preloadTimeLimits() {
       }
     }
 
-    console.log('⏰ 預載入時間限制...');
+    // 從 Supabase 讀取
+    console.log('⏰ 從 Supabase 預載入時間限制...');
     try {
-      const result = await callApi('getTimeLimits', {});
-      if (result && result.success && result.limits) {
-        TIME.ORDER_START = result.limits.ORDER_START;
-        TIME.ORDER_END = result.limits.ORDER_END;
-        TIME.ADMIN_START = result.limits.ADMIN_RESTAURANT_START;
-        TIME.ADMIN_END = result.limits.ADMIN_RESTAURANT_END;
-        TIME.RATING_START = result.limits.RATING_START;
-        TIME.RATING_END = result.limits.RATING_END;
-
-        const limitsToCache = {
-          ORDER_START: result.limits.ORDER_START,
-          ORDER_END: result.limits.ORDER_END,
-          ADMIN_START: result.limits.ADMIN_RESTAURANT_START,
-          ADMIN_END: result.limits.ADMIN_RESTAURANT_END,
-          RATING_START: result.limits.RATING_START,
-          RATING_END: result.limits.RATING_END
-        };
-        localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(limitsToCache));
-        localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
-
-        console.log('✅ 時間限制已同步並快取:', TIME);
-        console.log('   點餐時間範圍:', getOrderTimeRange());
-        _timeLimitsLoaded = true;
-      }
+      await updateTimeLimitsFromSupabase();
+      _timeLimitsLoaded = true;
     } catch (error) {
       console.warn('預載入時間限制失敗，使用預設值:', error);
     } finally {
@@ -96,6 +49,54 @@ async function preloadTimeLimits() {
   })();
 
   return _timeLimitsPromise;
+}
+
+/**
+ * 從 Supabase 讀取時間限制
+ */
+async function updateTimeLimitsFromSupabase() {
+  const sb = await initSupabase();
+
+  const { data, error } = await sb
+    .from('system_settings')
+    .select('key, value')
+    .in('key', [
+      'ORDER_START', 'ORDER_END',
+      'ADMIN_RESTAURANT_START', 'ADMIN_RESTAURANT_END',
+      'RATING_START', 'RATING_END',
+      'today_order_end'
+    ]);
+
+  if (error) {
+    console.error('讀取時間限制失敗:', error);
+    return;
+  }
+
+  const settings = {};
+  data.forEach(item => { settings[item.key] = item.value; });
+
+  // 更新 TIME
+  TIME.ORDER_START = parseInt(settings.ORDER_START) || 800;
+  TIME.ORDER_END = parseInt(settings.today_order_end) || parseInt(settings.ORDER_END) || 1000;
+  TIME.ADMIN_START = parseInt(settings.ADMIN_RESTAURANT_START) || 800;
+  TIME.ADMIN_END = parseInt(settings.ADMIN_RESTAURANT_END) || 1200;
+  TIME.RATING_START = parseInt(settings.RATING_START) || 1200;
+  TIME.RATING_END = parseInt(settings.RATING_END) || 1600;
+
+  console.log('✅ 時間限制已同步:', TIME);
+  console.log('   點餐時間範圍:', getOrderTimeRange());
+
+  // 寫入快取
+  const limitsToCache = {
+    ORDER_START: TIME.ORDER_START,
+    ORDER_END: TIME.ORDER_END,
+    ADMIN_START: TIME.ADMIN_START,
+    ADMIN_END: TIME.ADMIN_END,
+    RATING_START: TIME.RATING_START,
+    RATING_END: TIME.RATING_END
+  };
+  localStorage.setItem(TIME_LIMITS_CACHE_KEY, JSON.stringify(limitsToCache));
+  localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
 }
 
 // ==================== 單例保護：今日餐廳（含日期快取） ====================
