@@ -3,6 +3,13 @@
 // 依賴：api.js、state.js、time.js、core.js
 // ==================================================
 
+const TIME_LIMITS_CACHE_KEY = 'bhg_timeLimits';
+const TIME_LIMITS_CACHE_TIME_KEY = 'bhg_timeLimitsTime';
+const TIME_LIMITS_CACHE_TTL = 60 * 60 * 1000;
+
+let _timeLimitsLoaded = false;
+let _timeLimitsPromise = null;
+
 // ==================== 單例保護：時間限制（含 localStorage 快取） ====================
 
 async function preloadTimeLimits() {
