@@ -298,17 +298,30 @@ async function loadSystemInfo() {
 
   el.innerHTML = '<div class="loading"><div class="spinner"></div><p>載入中...</p></div>';
 
-  const result = await callApi('getSystemInfo', {});
+  try {
+    const sb = await initSupabase();
 
-  if (result && result.version) {
+    const { data, error } = await sb
+      .from('system_settings')
+      .select('key, value')
+      .in('key', ['version', 'developer', 'qa_link', 'instagram_link']);
+
+    if (error) {
+      el.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+
+    const settings = {};
+    data.forEach(item => { settings[item.key] = item.value; });
+
     el.innerHTML = `
-      <p><strong>版本：</strong>${escapeHtml(result.version)}</p>
-      <p><strong>開發者：</strong>${escapeHtml(result.developer)}</p>
-      <p><strong>問題回報：</strong><a href="${escapeHtml(result.qaLink)}" target="_blank">📝 填寫表單</a></p>
-      <p><strong>IG：</strong><a href="${escapeHtml(result.instagramLink)}" target="_blank">📷 @bhg.delicious</a></p>
+      <p><strong>版本：</strong>${escapeHtml(settings.version || '未知')}</p>
+      <p><strong>開發者：</strong>${escapeHtml(settings.developer || '未知')}</p>
+      <p><strong>問題回報：</strong><a href="${escapeHtml(settings.qa_link || '#')}" target="_blank">📝 填寫表單</a></p>
+      <p><strong>IG：</strong><a href="${escapeHtml(settings.instagram_link || '#')}" target="_blank">📷 @bhg.delicious</a></p>
     `;
-  } else {
-    el.innerHTML = `<div class="message error">❌ ${escapeHtml(result?.message || '載入失敗')}</div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="message error">❌ ${escapeHtml(e.message)}</div>`;
   }
 }
 
