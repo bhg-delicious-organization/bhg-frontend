@@ -257,11 +257,9 @@ async function loadRestaurantMenu(restaurantName) {
 
   _menuCacheKey = restaurantName;
   _menuLoadingPromise = (async () => {
-    console.log('📥 載入餐廳菜單:', restaurantName);
+    console.log('📥 從 Supabase 載入餐廳菜單:', restaurantName);
     try {
-      const result = await callApi('getRestaurantMenu', {
-        restaurantName: restaurantName
-      });
+      const result = await fetchMenuFromSupabase(restaurantName);
 
       if (result && result.success) {
         _menuCache = result;
@@ -280,6 +278,71 @@ async function loadRestaurantMenu(restaurantName) {
   })();
 
   return _menuLoadingPromise;
+}
+
+/**
+ * 從 Supabase 讀取餐廳菜單
+ */
+async function fetchMenuFromSupabase(restaurantName) {
+  const sb = await initSupabase();
+
+  // 1. 查餐廳 ID
+  const { data: restaurantData, error: restaurantError } = await sb
+    .from('restaurants')
+    .select('id, name')
+    .eq('name', restaurantName)
+    .single();
+
+  if (restaurantError || !restaurantData) {
+    console.error('找不到餐廳:', restaurantName);
+    return { success: false, message: '找不到該餐廳' };
+  }
+
+  // 2. 查菜單
+  const { data: menuData, error: menuError } = await sb
+    .from('menu_items')
+    .select('category, meal_name, price, order_count, rating_sum, rating_count')
+    .eq('restaurant_id', restaurantData.id)
+    .order('category')
+    .order('meal_name');
+
+  if (menuError) {
+    console.error('讀取菜單失敗:', menuError);
+    return { success: false, message: menuError.message };
+  }
+
+  // 3. 按分類分組
+  const categoriesMap = {};
+  menuData.forEach(item => {
+    if (!categoriesMap[item.category]) {
+      categoriesMap[item.category] = {
+        name: item.category,
+        items: []
+      };
+    }
+
+    // 計算平均評分
+    let rating = 0;
+    if (item.rating_count > 0) {
+      rating = Math.round((item.rating_sum / item.rating_count) * 100) / 100;
+    }
+
+    categoriesMap[item.category].items.push({
+      name: item.meal_name,
+      price: item.price,
+      count: item.order_count,
+      rating: rating,
+      ratingNumber: item.rating_count
+    });
+  });
+
+  const categories = Object.values(categoriesMap);
+
+  return {
+    success: true,
+    restaurant: restaurantName,
+    categories: categories
+  };
 }
 
 function clearRestaurantMenuCache() {
