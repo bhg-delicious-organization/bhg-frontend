@@ -1,6 +1,6 @@
 // ==================== preload.js ====================
 // 預載入模組
-// 依賴：api.js、state.js、time.js、core.js
+// 依賴：api.js、supabase.js、state.js、time.js、core.js
 // ==================================================
 
 const TIME_LIMITS_CACHE_KEY = 'bhg_timeLimits';
@@ -188,30 +188,6 @@ async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
   } else {
     console.log('✅ 背景確認今日餐廳無變');
   }
-}
-
-    console.log('📡 預載入今日餐廳...');
-    try {
-      const result = await callApi('getTodayRestaurant', {});
-      if (result && result.success) {
-        const restaurant = result.restaurant || '';
-        AppState.setCurrentRestaurantName(restaurant);
-        localStorage.setItem(cacheKey, restaurant);
-        console.log('✅ 今日餐廳已快取:', restaurant || '（未設定）');
-      } else {
-        console.log('ℹ️ 今日餐廳尚未設定');
-        AppState.setCurrentRestaurantName('');
-        localStorage.setItem(cacheKey, '');
-      }
-      _todayRestaurantLoaded = true;
-    } catch (error) {
-      console.warn('預載入今日餐廳失敗:', error);
-    } finally {
-      _todayRestaurantPromise = null;
-    }
-  })();
-
-  return _todayRestaurantPromise;
 }
 
 function clearTodayRestaurantCache() {
