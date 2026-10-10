@@ -1,6 +1,6 @@
 // ==================== auth.js ====================
 // 管理員認證模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js
+// 依賴：api.js、supabase.js、state.js、ui.js、common.js、core.js、navigation.js
 // ====================================================
 
 /**
@@ -28,6 +28,15 @@ function showAdminModal() {
 
 /**
  * 關閉管理員登入模態窗
+ */
+function hideAdminModal() {
+  const modal = document.getElementById('adminModal');
+  if (modal) modal.classList.remove('active');
+  if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
+}
+
+/**
+ * 管理員登入
  */
 async function adminLogin(event) {
   const btn = event ? event.currentTarget : null;
@@ -157,26 +166,43 @@ async function changeAdminPassword(event) {
     showConanLoading('adminPasswordResult', 'changeMyPassword');
   }
 
-  const result = await callAdminApi('changeAdminPassword', {
-    oldPassword: oldPassword,
-    newPassword: newPassword
-  });
+  try {
+    const sb = await initSupabase();
+    const { data, error } = await sb.auth.updateUser({
+      password: newPassword
+    });
 
-  if (btn) {
-    btn.innerHTML = btn._originalHTML || '確認修改密碼';
-    btn.disabled = false;
-  }
+    if (btn) {
+      btn.innerHTML = btn._originalHTML || '確認修改密碼';
+      btn.disabled = false;
+    }
 
-  if (result.success) {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
+    if (error) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      }
+      return;
+    }
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success">✅ 密碼修改成功</div>`;
+    }
+
     setTimeout(() => {
       document.getElementById('adminOldPassword').value = '';
       document.getElementById('adminNewPassword').value = '';
       document.getElementById('adminConfirmPassword').value = '';
       if (resultDiv) resultDiv.innerHTML = '';
     }, 2000);
-  } else {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+
+  } catch (error) {
+    if (btn) {
+      btn.innerHTML = btn._originalHTML || '確認修改密碼';
+      btn.disabled = false;
+    }
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+    }
   }
 }
 
