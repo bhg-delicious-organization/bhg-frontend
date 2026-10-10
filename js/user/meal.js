@@ -1,6 +1,6 @@
 // ==================== meal.js ====================
-// 使用者訂飯模組（訂飯頁面）
-// 依賴：api.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
+// 使用者訂飯模組（Supabase 版）
+// 依賴：api.js、supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
 // ==================================================
 
 async function loadMealInfo(event) {
@@ -30,66 +30,99 @@ async function loadMealInfo(event) {
   // ✅ 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
-  const restaurantResult = await callApi('getTodayRestaurant', {});
-  const hasRestaurant = restaurantResult.success && restaurantResult.restaurant;
+  try {
+    const sb = await initSupabase();
 
-  const balanceResult = await callApi('getUserBalance', { userId: studentId });
+    // 1. 查餘額
+    const { data: userData, error: userError } = await sb
+      .from('users')
+      .select('balance, name')
+      .eq('user_id', studentId)
+      .single();
 
-  if (btn) setButtonLoading(btn, false);
+    if (btn) setButtonLoading(btn, false);
 
-  if (!balanceResult.success) {
-    const box = document.getElementById('mealBalanceBox');
-    if (box) box.textContent = '查無此學號';
-    return;
-  }
-
-  await updateMealBalanceDisplay(balanceResult.balance);
-
-  const showMealSelection = hasRestaurant && isUserOrderTime();
-  const mealSelectionDiv = document.getElementById('mealSelection');
-  if (mealSelectionDiv) {
-    mealSelectionDiv.style.display = showMealSelection ? 'flex' : 'none';
-  }
-
-  if (isUserOrderTime() || isOrderEnded()) {
-    await loadUserTodayMeals(studentId);
-  } else {
-    const display = document.getElementById('todayMealDisplay');
-    if (display) {
-      const timeRange = getOrderTimeRange();
-      display.innerHTML = `
-        <h3>📋 今日餐點</h3>
-        <p style="color: var(--gray);">🕐 點餐時間為 ${timeRange}</p>
-      `;
+    if (userError || !userData) {
+      const box = document.getElementById('mealBalanceBox');
+      if (box) box.textContent = '查無此學號';
+      return;
     }
-  }
 
-  await checkUserOrderHistory();
+    // 2. 查今日餐廳
+    const { data: restaurantData } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
+
+    const hasRestaurant = restaurantData && restaurantData.value;
+
+    // 3. 更新餘額顯示
+    await updateMealBalanceDisplay(userData.balance);
+
+    // 4. 顯示/隱藏「點餐」按鈕
+    const showMealSelection = hasRestaurant && isUserOrderTime();
+    const mealSelectionDiv = document.getElementById('mealSelection');
+    if (mealSelectionDiv) {
+      mealSelectionDiv.style.display = showMealSelection ? 'flex' : 'none';
+    }
+
+    // 5. 載入今日餐點
+    if (isUserOrderTime() || isOrderEnded()) {
+      await loadUserTodayMeals(studentId);
+    } else {
+      const display = document.getElementById('todayMealDisplay');
+      if (display) {
+        const timeRange = getOrderTimeRange();
+        display.innerHTML = `
+          <h3>📋 今日餐點</h3>
+          <p style="color: var(--gray);">🕐 點餐時間為 ${timeRange}</p>
+        `;
+      }
+    }
+
+    // 6. 查訂單歷史
+    await checkUserOrderHistory();
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('載入失敗:', error);
+    showMessageModal('❌ 錯誤', error.message || '載入失敗');
+  }
 }
 
 async function updateMealBalanceDisplay(balance) {
-  const mealsResult = await callApi('getUserTodayMeals', {
-    userId: AppState.currentStudentId()
-  });
+  try {
+    const sb = await initSupabase();
+    const studentId = AppState.currentStudentId();
 
-  let currentTotal = 0;
-  if (mealsResult.success && mealsResult.meals) {
-    mealsResult.meals.forEach(meal => {
-      currentTotal += (meal.amount || 0) * (meal.cost || 0);
-    });
-  }
+    // ✅ 從 today_meals 查今日餐點
+    const { data: meals, error } = await sb
+      .from('today_meals')
+      .select('amount, price')
+      .eq('user_id', studentId);
 
-  const remaining = balance - currentTotal;
-  const box = document.getElementById('mealBalanceBox');
+    let currentTotal = 0;
+    if (!error && meals) {
+      meals.forEach(meal => {
+        currentTotal += (meal.amount || 0) * (meal.price || 0);
+      });
+    }
 
-  if (box) {
-    box.innerHTML = `
-      <div>💰 目前餘額：<strong>$${balance}</strong></div>
-      <div style="font-size: 0.9rem; margin-top: 8px;">
-        🍱 今日已點：<strong>$${currentTotal}</strong><br>
-        ✨ 剩餘可用：<strong style="color: ${remaining >= 0 ? '#27ae60' : '#e74c3c'}">$${remaining}</strong>
-      </div>
-    `;
+    const remaining = balance - currentTotal;
+    const box = document.getElementById('mealBalanceBox');
+
+    if (box) {
+      box.innerHTML = `
+        <div>💰 目前餘額：<strong>$${balance}</strong></div>
+        <div style="font-size: 0.9rem; margin-top: 8px;">
+          🍱 今日已點：<strong>$${currentTotal}</strong><br>
+          ✨ 剩餘可用：<strong style="color: ${remaining >= 0 ? '#27ae60' : '#e74c3c'}">$${remaining}</strong>
+        </div>
+      `;
+    }
+  } catch (error) {
+    console.warn('更新餘額顯示失敗:', error);
   }
 }
 
@@ -101,98 +134,113 @@ async function loadUserTodayMeals(studentId) {
 
   showConanLoading('todayMealDisplay', 'getUserTodayMeals');
 
-  const result = await callApi('getUserTodayMeals', { userId: studentId });
-  const container = document.getElementById('todayMealDisplay');
-  if (!container) return;
+  try {
+    const sb = await initSupabase();
 
-  let html = '<h3>📋 今日餐點</h3>';
+    // ✅ 從 today_meals 查今日餐點
+    const { data: meals, error } = await sb
+      .from('today_meals')
+      .select('slot, restaurant, category, meal_name, amount, price, rated')
+      .eq('user_id', studentId)
+      .order('slot');
 
-  const timeRange = getOrderTimeRange();
+    const container = document.getElementById('todayMealDisplay');
+    if (!container) return;
 
-  if (currentTime < orderStart) {
-    html += `<p style="color: var(--gray);">🕐 點餐時間為 ${timeRange}，尚未開始</p>`;
-    container.innerHTML = html;
-    return;
-  }
+    let html = '<h3>📋 今日餐點</h3>';
 
-  if (!result.success || result.meals.length === 0) {
+    const timeRange = getOrderTimeRange();
+
+    if (currentTime < orderStart) {
+      html += `<p style="color: var(--gray);">🕐 點餐時間為 ${timeRange}，尚未開始</p>`;
+      container.innerHTML = html;
+      return;
+    }
+
+    if (error || !meals || meals.length === 0) {
+      if (currentTime >= orderEnd) {
+        html += `<p style="color: var(--gray);">⏰ 今日訂餐已截止<br>今日無訂餐</p>`;
+      } else {
+        html += '<p>今日尚未點餐</p>';
+      }
+      container.innerHTML = html;
+      return;
+    }
+
     if (currentTime >= orderEnd) {
-      html += `<p style="color: var(--gray);">⏰ 今日訂餐已截止<br>今日無訂餐</p>`;
-    } else {
-      html += '<p>今日尚未點餐</p>';
-    }
-    container.innerHTML = html;
-    return;
-  }
-
-  if (currentTime >= orderEnd) {
-    html += `<p style="color: var(--danger); margin-bottom: 8px;">⏰ 今日訂餐已截止</p>`;
-  }
-
-  if (ratingTime) {
-    html += `<p style="color: var(--success); margin-bottom: 8px; font-size: 0.85rem;">
-      <i class="fas fa-star"></i> 評分時間 12:00-16:00，為喜歡的餐點評分吧！
-    </p>`;
-  } else if (currentTime < TIME.RATING_START) {
-    const remaining = getRatingTimeRemaining();
-    html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
-      <i class="fas fa-clock"></i> 評分將於 ${formatTimeRemaining(remaining)} 後開始
-    </p>`;
-  } else if (currentTime >= TIME.RATING_END) {
-    html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
-      <i class="fas fa-clock"></i> 今日評分已結束，下次再來評分吧！
-    </p>`;
-  }
-
-  html += '<ul style="list-style: none; padding: 0;">';
-
-  result.meals.forEach(meal => {
-    const isNotRated = (!meal.rated || meal.rated === 0 || meal.rated === '' || meal.rated === null);
-    const hasRated = meal.rated && meal.rated !== 0 && meal.rated !== '' && meal.rated !== null;
-
-    html += `<li style="padding: 12px; background: #f8f9fa; margin-bottom: 12px; border-radius: 8px;" data-slot="${meal.slotIndex}">`;
-    html += `<div><strong>${escapeHtml(meal.name)}</strong> x${meal.amount}</div>`;
-    html += `<div style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(meal.store)} - ${escapeHtml(meal.category)}</div>`;
-
-    const showRatingButtons = ratingTime && isNotRated;
-
-    if (showRatingButtons) {
-      html += `
-        <div class="rating-buttons" data-slot="${meal.slotIndex}" style="display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;">
-          <button class="btn rating-btn" data-rating="5" style="flex: 1; padding: 6px 8px; background: #f39c12; color: white; font-size: 0.7rem; width: auto;">⭐ 夯爆了</button>
-          <button class="btn rating-btn" data-rating="4" style="flex: 1; padding: 6px 8px; background: #2ecc71; color: white; font-size: 0.7rem; width: auto;">🔥 頂級</button>
-          <button class="btn rating-btn" data-rating="3" style="flex: 1; padding: 6px 8px; background: #3498db; color: white; font-size: 0.7rem; width: auto;">👑 人上人</button>
-          <button class="btn rating-btn" data-rating="2" style="flex: 1; padding: 6px 8px; background: #95a5a6; color: white; font-size: 0.7rem; width: auto;">🎭 NPC</button>
-          <button class="btn rating-btn" data-rating="1" style="flex: 1; padding: 6px 8px; background: #e74c3c; color: white; font-size: 0.7rem; width: auto;">💩 拉完了</button>
-        </div>
-      `;
-    } else if (hasRated) {
-      const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
-      const stars = '⭐'.repeat(meal.rated);
-      html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
-        <i class="fas fa-check-circle"></i> 已評分：${ratingText[meal.rated]} ${stars} (${meal.rated}分)
-      </div>`;
-    } else if (!ratingTime && currentTime < TIME.RATING_START) {
-      html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--gray);">🕐 評分將於 12:00 開始</div>`;
-    } else if (!ratingTime && currentTime >= TIME.RATING_END) {
-      html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--gray);">🕐 今日評分已結束</div>`;
+      html += `<p style="color: var(--danger); margin-bottom: 8px;">⏰ 今日訂餐已截止</p>`;
     }
 
-    html += `</li>`;
-  });
+    // 評分時間提示
+    if (ratingTime) {
+      html += `<p style="color: var(--success); margin-bottom: 8px; font-size: 0.85rem;">
+        <i class="fas fa-star"></i> 評分時間 12:00-16:00，為喜歡的餐點評分吧！
+      </p>`;
+    } else if (currentTime < TIME.RATING_START) {
+      const remaining = getRatingTimeRemaining();
+      html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
+        <i class="fas fa-clock"></i> 評分將於 ${formatTimeRemaining(remaining)} 後開始
+      </p>`;
+    } else if (currentTime >= TIME.RATING_END) {
+      html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
+        <i class="fas fa-clock"></i> 今日評分已結束，下次再來評分吧！
+      </p>`;
+    }
 
-  html += '</ul>';
-  container.innerHTML = html;
+    html += '<ul style="list-style: none; padding: 0;">';
 
-  container.querySelectorAll('.rating-btn').forEach(btn => {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      const rating = parseInt(this.dataset.rating);
-      const li = this.closest('li');
-      const slotIndex = parseInt(li.dataset.slot);
-      submitRating(studentId, slotIndex, rating, li);
+    meals.forEach(meal => {
+      const isNotRated = (!meal.rated || meal.rated === 0);
+      const hasRated = meal.rated && meal.rated !== 0;
+
+      html += `<li style="padding: 12px; background: #f8f9fa; margin-bottom: 12px; border-radius: 8px;" data-slot="${meal.slot}">`;
+      html += `<div><strong>${escapeHtml(meal.meal_name)}</strong> x${meal.amount}</div>`;
+      html += `<div style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(meal.restaurant)} - ${escapeHtml(meal.category)}</div>`;
+
+      const showRatingButtons = ratingTime && isNotRated;
+
+      if (showRatingButtons) {
+        html += `
+          <div class="rating-buttons" data-slot="${meal.slot}" style="display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;">
+            <button class="btn rating-btn" data-rating="5" style="flex: 1; padding: 6px 8px; background: #f39c12; color: white; font-size: 0.7rem; width: auto;">⭐ 夯爆了</button>
+            <button class="btn rating-btn" data-rating="4" style="flex: 1; padding: 6px 8px; background: #2ecc71; color: white; font-size: 0.7rem; width: auto;">🔥 頂級</button>
+            <button class="btn rating-btn" data-rating="3" style="flex: 1; padding: 6px 8px; background: #3498db; color: white; font-size: 0.7rem; width: auto;">👑 人上人</button>
+            <button class="btn rating-btn" data-rating="2" style="flex: 1; padding: 6px 8px; background: #95a5a6; color: white; font-size: 0.7rem; width: auto;">🎭 NPC</button>
+            <button class="btn rating-btn" data-rating="1" style="flex: 1; padding: 6px 8px; background: #e74c3c; color: white; font-size: 0.7rem; width: auto;">💩 拉完了</button>
+          </div>
+        `;
+      } else if (hasRated) {
+        const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
+        const stars = '⭐'.repeat(meal.rated);
+        html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
+          <i class="fas fa-check-circle"></i> 已評分：${ratingText[meal.rated]} ${stars} (${meal.rated}分)
+        </div>`;
+      }
+
+      html += `</li>`;
     });
-  });
+
+    html += '</ul>';
+    container.innerHTML = html;
+
+    // 綁定評分按鈕
+    container.querySelectorAll('.rating-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const rating = parseInt(this.dataset.rating);
+        const li = this.closest('li');
+        const slotIndex = parseInt(li.dataset.slot);
+        submitRating(studentId, slotIndex, rating, li);
+      });
+    });
+
+  } catch (error) {
+    console.error('載入今日餐點失敗:', error);
+    const container = document.getElementById('todayMealDisplay');
+    if (container) {
+      container.innerHTML = '<div class="message error">❌ 載入失敗</div>';
+    }
+  }
 }
 
 async function submitRating(studentId, slotIndex, rating, liElement) {
@@ -203,13 +251,35 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
     ratingDiv.innerHTML = '<div style="text-align: center; padding: 8px;"><i class="fas fa-spinner fa-spin"></i> 送出評分中...</div>';
   }
 
-  const result = await callApi('rateMeal', {
-    userId: studentId,
-    slotIndex: slotIndex,
-    rating: rating
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (result.success) {
+    // ✅ 更新 today_meals 的 rated 欄位
+    const { error } = await sb
+      .from('today_meals')
+      .update({ rated: rating })
+      .eq('user_id', studentId)
+      .eq('slot', slotIndex);
+
+    if (error) {
+      // 失敗 → 恢復
+      if (ratingDiv && ratingDiv._originalHTML) {
+        ratingDiv.innerHTML = ratingDiv._originalHTML;
+        ratingDiv.querySelectorAll('.rating-btn').forEach(btn => {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const newRating = parseInt(this.dataset.rating);
+            const li = this.closest('li');
+            const slot = parseInt(li.dataset.slot);
+            submitRating(studentId, slot, newRating, li);
+          });
+        });
+      }
+      showMessageModal('❌ 評分失敗', error.message);
+      return;
+    }
+
+    // 成功
     const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
     const stars = '⭐'.repeat(rating);
     const successHtml = `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
@@ -219,21 +289,11 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
     if (ratingDiv) ratingDiv.remove();
     liElement.insertAdjacentHTML('beforeend', successHtml);
 
-    showMessageModal('✅ 評分成功', result.message);
-  } else {
-    if (ratingDiv && ratingDiv._originalHTML) {
-      ratingDiv.innerHTML = ratingDiv._originalHTML;
-      ratingDiv.querySelectorAll('.rating-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-          e.stopPropagation();
-          const newRating = parseInt(this.dataset.rating);
-          const li = this.closest('li');
-          const slot = parseInt(li.dataset.slot);
-          submitRating(studentId, slot, newRating, li);
-        });
-      });
-    }
-    showMessageModal('❌ 評分失敗', result.message);
+    showMessageModal('✅ 評分成功', `評分：${ratingText[rating]}`);
+
+  } catch (error) {
+    console.error('評分失敗:', error);
+    showMessageModal('❌ 評分失敗', error.message);
   }
 }
 
@@ -261,15 +321,27 @@ async function enterMealOrderMode(event) {
 
   if (btn) setButtonLoading(btn, true);
 
-  const result = await callApi('getTodayRestaurant', {});
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data: restaurantData } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
 
-  if (result.success) {
-    navigateTo('user-meal-order');
-    if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
-  } else {
-    showMessageModal('❌ 無法點餐', '今日餐廳尚未設定');
+    if (btn) setButtonLoading(btn, false);
+
+    if (restaurantData && restaurantData.value) {
+      navigateTo('user-meal-order');
+      if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
+    } else {
+      showMessageModal('❌ 無法點餐', '今日餐廳尚未設定');
+    }
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('載入失敗:', error);
+    showMessageModal('❌ 錯誤', error.message);
   }
 }
 
@@ -277,45 +349,67 @@ async function checkUserOrderHistory() {
   const studentId = AppState.currentStudentId();
   if (!studentId) return;
 
-  const result = await callApi('getOrderDetails', {});
-  const historySection = document.getElementById('userOrderHistorySection');
-  const historyContainer = document.getElementById('userOrderHistory');
-  const badge = document.getElementById('orderHistoryBadge');
+  try {
+    const sb = await initSupabase();
 
-  if (!historySection || !historyContainer) return;
+    // ✅ 從 order_items + orders 查歷史訂單
+    const { data: items, error } = await sb
+      .from('order_items')
+      .select('*, orders!inner(order_id, created_at, restaurant)')
+      .eq('user_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(50);
 
-  if (result && result.success && result.orders && result.orders.length > 0) {
-    const userOrders = [];
-    result.orders.forEach(order => {
-      const userItems = order.items.filter(item => item.userId === studentId);
-      if (userItems.length > 0) {
-        const userOrderTotal = userItems.reduce((sum, item) => sum + item.subtotal, 0);
-        userOrders.push({
-          orderId: order.orderId,
-          timestamp: order.timestamp,
-          displayRestaurant: order.displayRestaurant,
-          items: userItems,
-          orderTotal: userOrderTotal
-        });
+    const historySection = document.getElementById('userOrderHistorySection');
+    const historyContainer = document.getElementById('userOrderHistory');
+    const badge = document.getElementById('orderHistoryBadge');
+
+    if (!historySection || !historyContainer) return;
+
+    if (error || !items || items.length === 0) {
+      historySection.style.display = 'none';
+      return;
+    }
+
+    // 按訂單分組
+    const orderMap = {};
+    items.forEach(item => {
+      const oid = item.orders.order_id;
+      if (!orderMap[oid]) {
+        orderMap[oid] = {
+          orderId: oid,
+          timestamp: item.orders.created_at,
+          displayRestaurant: item.orders.restaurant,
+          items: [],
+          orderTotal: 0
+        };
       }
+      orderMap[oid].items.push({
+        mealName: item.meal_name,
+        quantity: item.quantity,
+        price: item.price,
+        subtotal: item.subtotal
+      });
+      orderMap[oid].orderTotal += item.subtotal;
     });
+
+    const userOrders = Object.values(orderMap);
 
     if (userOrders.length > 0) {
       historySection.style.display = 'block';
-      userOrders.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       const recentOrders = userOrders.slice(0, 10);
       displayUserOrderHistory(recentOrders, historyContainer);
 
       const displayedTotal = recentOrders.reduce((sum, order) => sum + order.orderTotal, 0);
       let badgeText = `顯示最新 ${recentOrders.length} 筆`;
-      if (userOrders.length > 10) badgeText += ` (共 ${userOrders.length} 筆)`;
       badgeText += ` | 小計 $${displayedTotal.toFixed(1)}`;
       if (badge) badge.textContent = badgeText;
     } else {
       historySection.style.display = 'none';
     }
-  } else {
-    historySection.style.display = 'none';
+
+  } catch (error) {
+    console.warn('查訂單歷史失敗:', error);
   }
 }
 
