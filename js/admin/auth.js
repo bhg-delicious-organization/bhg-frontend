@@ -75,7 +75,7 @@ async function adminLogin(event) {
     }
 
     // 檢查是否為管理員
-    if (data.user.email !== ADMIN_EMAIL) {
+    if (data.user.email !== window.ADMIN_EMAIL) {
       await sb.auth.signOut();
       if (messageEl) {
         messageEl.innerHTML = '<div class="message error">此帳號不是管理員</div>';
