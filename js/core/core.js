@@ -8,7 +8,7 @@ let lastScrollY = window.scrollY;
 
 // ==================== 管理員登入狀態（Supabase Auth） ====================
 
-const ADMIN_EMAIL = 'hrir2580@gmail.com';
+window.ADMIN_EMAIL = 'hrir2580@gmail.com';
 
 /**
  * 檢查是否為管理員登入狀態（用 Supabase Auth）
