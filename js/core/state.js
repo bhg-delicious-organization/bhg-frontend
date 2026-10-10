@@ -55,15 +55,8 @@ const AppState = (function() {
       _adminToken = token || null;
       _csrfToken = csrfToken || null;
 
-      if (value && token) {
-        sessionStorage.setItem('adminToken', token);
-        if (csrfToken) sessionStorage.setItem('csrfToken', csrfToken);
-        localStorage.setItem('adminLoggedIn', 'true');
-      } else {
-        sessionStorage.removeItem('adminToken');
-        sessionStorage.removeItem('csrfToken');
-        localStorage.removeItem('adminLoggedIn');
-      }
+      // ✅ 只保留記憶體狀態，不再寫入 localStorage / sessionStorage
+      // 管理員登入狀態由 Supabase Auth 管理
       _notify('admin', { old, new: value, token: _adminToken });
     },
 
@@ -102,28 +95,16 @@ const AppState = (function() {
     },
 
     /**
-     * 初始化（從 localStorage/sessionStorage 讀取狀態）
-     * @returns {boolean} 是否已登入管理員
+     * 初始化（只讀學生學號，管理員狀態由 Supabase Auth 判斷）
+     * @returns {boolean} 永遠回傳 false（管理員狀態由 checkSupabaseAdminLogin 判斷）
      */
     init: function() {
-      const saved = localStorage.getItem('adminLoggedIn');
-      const savedToken = sessionStorage.getItem('adminToken');
-      const savedCsrf = sessionStorage.getItem('csrfToken');
-
-      let isLoggedIn = false;
-      if (saved === 'true' && savedToken) {
-        _isAdmin = true;
-        _adminToken = savedToken;
-        _csrfToken = savedCsrf || null;
-        isLoggedIn = true;
-      }
-
       const savedStudentId = localStorage.getItem('currentStudentId');
       if (savedStudentId) {
         _currentStudentId = savedStudentId;
       }
 
-      return isLoggedIn;
+      return false;
     },
 
     logout: function() {
