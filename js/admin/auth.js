@@ -3,6 +3,8 @@
 // 依賴：api.js、supabase.js、state.js、ui.js、common.js、core.js、navigation.js
 // ====================================================
 
+const ADMIN_EMAIL = 'hrir2580@gmail.com';
+
 /**
  * 顯示管理員登入模態窗
  */
@@ -70,6 +72,15 @@ async function adminLogin(event) {
     if (error) {
       if (messageEl) {
         messageEl.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+      }
+      return;
+    }
+
+    // 檢查是否為管理員
+    if (data.user.email !== ADMIN_EMAIL) {
+      await sb.auth.signOut();
+      if (messageEl) {
+        messageEl.innerHTML = '<div class="message error">此帳號不是管理員</div>';
       }
       return;
     }
