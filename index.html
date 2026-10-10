@@ -8,7 +8,7 @@
     <meta name="author" content="gtes10301">
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="icon" type="image/png" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
     <title>大家政便當廠-儲值系統</title>
 
     <!-- PWA -->
@@ -18,16 +18,20 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="便當廠">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
 
     <!-- OneSignal SDK（defer，非阻斷） -->
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.es6.js" defer></script>
 
-    <!-- Font Awesome（自己托管 + 非阻斷 + 預載字型） -->
-    <link rel="preload" href="fontawesome.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="fa-regular-400.woff2" as="font" type="font/woff2" crossorigin>
-    <noscript><link rel="stylesheet" href="fontawesome.min.css"></noscript>
+    <!-- Font Awesome（非阻斷載入） -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          media="print"
+          onload="this.media='all'">
+    <noscript>
+      <link rel="stylesheet"
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </noscript>
 
     <!-- 主要樣式表（必須阻斷，否則畫面全亂） -->
     <link rel="stylesheet" href="styles.css">
@@ -69,7 +73,7 @@
                 <!-- 標題 -->
                 <div style="font-size: 2.5rem; margin-bottom: 8px;">🍱</div>
                 <div style="font-family: monospace; font-size: 0.75rem; color: var(--gray); letter-spacing: 2px; margin-bottom: 20px;">
-                    BHG SYSTEM v2.9.3
+                    BHG SYSTEM v3.2.1
                 </div>
 
                 <!-- 終端機風格標籤 -->
@@ -230,31 +234,30 @@
     </div>
 
     <!-- ==================== 管理員登入模態視窗 ==================== -->
-    
     <div id="adminModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3><i class="fas fa-lock"></i> 管理員登入</h3>
-          <button class="close-btn" onclick="hideAdminModal()">&times;</button>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-lock"></i> 管理員登入</h3>
+                <button class="close-btn" onclick="hideAdminModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" id="adminEmail" class="form-control" placeholder="請輸入 Email">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">密碼</label>
+                    <input type="password" id="adminPassword" class="form-control" placeholder="請輸入密碼">
+                </div>
+                <div id="loginMessage"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideAdminModal()">取消</button>
+                <button class="btn btn-primary" onclick="adminLogin(event)">
+                    <i class="fas fa-sign-in-alt"></i> 登入
+                </button>
+            </div>
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label class="form-label">Email</label>
-            <input type="email" id="adminEmail" class="form-control" placeholder="請輸入 Email">
-          </div>
-          <div class="form-group">
-            <label class="form-label">密碼</label>
-            <input type="password" id="adminPassword" class="form-control" placeholder="請輸入密碼">
-          </div>
-          <div id="loginMessage"></div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" onclick="hideAdminModal()">取消</button>
-          <button class="btn btn-primary" onclick="adminLogin(event)">
-            <i class="fas fa-sign-in-alt"></i> 登入
-          </button>
-        </div>
-      </div>
     </div>
 
     <!-- ==================== 訊息模態視窗 ==================== -->
@@ -384,7 +387,9 @@
               } else {
                 console.log('🔇 小改：靜默更新中...');
                 setTimeout(function() {
-                  window.location.reload();
+                  // ✅ 加時間戳，強制繞過 HTTP 快取
+                  const url = window.location.href.split('?')[0];
+                  window.location.href = url + '?_t=' + Date.now();
                 }, 500);
               }
             }
@@ -433,7 +438,8 @@
 
         document.getElementById('majorUpdateBtn').onclick = function() {
           navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
-          window.location.reload();
+          const url = window.location.href.split('?')[0];
+          window.location.href = url + '?_t=' + Date.now();
         };
       }
     </script>
