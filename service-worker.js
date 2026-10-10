@@ -2,7 +2,7 @@
 // PWA Service Worker（自動判斷大改/小改）
 // ==========================================================
 
-const VERSION = '3.1.4';  // 2.9.7 → 3.0.0
+const VERSION = '3.2.1';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -12,12 +12,10 @@ const URLS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './fontawesome.min.css',
-  './fa-solid-900.woff2',
-  './fa-regular-400.woff2',
   './api.js',
   './styles.css',
   './assets/conan.png',
+  './js/core/supabase.js',
   './js/core/state.js',
   './js/core/ui.js',
   './js/core/time.js',
@@ -81,9 +79,8 @@ self.addEventListener('install', function(event) {
       return cache.addAll(URLS_TO_CACHE).catch(function(err) {
         console.warn('⚠️ 部分資源快取失敗:', err);
       });
-    }).then(function() {
-      return self.skipWaiting();
     })
+    // ✅ 不呼叫 skipWaiting()，等前端確認
   );
 });
 
@@ -142,27 +139,10 @@ self.addEventListener('fetch', function(event) {
 
   const url = event.request.url;
 
-  // ✅ 只處理 http/https 請求（排除 chrome-extension、data:、blob: 等）
+  // ✅ 只處理 http/https
   if (!url.startsWith('http://') && !url.startsWith('https://')) return;
 
-  // ✅ 只處理允許的來源
-  try {
-    const requestUrl = new URL(url);
-    const ALLOWED_HOSTS = [
-      'bhg-delicious-organization.github.io',
-      'cdn.onesignal.com',
-      'cdnjs.cloudflare.com',
-      'i.ibb.co'
-    ];
-
-    if (!ALLOWED_HOSTS.includes(requestUrl.hostname)) {
-      return;
-    }
-  } catch (e) {
-    return;
-  }
-
-  // ✅ 排除特定的 URL
+  // ✅ 排除特定來源
   if (url.includes('script.google.com')) return;
   if (url.includes('onesignal.com')) return;
   if (url.includes('OneSignalSDKWorker.js')) return;
@@ -170,6 +150,23 @@ self.addEventListener('fetch', function(event) {
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
   if (url.includes('/onesignal/')) return;
 
+  // ✅ index.html 走 Network First（永遠拿最新）
+  if (url.endsWith('/') || url.endsWith('/index.html') || url.includes('/index.html?')) {
+    event.respondWith(
+      fetch(event.request).then(function(response) {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache) {
+          cache.put(event.request, clone);
+        }).catch(function() {});
+        return response;
+      }).catch(function() {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
+  // ✅ 其他資源走 Cache First
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if (response) return response;
@@ -179,14 +176,11 @@ self.addEventListener('fetch', function(event) {
           return networkResponse;
         }
 
-        // ✅ 先 clone，避免 request 被釋放
         const responseToCache = networkResponse.clone();
         const requestToCache = event.request.clone();
 
         caches.open(CACHE_NAME).then(function(cache) {
-          return cache.put(requestToCache, responseToCache);
-        }).catch(function() {
-          // ✅ 完全忽略快取失敗（例如 chrome-extension）
+          cache.put(requestToCache, responseToCache).catch(function() {});
         });
 
         return networkResponse;
