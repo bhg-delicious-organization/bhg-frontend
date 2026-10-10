@@ -1,10 +1,37 @@
 // ==================== core.js ====================
 // 核心功能模組
-// 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js
+// 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
 // ==================================================
 
 window.navHidden = false;
 let lastScrollY = window.scrollY;
+
+// ==================== 管理員登入狀態（Supabase Auth） ====================
+
+const ADMIN_EMAIL = 'hrir2580@gmail.com';
+
+/**
+ * 檢查是否為管理員登入狀態（用 Supabase Auth）
+ */
+async function checkSupabaseAdminLogin() {
+  try {
+    const sb = await initSupabase();
+    const { data: { session } } = await sb.auth.getSession();
+
+    if (session && session.user) {
+      if (session.user.email === ADMIN_EMAIL) {
+        AppState.setAdmin(true, session.access_token, null);
+        console.log('✅ 管理員已登入:', session.user.email);
+        return true;
+      }
+    }
+
+    return false;
+  } catch (e) {
+    console.warn('檢查登入狀態失敗:', e);
+    return false;
+  }
+}
 
 // ==================== 載入進度控制 ====================
 
@@ -390,7 +417,10 @@ async function initApp() {
   initRememberedId();
   initAutoHideNav();
 
-  const isLoggedIn = AppState.init();
+  // ✅ 用 Supabase Auth 判斷管理員登入狀態
+  AppState.init();  // 只讀學生學號
+  const isLoggedIn = await checkSupabaseAdminLogin();
+
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
@@ -404,12 +434,10 @@ async function initApp() {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
 
-    AppState.setAdmin(true, sessionStorage.getItem('adminToken'), sessionStorage.getItem('csrfToken'));
     if (statusText) statusText.textContent = '已登入';
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    // ✅ 移除人為延遲
     markStepStart('init');
     markStepDone('init');
 
@@ -444,7 +472,6 @@ async function initApp() {
     markStepStart('done');
     markStepDone('done');
 
-    // ✅ 延後 3 秒預載入頁面
     setTimeout(() => {
       preloadAllPages();
     }, 3000);
@@ -458,7 +485,6 @@ async function initApp() {
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    // ✅ 移除人為延遲
     markStepStart('init');
     markStepDone('init');
 
@@ -498,7 +524,6 @@ async function initApp() {
     markStepStart('done');
     markStepDone('done');
 
-    // ✅ 延後 3 秒預載入頁面
     setTimeout(() => {
       preloadAllPages();
     }, 3000);
@@ -521,5 +546,6 @@ window.loadSystemInfo = loadSystemInfo;
 window.updateLoaderProgress = updateLoaderProgress;
 window.markStepStart = markStepStart;
 window.markStepDone = markStepDone;
+window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 
 console.log('⚙️ core.js 已載入');
