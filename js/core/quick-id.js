@@ -1,6 +1,6 @@
 // ==================== quick-id.js ====================
-// 學號登入管理模組
-// 依賴：api.js、state.js、ui.js、common.js
+// 學號登入管理模組（Supabase Auth）
+// 依賴：api.js、supabase.js、state.js、ui.js、common.js
 // ====================================================
 
 /**
@@ -61,7 +61,7 @@ function hideQuickIdModal() {
 }
 
 /**
- * 儲存學號（登入）
+ * 儲存學號（登入）- 使用 Supabase Auth
  */
 async function saveQuickId() {
   const studentId = document.getElementById('quickIdInput').value.trim();
@@ -73,30 +73,75 @@ async function saveQuickId() {
     return;
   }
 
-  if (msgDiv) msgDiv.innerHTML = '<div class="loading"><div class="spinner"></div>驗證中...</div>';
+  if (msgDiv) {
+    msgDiv.innerHTML = '<div class="loading"><div class="spinner"></div>驗證中...</div>';
+  }
 
-  const result = await callApi('verifyUserPassword', {
-    userId: studentId,
-    password: password
-  });
+  try {
+    const sb = await initSupabase();
+    const email = `${studentId}@bhg.local`;
 
-  if (msgDiv) msgDiv.innerHTML = '';
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
-  if (result.success) {
+    if (msgDiv) msgDiv.innerHTML = '';
+
+    if (error) {
+      let errorMessage = error.message;
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = '學號或密碼錯誤';
+      }
+      if (msgDiv) {
+        msgDiv.innerHTML = `<div class="message error">${escapeHtml(errorMessage)}</div>`;
+      }
+      return;
+    }
+
+    // 登入成功
     AppState.setCurrentStudentId(studentId);
     fillAllStudentIdInputs(studentId, true);
     hideQuickIdModal();
-    showMessageModal('✅ 登入成功', `歡迎回來，${result.name}`);
+
+    // 從 users 表讀取姓名
+    let name = studentId;
+    try {
+      const { data: userData } = await sb
+        .from('users')
+        .select('name')
+        .eq('user_id', studentId)
+        .single();
+
+      if (userData?.name) name = userData.name;
+    } catch (e) {
+      console.warn('讀取姓名失敗:', e);
+    }
+
+    showMessageModal('✅ 登入成功', `歡迎回來，${name}`);
+
     if (typeof loadAccountPage === 'function') loadAccountPage();
-  } else {
-    if (msgDiv) msgDiv.innerHTML = `<div class="message error">${escapeHtml(result.message)}</div>`;
+
+  } catch (error) {
+    if (msgDiv) msgDiv.innerHTML = '';
+    console.error('登入失敗:', error);
+    if (msgDiv) {
+      msgDiv.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
   }
 }
 
 /**
- * 清除記住的學號
+ * 清除記住的學號（登出）
  */
-function clearRememberedId() {
+async function clearRememberedId() {
+  try {
+    const sb = await initSupabase();
+    await sb.auth.signOut();
+  } catch (e) {
+    console.warn('登出失敗:', e);
+  }
+
   AppState.setCurrentStudentId('');
   const btnText = document.getElementById('quickIdBtnText');
   if (btnText) btnText.textContent = '學號';
@@ -109,7 +154,14 @@ function clearRememberedId() {
 /**
  * 從學號模態窗登出
  */
-function logoutFromQuickModal() {
+async function logoutFromQuickModal() {
+  try {
+    const sb = await initSupabase();
+    await sb.auth.signOut();
+  } catch (e) {
+    console.warn('登出失敗:', e);
+  }
+
   AppState.setCurrentStudentId('');
 
   const inputs = ['queryStudentId', 'rechargeStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
