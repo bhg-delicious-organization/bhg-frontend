@@ -3,8 +3,6 @@
 // 依賴：api.js、supabase.js、state.js、ui.js、common.js、core.js、navigation.js
 // ====================================================
 
-const ADMIN_EMAIL = 'hrir2580@gmail.com';
-
 /**
  * 顯示管理員登入模態窗
  */
