@@ -10,9 +10,6 @@ let lastScrollY = window.scrollY;
 
 window.ADMIN_EMAIL = 'hrir2580@gmail.com';
 
-/**
- * 檢查是否為管理員登入狀態（用 Supabase Auth）
- */
 async function checkSupabaseAdminLogin() {
   try {
     const sb = await initSupabase();
@@ -128,11 +125,7 @@ function initEnterKeyBindings() {
     bindEnterKey(queryInput, () => queryUserInfo());
   }
 
-  const giftCodeInput = document.getElementById('giftCode');
   const rechargeUserIdInput = document.getElementById('rechargeStudentId');
-  if (giftCodeInput && typeof redeemGiftCode === 'function') {
-    bindEnterKey(giftCodeInput, () => redeemGiftCode());
-  }
   if (rechargeUserIdInput && typeof redeemGiftCode === 'function') {
     bindEnterKey(rechargeUserIdInput, () => redeemGiftCode());
   }
@@ -238,12 +231,23 @@ function fallbackCopyToClipboard(text, resolve, reject) {
 
 function reportFrontendError(functionName, error, description = '') {
   const errorMsg = error?.message || error;
-  callApi('reportFrontendError', {
-    functionName: functionName,
-    message: errorMsg,
-    description: description,
-    stack: error?.stack || ''
-  });
+
+  // 寫入 Supabase error_logs
+  (async () => {
+    try {
+      const sb = await initSupabase();
+      await sb.from('error_logs').insert({
+        source: '前端',
+        function_name: functionName,
+        error_type: 'Error',
+        error_message: String(errorMsg).substring(0, 500),
+        description: description
+      });
+    } catch (e) {
+      console.warn('上報錯誤失敗:', e);
+    }
+  })();
+
   console.error(`[前端錯誤] ${functionName}:`, error);
 }
 
@@ -270,7 +274,7 @@ function initRememberedId() {
 }
 
 function fillAllStudentIdInputs(studentId, setAsCurrent = false) {
-  const inputs = ['queryStudentId', 'rechargeStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
+  const inputs = ['queryStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
   inputs.forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = studentId;
@@ -386,7 +390,6 @@ function updateTimeModeHint() {
 async function initApp() {
   console.log('🚀 系統初始化開始');
 
-  // ✅ 清除舊的餐廳快取（跨日）
   if (typeof cleanupOldRestaurantCache === 'function') {
     cleanupOldRestaurantCache();
   }
@@ -417,8 +420,7 @@ async function initApp() {
   initRememberedId();
   initAutoHideNav();
 
-  // ✅ 用 Supabase Auth 判斷管理員登入狀態
-  AppState.init();  // 只讀學生學號
+  AppState.init();
   const isLoggedIn = await checkSupabaseAdminLogin();
 
   const statusText = document.getElementById('adminStatusText');
@@ -430,7 +432,6 @@ async function initApp() {
   const adminNav = document.querySelector('.admin-nav');
 
   if (isLoggedIn) {
-    // ========== 管理員模式 ==========
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
 
@@ -477,7 +478,6 @@ async function initApp() {
     }, 3000);
 
   } else {
-    // ========== 使用者模式 ==========
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
 
