@@ -1,19 +1,13 @@
 // ==================== recharge.js ====================
-// 管理員直接儲值模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js
-// ====================================================
+// 管理員直接儲值模組（Supabase 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
+// ==================================================
 
-/**
- * 設定直接儲值的金額
- */
 function setDirectAmount(amount) {
   const amountInput = document.getElementById('directRechargeAmount');
   if (amountInput) amountInput.value = amount;
 }
 
-/**
- * 管理員直接儲值
- */
 async function directRecharge(event) {
   const btn = event ? event.currentTarget : null;
 
@@ -47,34 +41,48 @@ async function directRecharge(event) {
   if (btn) setButtonLoading(btn, true);
   if (resultDiv) showConanLoading('directRechargeResult', 'adminDirectRecharge');
 
-  const result = await callAdminApi('adminDirectRecharge', {
-    userId: userId,
-    amount: amountNum,
-    note: note || '管理員直接儲值'
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data, error } = await sb.rpc('admin_recharge', {
+      p_user_id: userId,
+      p_amount: amountNum,
+      p_note: note || '管理員直接儲值'
+    });
 
-  if (result.success) {
-    if (resultDiv) {
-      resultDiv.innerHTML = `
-        <div class="message success">
-          <i class="fas fa-check-circle"></i> ✅ 儲值成功！<br>
-          <strong>${escapeHtml(result.name)} (${escapeHtml(result.user_id)})</strong><br>
-          儲值金額: $${result.amount}<br>
-          新餘額: $${result.new_balance}
-        </div>
-      `;
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      return;
     }
-    document.getElementById('directRechargeUserId').value = '';
-    document.getElementById('directRechargeAmount').value = '';
-    document.getElementById('directRechargeNote').value = '';
-  } else {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+
+    if (data.success) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `
+          <div class="message success">
+            <i class="fas fa-check-circle"></i> ✅ 儲值成功！<br>
+            <strong>${escapeHtml(data.name)} (${escapeHtml(data.user_id)})</strong><br>
+            儲值金額: $${data.amount}<br>
+            新餘額: $${data.new_balance}
+          </div>
+        `;
+      }
+      document.getElementById('directRechargeUserId').value = '';
+      document.getElementById('directRechargeAmount').value = '';
+      document.getElementById('directRechargeNote').value = '';
+    } else {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
+    }
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('儲值失敗:', error);
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
   }
 }
 
 window.setDirectAmount = setDirectAmount;
 window.directRecharge = directRecharge;
 
-console.log('⚡ 直接儲值模組已載入');
+console.log('⚡ 直接儲值模組已載入（Supabase 版）');
