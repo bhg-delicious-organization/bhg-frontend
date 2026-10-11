@@ -1,8 +1,8 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker（自動判斷大改/小改）
+// PWA Service Worker（更新後自動跳過等待 + 自動重載）
 // ==========================================================
 
-const VERSION = '3.2.3';  // ⚠️ 只改這行
+const VERSION = '3.2.4';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -74,13 +74,16 @@ function isMajorUpdate(oldVersion, newVersion) {
 // ==================== 安裝 ====================
 self.addEventListener('install', function(event) {
   console.log(`📦 新版本 ${VERSION} 安裝中...`);
+
+  // ✅ 直接跳過等待，不等前端確認
+  self.skipWaiting();
+
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(URLS_TO_CACHE).catch(function(err) {
         console.warn('⚠️ 部分資源快取失敗:', err);
       });
     })
-    // ✅ 不呼叫 skipWaiting()，等前端確認
   );
 });
 
@@ -139,18 +142,19 @@ self.addEventListener('fetch', function(event) {
 
   const url = event.request.url;
 
-  // ✅ 只處理 http/https
   if (!url.startsWith('http://') && !url.startsWith('https://')) return;
 
-  // ✅ 排除特定來源
+  // 排除特定來源
   if (url.includes('script.google.com')) return;
+  if (url.includes('supabase.co')) return;              // ✅ Supabase API 不攔
   if (url.includes('onesignal.com')) return;
   if (url.includes('OneSignalSDKWorker.js')) return;
   if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
+  if (url.includes('jsdelivr.net')) return;             // ✅ CDN 不攔
   if (url.includes('/onesignal/')) return;
 
-  // ✅ index.html 走 Network First（永遠拿最新）
+  // index.html 走 Network First
   if (url.endsWith('/') || url.endsWith('/index.html') || url.includes('/index.html?')) {
     event.respondWith(
       fetch(event.request).then(function(response) {
@@ -166,7 +170,7 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // ✅ 其他資源走 Cache First
+  // 其他資源走 Cache First
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if (response) return response;
