@@ -1,6 +1,6 @@
 // ==================== restaurant.js ====================
-// 管理員餐廳管理模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js
+// 管理員餐廳管理模組（Supabase 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ==================================================
 
 function setEndTimeQuick(time) {
@@ -24,29 +24,46 @@ async function loadTodayRestaurantStatus() {
 
   await ensureTimeLimitsLoaded();
 
-  const result = await callApi('getTodayRestaurant', {});
+  try {
+    const sb = await initSupabase();
 
-  if (result.success && result.restaurant) {
-    let endTimeStr = '10:00';
-    try {
-      const limitsResult = await callApi('getTimeLimits', {});
-      if (limitsResult.success && limitsResult.limits) {
-        endTimeStr = formatTimeStr(limitsResult.limits.ORDER_END);
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
+
+    const restaurant = setting?.value || '';
+
+    if (restaurant) {
+      let endTimeStr = '10:00';
+      try {
+        const { data: endSetting } = await sb
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'today_order_end')
+          .single();
+        if (endSetting?.value) {
+          endTimeStr = formatTimeStr(parseInt(endSetting.value));
+        }
+      } catch (e) {
+        console.warn('讀取截止時間失敗:', e);
       }
-    } catch (e) {
-      console.warn('讀取截止時間失敗:', e);
-    }
 
-    statusText.innerHTML = `✅ 今日餐廳：<strong>${escapeHtml(result.restaurant)}</strong><br>⏰ 截止時間：<strong>${endTimeStr}</strong>（已設定，無法修改）`;
-    statusDiv.style.backgroundColor = '#f0fdf4';
-    statusDiv.style.borderLeftColor = '#10b981';
-    if (selectContainer) selectContainer.style.display = 'none';
-  } else {
-    statusText.innerHTML = `⏳ 今日餐廳尚未設定，請選擇：`;
-    statusDiv.style.backgroundColor = '#fff7ed';
-    statusDiv.style.borderLeftColor = '#f97316';
-    if (selectContainer) selectContainer.style.display = 'block';
-    loadRestaurantOptions();
+      statusText.innerHTML = `✅ 今日餐廳：<strong>${escapeHtml(restaurant)}</strong><br>⏰ 截止時間：<strong>${endTimeStr}</strong>（已設定，無法修改）`;
+      statusDiv.style.backgroundColor = '#f0fdf4';
+      statusDiv.style.borderLeftColor = '#10b981';
+      if (selectContainer) selectContainer.style.display = 'none';
+    } else {
+      statusText.innerHTML = `⏳ 今日餐廳尚未設定，請選擇：`;
+      statusDiv.style.backgroundColor = '#fff7ed';
+      statusDiv.style.borderLeftColor = '#f97316';
+      if (selectContainer) selectContainer.style.display = 'block';
+      loadRestaurantOptions();
+    }
+  } catch (error) {
+    console.error('載入今日餐廳狀態失敗:', error);
+    statusText.textContent = '載入失敗';
   }
 }
 
@@ -56,17 +73,29 @@ async function loadRestaurantOptions() {
 
   select.innerHTML = '<option value="">載入中...</option>';
 
-  const result = await callAdminApi('getAllStores', {});
+  try {
+    const sb = await initSupabase();
 
-  if (result.success && result.stores) {
+    const { data: stores, error } = await sb
+      .from('restaurants')
+      .select('name')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error || !stores) {
+      select.innerHTML = '<option value="">載入失敗</option>';
+      return;
+    }
+
     select.innerHTML = '<option value="">請選擇餐廳</option>';
-    result.stores.forEach(store => {
+    stores.forEach(store => {
       const option = document.createElement('option');
-      option.value = store;
-      option.textContent = store;
+      option.value = store.name;
+      option.textContent = store.name;
       select.appendChild(option);
     });
-  } else {
+  } catch (error) {
+    console.error('載入餐廳選項失敗:', error);
     select.innerHTML = '<option value="">載入失敗</option>';
   }
 }
@@ -104,33 +133,58 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   const resultDiv = document.getElementById('restaurantResult');
   if (resultDiv) showConanLoading('restaurantResult', 'setTodayRestaurant');
 
-  const result = await callAdminApi('setTodayRestaurant', {
-    restaurantName: restaurantName,
-    orderEndTime: orderEndTime
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const now = new Date().toISOString();
 
-  if (result.success) {
+    // 1. 設定今日餐廳
+    const { error: e1 } = await sb
+      .from('system_settings')
+      .upsert({ key: 'today_restaurant', value: restaurantName, updated_at: now });
+
+    if (e1) throw new Error('設定餐廳失敗：' + e1.message);
+
+    // 2. 設定截止時間
+    const { error: e2 } = await sb
+      .from('system_settings')
+      .upsert({ key: 'today_order_end', value: String(orderEndTime), updated_at: now });
+
+    if (e2) throw new Error('設定截止時間失敗：' + e2.message);
+
+    if (btn) setButtonLoading(btn, false);
+
     AppState.setCurrentRestaurantName(restaurantName);
     TIME.ORDER_END = parseInt(orderEndTime);
 
-    // ✅ 清除今日餐廳快取
-    if (typeof clearTodayRestaurantCache === 'function') {
-      clearTodayRestaurantCache();
-    }
-
-    // ✅ 清除菜單快取
-    if (typeof clearRestaurantMenuCache === 'function') {
-      clearRestaurantMenuCache();
-    }
+    if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
+    if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
 
     if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
+      resultDiv.innerHTML = `<div class="message success">✅ 今日餐廳「${escapeHtml(restaurantName)}」設定成功，截止時間 ${formatTimeStr(orderEndTime)}</div>`;
     }
+
+    // 3. 發通知（走 GAS）
+    try {
+      await fetch('https://script.google.com/macros/s/AKfycbwGpChoVd0K6InXzM6T962y0y5bLcVwNCJO0uy1RIcsyrMmz7-q5CMcNlh_9qDZfDPXUA/exec', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'notifyTodayRestaurant',
+          data: { restaurantName, orderEndTime }
+        })
+      });
+    } catch (notifyErr) {
+      console.warn('發通知失敗:', notifyErr);
+    }
+
     loadTodayRestaurantStatus();
-  } else {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('設定餐廳失敗:', error);
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+    }
   }
 }
 
@@ -141,51 +195,129 @@ async function showTodayRestaurantStats(event) {
   const resultDiv = document.getElementById('mealStatsResult');
   if (resultDiv) showConanLoading('mealStatsResult', 'getTodayRestaurantStats');
 
-  const result = await callAdminApi('getTodayRestaurantStats', {});
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
 
-  if (!result.success) {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
-    return;
+    const restaurantName = setting?.value || '';
+    if (!restaurantName) throw new Error('今日餐廳尚未設定');
+
+    const { data: restData } = await sb
+      .from('restaurants')
+      .select('id')
+      .eq('name', restaurantName)
+      .single();
+
+    if (!restData) throw new Error('找不到餐廳');
+
+    const { data: items, error } = await sb
+      .from('menu_items')
+      .select('category, meal_name, price, order_count')
+      .eq('restaurant_id', restData.id)
+      .gt('order_count', 0)
+      .order('category')
+      .order('meal_name');
+
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) throw new Error(error.message);
+
+    if (!items || items.length === 0) {
+      if (resultDiv) resultDiv.innerHTML = '<div class="message info">暫無餐點資料</div>';
+      return;
+    }
+
+    let totalCount = 0;
+    let html = `<h4 style="margin-bottom: 10px;">🍽️ ${escapeHtml(restaurantName)} 餐點統計</h4>`;
+    html += '<div class="table-container"><table class="table">';
+    html += '<tr><th>種類</th><th>品項</th><th>數量</th></tr>';
+    items.forEach(item => {
+      html += `<tr><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.meal_name)}</td><td>${item.order_count}</td></tr>`;
+      totalCount += Number(item.order_count);
+    });
+    html += '</table></div>';
+    html += `<p style="margin-top: 8px; color: var(--gray); font-size: 0.9rem;">總份數：${totalCount} 份</p>`;
+
+    if (resultDiv) resultDiv.innerHTML = html;
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('載入餐點統計失敗:', error);
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
   }
-
-  if (!result.restaurant.items || result.restaurant.items.length === 0) {
-    if (resultDiv) resultDiv.innerHTML = '<div class="message info">暫無餐點資料</div>';
-    return;
-  }
-
-  let totalCount = 0;
-  let html = `<h4 style="margin-bottom: 10px;">🍽️ ${escapeHtml(result.restaurant.name)} 餐點統計</h4>`;
-  html += '<div class="table-container"><table class="table">';
-  html += '<tr><th>種類</th><th>品項</th><th>數量</th></tr>';
-  result.restaurant.items.forEach(item => {
-    html += `<tr><td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.name)}</td><td>${item.count}</td></tr>`;
-    totalCount += item.count;
-  });
-  html += '</table></div>';
-  html += `<p style="margin-top: 8px; color: var(--gray); font-size: 0.9rem;">總份數：${totalCount} 份</p>`;
-
-  if (resultDiv) resultDiv.innerHTML = html;
 }
 
 async function copyRestaurantStatsList(event) {
   const btn = event ? event.currentTarget : null;
   if (btn) setButtonLoading(btn, true);
 
-  const result = await callAdminApi('generateRestaurantStatsList', {});
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
 
-  if (result.success) {
-    try {
-      await copyToClipboard(result.text);
-      showMessageModal('✅ 成功', `已複製 ${result.restaurantName} 餐點統計`);
-    } catch (err) {
-      showMessageModal('❌ 錯誤', '複製失敗，請手動選取');
+    const restaurantName = setting?.value || '';
+    if (!restaurantName) throw new Error('今日餐廳尚未設定');
+
+    const { data: restData } = await sb
+      .from('restaurants')
+      .select('id')
+      .eq('name', restaurantName)
+      .single();
+
+    const { data: items, error } = await sb
+      .from('menu_items')
+      .select('category, meal_name, price, order_count')
+      .eq('restaurant_id', restData.id)
+      .gt('order_count', 0)
+      .order('category')
+      .order('meal_name');
+
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) throw new Error(error.message);
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('zh-TW');
+    const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false });
+
+    let text = `【大家政便當廠】${restaurantName} 餐點統計\n`;
+    text += `生成時間：${dateStr} ${timeStr}\n`;
+    text += `════════════════════\n\n`;
+
+    if (!items || items.length === 0) {
+      text += '暫無餐點資料';
+    } else {
+      let totalCount = 0;
+      let currentCategory = '';
+      items.forEach(item => {
+        if (item.category !== currentCategory) {
+          currentCategory = item.category;
+          text += `【${currentCategory}】\n`;
+        }
+        text += `  ${item.meal_name} x${item.order_count}  (${item.price}元)\n`;
+        totalCount += Number(item.order_count);
+      });
+      text += `\n════════════════════\n`;
+      text += `總份數：${totalCount} 份\n`;
     }
-  } else {
-    showMessageModal('❌ 錯誤', result.message || '產生統計失敗');
+
+    await copyToClipboard(text);
+    showMessageModal('✅ 成功', `已複製 ${restaurantName} 餐點統計`);
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('複製統計失敗:', error);
+    showMessageModal('❌ 錯誤', error.message || '產生統計失敗');
   }
 }
 
@@ -200,27 +332,34 @@ function cutOffOrder() {
       const resultDiv = document.getElementById('cutOffResult');
       if (resultDiv) showConanLoading('cutOffResult', 'cutOffOrder');
 
-      const result = await callAdminApi('cutOffOrder', {});
+      try {
+        const sb = await initSupabase();
+        const { data, error } = await sb.rpc('cut_off_order');
 
-      if (btn) setButtonLoading(btn, false);
+        if (btn) setButtonLoading(btn, false);
 
-      if (result.success) {
-        showMessageModal('✅ 截止訂餐', result.message);
-        AppState.setCurrentRestaurantName('');
-
-        // ✅ 清除今日餐廳快取
-        if (typeof clearTodayRestaurantCache === 'function') {
-          clearTodayRestaurantCache();
+        if (error) {
+          showMessageModal('❌ 截止失敗', error.message);
+          return;
         }
 
-        // ✅ 清除菜單快取
-        if (typeof clearRestaurantMenuCache === 'function') {
-          clearRestaurantMenuCache();
-        }
+        const result = data;
 
-        loadTodayRestaurantStatus();
-      } else {
-        showMessageModal('❌ 截止失敗', result.message);
+        if (result.success) {
+          showMessageModal('✅ 截止訂餐', result.message);
+          AppState.setCurrentRestaurantName('');
+
+          if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
+          if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
+
+          loadTodayRestaurantStatus();
+        } else {
+          showMessageModal('❌ 截止失敗', result.message);
+        }
+      } catch (err) {
+        if (btn) setButtonLoading(btn, false);
+        console.error('截止訂餐失敗:', err);
+        showMessageModal('❌ 截止失敗', err.message || '請稍後再試');
       }
     }
   );
@@ -233,4 +372,4 @@ window.showTodayRestaurantStats = showTodayRestaurantStats;
 window.copyRestaurantStatsList = copyRestaurantStatsList;
 window.cutOffOrder = cutOffOrder;
 
-console.log('🏪 餐廳模組已載入');
+console.log('🏪 餐廳模組已載入（Supabase 版）');
