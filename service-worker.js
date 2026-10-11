@@ -1,8 +1,8 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker（更新後自動跳過等待 + 自動重載）
+// PWA Service Worker（自動判斷大改/小改）
 // ==========================================================
 
-const VERSION = '3.2.4';  // ⚠️ 只改這行
+const VERSION = '3.2.5';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -12,7 +12,6 @@ const URLS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './api.js',
   './styles.css',
   './assets/conan.png',
   './js/core/supabase.js',
@@ -40,13 +39,11 @@ const URLS_TO_CACHE = [
   './pages/user-meal-order.html',
   './pages/user-meal.html',
   './pages/user-query.html',
-  './pages/user-recharge.html',
   './pages/user-register.html',
   './pages/user-system.html',
   // 使用者模組
   './js/user/query.js',
   './js/user/register.js',
-  './js/user/gift.js',
   './js/user/changepwd.js',
   './js/user/account.js',
   './js/user/meal.js',
@@ -54,7 +51,6 @@ const URLS_TO_CACHE = [
   // 管理員模組
   './js/admin/auth.js',
   './js/admin/restaurant.js',
-  './js/admin/gift.js',
   './js/admin/recharge.js',
   './js/admin/query.js',
   './js/admin/analytics.js',
@@ -75,7 +71,6 @@ function isMajorUpdate(oldVersion, newVersion) {
 self.addEventListener('install', function(event) {
   console.log(`📦 新版本 ${VERSION} 安裝中...`);
 
-  // ✅ 直接跳過等待，不等前端確認
   self.skipWaiting();
 
   event.waitUntil(
@@ -146,12 +141,12 @@ self.addEventListener('fetch', function(event) {
 
   // 排除特定來源
   if (url.includes('script.google.com')) return;
-  if (url.includes('supabase.co')) return;              // ✅ Supabase API 不攔
+  if (url.includes('supabase.co')) return;
   if (url.includes('onesignal.com')) return;
   if (url.includes('OneSignalSDKWorker.js')) return;
   if (url.includes('OneSignalSDKUpdaterWorker.js')) return;
   if (url.includes('i.ibb.co') || url.includes('cdnjs.cloudflare.com')) return;
-  if (url.includes('jsdelivr.net')) return;             // ✅ CDN 不攔
+  if (url.includes('jsdelivr.net')) return;
   if (url.includes('/onesignal/')) return;
 
   // index.html 走 Network First
