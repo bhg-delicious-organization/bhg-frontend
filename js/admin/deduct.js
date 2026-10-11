@@ -1,14 +1,11 @@
 // ==================== deduct.js ====================
-// 管理員扣款模組（單筆 + 批量）
-// 依賴：api.js、state.js、ui.js、common.js、core.js
-// ====================================================
+// 管理員扣款模組（單筆 + 批量）（Supabase 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
+// ==================================================
 
 let currentCategoryOrderers = [];
 let currentRestaurant = '';
 
-/**
- * 單筆扣款
- */
 async function deductBalance(event) {
   const btn = event ? event.currentTarget : null;
 
@@ -30,29 +27,36 @@ async function deductBalance(event) {
   const resultDiv = document.getElementById('deductResult');
   if (resultDiv) showConanLoading('deductResult', 'deductBalance');
 
-  const result = await callAdminApi('deductBalance', {
-    userId: studentId,
-    amount: parseInt(amount)
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data, error } = await sb.rpc('admin_deduct', {
+      p_user_id: studentId,
+      p_amount: parseFloat(amount)
+    });
 
-  if (result.success) {
-    if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> ${escapeHtml(result.message)}</div>`;
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      return;
     }
-    document.getElementById('deductStudentId').value = '';
-    document.getElementById('deductAmount').value = '';
-  } else {
-    if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message error"><i class="fas fa-exclamation-circle"></i> ${escapeHtml(result.message)}</div>`;
+
+    if (data.success) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}</div>`;
+      }
+      document.getElementById('deductStudentId').value = '';
+      document.getElementById('deductAmount').value = '';
+    } else {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error"><i class="fas fa-exclamation-circle"></i> ${escapeHtml(data.message)}</div>`;
     }
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
   }
 }
 
-/**
- * 載入批量扣款資料（今日餐廳 + 分類）
- */
 async function loadBatchDeductData() {
   const restaurantSpan = document.getElementById('batchRestaurantName');
   const categorySelect = document.getElementById('batchCategorySelect');
@@ -62,48 +66,78 @@ async function loadBatchDeductData() {
   restaurantSpan.innerHTML = '<span style="color: var(--gray);">載入中...</span>';
   categorySelect.innerHTML = '<option value="">載入中...</option>';
 
-  const result = await callAdminApi('getTodayRestaurant', {});
+  try {
+    const sb = await initSupabase();
 
-  if (result.success && result.restaurant) {
-    currentRestaurant = result.restaurant;
-    restaurantSpan.innerHTML = `<strong>${escapeHtml(result.restaurant)}</strong>`;
-    loadCategoriesForRestaurant(result.restaurant);
-  } else {
-    restaurantSpan.innerHTML = '<span style="color: var(--danger);">未設定</span>';
-    categorySelect.innerHTML = '<option value="">請先設定今日餐廳</option>';
-    currentRestaurant = '';
+    const { data: setting } = await sb
+      .from('system_settings')
+      .select('value')
+      .eq('key', 'today_restaurant')
+      .single();
+
+    const restaurantName = setting?.value || '';
+
+    if (restaurantName) {
+      currentRestaurant = restaurantName;
+      restaurantSpan.innerHTML = `<strong>${escapeHtml(restaurantName)}</strong>`;
+      loadCategoriesForRestaurant(restaurantName);
+    } else {
+      restaurantSpan.innerHTML = '<span style="color: var(--danger);">未設定</span>';
+      categorySelect.innerHTML = '<option value="">請先設定今日餐廳</option>';
+      currentRestaurant = '';
+    }
+  } catch (error) {
+    console.error('載入批量扣款資料失敗:', error);
+    restaurantSpan.innerHTML = '<span style="color: var(--danger);">載入失敗</span>';
+    categorySelect.innerHTML = '<option value="">載入失敗</option>';
   }
 }
 
-/**
- * 載入餐廳分類
- */
 async function loadCategoriesForRestaurant(restaurantName) {
   const categorySelect = document.getElementById('batchCategorySelect');
   if (!categorySelect) return;
 
   categorySelect.innerHTML = '<option value="">載入中...</option>';
 
-  const result = await callAdminApi('getRestaurantCategories', {
-    restaurantName: restaurantName
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (result.success && result.categories) {
+    const { data: restData } = await sb
+      .from('restaurants')
+      .select('id')
+      .eq('name', restaurantName)
+      .single();
+
+    if (!restData) {
+      categorySelect.innerHTML = '<option value="">無分類資料</option>';
+      return;
+    }
+
+    const { data: items, error } = await sb
+      .from('menu_items')
+      .select('category')
+      .eq('restaurant_id', restData.id);
+
+    if (error || !items) {
+      categorySelect.innerHTML = '<option value="">無分類資料</option>';
+      return;
+    }
+
+    const categories = [...new Set(items.map(i => i.category))].sort();
+
     categorySelect.innerHTML = '<option value="">請選擇分類</option>';
-    result.categories.forEach(cat => {
+    categories.forEach(cat => {
       const option = document.createElement('option');
-      option.value = cat.name;
-      option.textContent = cat.name;
+      option.value = cat;
+      option.textContent = cat;
       categorySelect.appendChild(option);
     });
-  } else {
-    categorySelect.innerHTML = '<option value="">無分類資料</option>';
+  } catch (error) {
+    console.error('載入分類失敗:', error);
+    categorySelect.innerHTML = '<option value="">載入失敗</option>';
   }
 }
 
-/**
- * 顯示分類的訂購者清單
- */
 async function showCategoryOrderers() {
   const categorySelect = document.getElementById('batchCategorySelect');
   const category = categorySelect ? categorySelect.value : '';
@@ -119,16 +153,50 @@ async function showCategoryOrderers() {
 
   showConanLoading('batchOrderersList', 'getCategoryOrderers');
 
-  const result = await callAdminApi('getCategoryOrderers', {
-    restaurantName: currentRestaurant,
-    categoryName: category
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (result.success) {
-    currentCategoryOrderers = result.users;
-    if (result.users.length > 0) {
+    const { data: meals, error } = await sb
+      .from('today_meals')
+      .select('user_id, meal_name, amount, category')
+      .eq('category', category);
+
+    if (error || !meals || meals.length === 0) {
+      container.innerHTML = '<p style="color: var(--gray);">尚無訂購者</p>';
+      currentCategoryOrderers = [];
+      return;
+    }
+
+    const userMap = {};
+    meals.forEach(m => {
+      if (!userMap[m.user_id]) {
+        userMap[m.user_id] = { userId: m.user_id, meals: [], totalAmount: 0 };
+      }
+      userMap[m.user_id].meals.push({ name: m.meal_name, amount: Number(m.amount) });
+      userMap[m.user_id].totalAmount += Number(m.amount);
+    });
+
+    const userIds = Object.keys(userMap);
+    const { data: users } = await sb
+      .from('users')
+      .select('user_id, name')
+      .in('user_id', userIds);
+
+    const nameMap = {};
+    (users || []).forEach(u => { nameMap[u.user_id] = u.name; });
+
+    const orderers = userIds.map(uid => ({
+      userId: uid,
+      name: nameMap[uid] || '未知',
+      totalAmount: userMap[uid].totalAmount,
+      meals: userMap[uid].meals
+    }));
+
+    currentCategoryOrderers = orderers;
+
+    if (orderers.length > 0) {
       let html = '<strong>📋 訂購者清單：</strong><ul style="margin-top: 8px;">';
-      result.users.forEach(user => {
+      orderers.forEach(user => {
         html += `<li>${escapeHtml(user.userId)} ${escapeHtml(user.name)} - 共 ${user.totalAmount} 份`;
         if (user.meals.length > 0) {
           html += ' (';
@@ -140,20 +208,17 @@ async function showCategoryOrderers() {
         }
         html += `</li>`;
       });
-      html += `</ul><div style="color: var(--gray); font-size: 0.85rem;">共 ${result.count} 位使用者</div>`;
+      html += `</ul><div style="color: var(--gray); font-size: 0.85rem;">共 ${orderers.length} 位使用者</div>`;
       container.innerHTML = html;
     } else {
       container.innerHTML = '<p style="color: var(--gray);">尚無訂購者</p>';
-      currentCategoryOrderers = [];
     }
-  } else {
+  } catch (error) {
+    console.error('載入訂購者失敗:', error);
     container.innerHTML = '<p class="message error">載入失敗</p>';
   }
 }
 
-/**
- * 確認批量扣款
- */
 function confirmBatchDeductByCategory() {
   const restaurantSpan = document.getElementById('batchRestaurantName');
   const categorySelect = document.getElementById('batchCategorySelect');
@@ -184,9 +249,6 @@ function confirmBatchDeductByCategory() {
   );
 }
 
-/**
- * 執行批量扣款
- */
 async function executeBatchDeductByCategory(restaurant, category, amount) {
   const resultDiv = document.getElementById('batchDeductResult');
   const btn = document.querySelector('#page-admin-batch-deduct .btn-warning');
@@ -194,23 +256,30 @@ async function executeBatchDeductByCategory(restaurant, category, amount) {
   if (btn) setButtonLoading(btn, true);
   if (resultDiv) showConanLoading('batchDeductResult', 'batchDeductByCategory');
 
-  const result = await callAdminApi('batchDeductByCategory', {
-    restaurantName: restaurant,
-    categoryName: category,
-    amountPerItem: parseFloat(amount)
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data, error } = await sb.rpc('batch_deduct_by_category', {
+      p_restaurant: restaurant,
+      p_category: category,
+      p_amount_per_item: parseFloat(amount)
+    });
 
-  if (result.success) {
-    let html = `<div class="message success">
-      <i class="fas fa-check-circle"></i> ${escapeHtml(result.message)}<br>
-      影響人數：${result.count} 人<br>
-      總扣款金額：$${result.totalDeducted}
-    </div>`;
+    if (btn) setButtonLoading(btn, false);
 
-    if (result.results) {
-      const failed = result.results.filter(r => !r.success);
+    if (error) {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      return;
+    }
+
+    if (data.success) {
+      let html = `<div class="message success">
+        <i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}<br>
+        影響人數：${data.count} 人<br>
+        總扣款金額：$${data.totalDeducted}
+      </div>`;
+
+      const failed = (data.results || []).filter(r => !r.success);
       if (failed.length > 0) {
         html += `<div class="message warning" style="margin-top: 10px;">
           <strong>⚠️ 以下使用者餘額不足，未扣款：</strong><ul>`;
@@ -219,13 +288,17 @@ async function executeBatchDeductByCategory(restaurant, category, amount) {
         });
         html += `</ul></div>`;
       }
-    }
 
-    if (resultDiv) resultDiv.innerHTML = html;
-    document.getElementById('batchDeductAmount').value = '';
-    showCategoryOrderers();
-  } else {
-    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+      if (resultDiv) resultDiv.innerHTML = html;
+      document.getElementById('batchDeductAmount').value = '';
+      showCategoryOrderers();
+    } else {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
+    }
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('批量扣款失敗:', error);
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
   }
 }
 
@@ -234,4 +307,4 @@ window.loadBatchDeductData = loadBatchDeductData;
 window.showCategoryOrderers = showCategoryOrderers;
 window.confirmBatchDeductByCategory = confirmBatchDeductByCategory;
 
-console.log('💰 扣款模組已載入');
+console.log('💰 扣款模組已載入（Supabase 版）');
