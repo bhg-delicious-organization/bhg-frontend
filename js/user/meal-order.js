@@ -314,7 +314,7 @@ async function submitOrder(event) {
 
       return {
         user_id: studentId,
-        slot: idx,
+        slot: idx +1,
         restaurant: restaurantName,
         category: real.category,
         meal_name: item.name,
