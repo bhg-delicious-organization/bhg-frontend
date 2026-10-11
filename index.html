@@ -377,70 +377,19 @@
             });
 
           navigator.serviceWorker.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'SW_UPDATED') {
-              const { oldVersion, newVersion, isMajorUpdate } = event.data;
-
-              console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion} (${isMajorUpdate ? '大改' : '小改'})`);
-
-              if (isMajorUpdate) {
-                showMajorUpdatePrompt(oldVersion, newVersion);
-              } else {
-                console.log('🔇 小改：靜默更新中...');
+              if (event.data && event.data.type === 'SW_UPDATED') {
+                const { oldVersion, newVersion, isMajorUpdate } = event.data;
+            
+                console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion} (${isMajorUpdate ? '大改' : '小改'})`);
+            
+                // ✅ 不管大改小改，自動重載
                 setTimeout(function() {
-                  // ✅ 加時間戳，強制繞過 HTTP 快取
                   const url = window.location.href.split('?')[0];
                   window.location.href = url + '?_t=' + Date.now();
-                }, 500);
+                }, 300);
               }
-            }
-          });
+            });
         });
-      }
-
-      function showMajorUpdatePrompt(oldVersion, newVersion) {
-        const prompt = document.createElement('div');
-        prompt.id = 'majorUpdatePrompt';
-        prompt.style.cssText = `
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          background: white;
-          border-radius: 16px;
-          padding: 24px;
-          z-index: 9999;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-          text-align: center;
-          max-width: 320px;
-          width: calc(100% - 40px);
-        `;
-        prompt.innerHTML = `
-          <div style="font-size: 3rem; margin-bottom: 16px;">🎉</div>
-          <h3 style="color: var(--primary); margin-bottom: 8px;">重大更新！</h3>
-          <p style="color: var(--gray); margin-bottom: 20px;">
-            系統已更新到 <strong>${newVersion}</strong><br>
-            包含新功能與改進！
-          </p>
-          <button id="majorUpdateBtn" style="
-            background: var(--success);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 12px 32px;
-            font-size: 1rem;
-            cursor: pointer;
-            width: 100%;
-          ">
-            <i class="fas fa-check"></i> 立即更新
-          </button>
-        `;
-        document.body.appendChild(prompt);
-
-        document.getElementById('majorUpdateBtn').onclick = function() {
-          navigator.serviceWorker.controller?.postMessage({ type: 'SKIP_WAITING' });
-          const url = window.location.href.split('?')[0];
-          window.location.href = url + '?_t=' + Date.now();
-        };
       }
     </script>
 
