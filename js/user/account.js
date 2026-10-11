@@ -1,11 +1,8 @@
 // ==================== account.js ====================
-// 使用者帳號管理模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js
+// 使用者帳號管理模組（Supabase 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ====================================================
 
-/**
- * 載入帳號頁面
- */
 async function loadAccountPage() {
   const studentId = AppState.currentStudentId();
   const notLoggedInDiv = document.getElementById('accountNotLoggedIn');
@@ -14,7 +11,6 @@ async function loadAccountPage() {
   if (!notLoggedInDiv || !loggedInDiv) return;
 
   if (!studentId) {
-    // 未登入狀態
     notLoggedInDiv.style.display = 'block';
     loggedInDiv.style.display = 'none';
 
@@ -23,40 +19,53 @@ async function loadAccountPage() {
     if (input) input.value = '';
     if (errorDiv) errorDiv.innerHTML = '';
   } else {
-    // 已登入狀態
     notLoggedInDiv.style.display = 'none';
     loggedInDiv.style.display = 'block';
 
-    // 顯示學號
     const studentIdEl = document.getElementById('accountStudentId');
     if (studentIdEl) studentIdEl.textContent = studentId;
 
-    // 顯示柯南載入動畫
     showConanLoading('accountUserName', 'getUserBalance');
 
-    // 載入姓名與餘額
-    const balanceResult = await callApi('getUserBalance', { userId: studentId });
-    const userNameEl = document.getElementById('accountUserName');
-    if (balanceResult.success) {
-      if (userNameEl) userNameEl.textContent = balanceResult.name;
-    } else {
-      if (userNameEl) userNameEl.textContent = '查無資料';
-    }
+    try {
+      const sb = await initSupabase();
 
-    // 載入總消費
-    const spentResult = await callApi('getUserTotalSpent', { userId: studentId });
-    const totalSpentEl = document.getElementById('accountTotalSpent');
-    if (spentResult.success) {
-      if (totalSpentEl) totalSpentEl.textContent = `$${spentResult.total}`;
-    } else {
-      if (totalSpentEl) totalSpentEl.textContent = '計算失敗';
+      // 1. 查姓名與餘額
+      const { data: userData, error: userError } = await sb
+        .from('users')
+        .select('name, balance')
+        .eq('user_id', studentId)
+        .single();
+
+      const userNameEl = document.getElementById('accountUserName');
+      if (userError || !userData) {
+        if (userNameEl) userNameEl.textContent = '查無資料';
+      } else {
+        if (userNameEl) userNameEl.textContent = userData.name;
+      }
+
+      // 2. 查總消費
+      const { data: transactions, error: transError } = await sb
+        .from('transactions')
+        .select('amount')
+        .eq('user_id', studentId)
+        .eq('type', '支出');
+
+      const totalSpentEl = document.getElementById('accountTotalSpent');
+      if (transError || !transactions) {
+        if (totalSpentEl) totalSpentEl.textContent = '計算失敗';
+      } else {
+        const total = transactions.reduce((sum, t) => sum + Number(t.amount || 0), 0);
+        if (totalSpentEl) totalSpentEl.textContent = `$${total}`;
+      }
+    } catch (error) {
+      console.error('載入帳號頁失敗:', error);
+      const userNameEl = document.getElementById('accountUserName');
+      if (userNameEl) userNameEl.textContent = '載入失敗';
     }
   }
 }
 
-/**
- * 從帳號頁面登入
- */
 async function loginFromAccount() {
   const studentId = document.getElementById('accountLoginStudentId').value.trim();
   const password = document.getElementById('accountLoginPassword').value;
@@ -71,29 +80,46 @@ async function loginFromAccount() {
     showConanLoading('accountLoginError', 'verifyUserPassword');
   }
 
-  const result = await callApi('verifyUserPassword', {
-    userId: studentId,
-    password: password
-  });
+  try {
+    const sb = await initSupabase();
+    const email = `${studentId}@bhg.local`;
 
-  if (errorDiv) errorDiv.innerHTML = '';
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
-  if (result.success) {
+    if (error) {
+      if (errorDiv) {
+        errorDiv.innerHTML = `<div class="message error">學號或密碼錯誤</div>`;
+      }
+      return;
+    }
+
+    if (errorDiv) errorDiv.innerHTML = '';
+
     AppState.setCurrentStudentId(studentId);
     fillAllStudentIdInputs(studentId, true);
     loadAccountPage();
-  } else {
-    if (errorDiv) errorDiv.innerHTML = `<div class="message error">${escapeHtml(result.message)}</div>`;
+
+  } catch (error) {
+    if (errorDiv) {
+      errorDiv.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+    }
   }
 }
 
-/**
- * 從帳號頁面登出
- */
-function logoutFromAccount() {
+async function logoutFromAccount() {
+  try {
+    const sb = await initSupabase();
+    await sb.auth.signOut();
+  } catch (e) {
+    console.warn('登出失敗:', e);
+  }
+
   AppState.setCurrentStudentId('');
 
-  const inputs = ['queryStudentId', 'rechargeStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
+  const inputs = ['queryStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
   inputs.forEach(id => {
     const input = document.getElementById(id);
     if (input) input.value = '';
@@ -107,4 +133,4 @@ window.loadAccountPage = loadAccountPage;
 window.loginFromAccount = loginFromAccount;
 window.logoutFromAccount = logoutFromAccount;
 
-console.log('👤 帳號模組已載入');
+console.log('👤 帳號模組已載入（Supabase 版）');
