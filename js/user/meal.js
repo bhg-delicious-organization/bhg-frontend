@@ -1,6 +1,6 @@
 // ==================== meal.js ====================
 // 使用者訂飯模組（Supabase 版）
-// 依賴：api.js、supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
+// 依賴：supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
 // ==================================================
 
 async function loadMealInfo(event) {
@@ -27,13 +27,11 @@ async function loadMealInfo(event) {
 
   if (btn) setButtonLoading(btn, true);
 
-  // ✅ 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   try {
     const sb = await initSupabase();
 
-    // 1. 查餘額
     const { data: userData, error: userError } = await sb
       .from('users')
       .select('balance, name')
@@ -48,7 +46,6 @@ async function loadMealInfo(event) {
       return;
     }
 
-    // 2. 查今日餐廳
     const { data: restaurantData } = await sb
       .from('system_settings')
       .select('value')
@@ -57,17 +54,14 @@ async function loadMealInfo(event) {
 
     const hasRestaurant = restaurantData && restaurantData.value;
 
-    // 3. 更新餘額顯示
     await updateMealBalanceDisplay(userData.balance);
 
-    // 4. 顯示/隱藏「點餐」按鈕
     const showMealSelection = hasRestaurant && isUserOrderTime();
     const mealSelectionDiv = document.getElementById('mealSelection');
     if (mealSelectionDiv) {
       mealSelectionDiv.style.display = showMealSelection ? 'flex' : 'none';
     }
 
-    // 5. 載入今日餐點
     if (isUserOrderTime() || isOrderEnded()) {
       await loadUserTodayMeals(studentId);
     } else {
@@ -81,7 +75,6 @@ async function loadMealInfo(event) {
       }
     }
 
-    // 6. 查訂單歷史
     await checkUserOrderHistory();
 
   } catch (error) {
@@ -96,7 +89,6 @@ async function updateMealBalanceDisplay(balance) {
     const sb = await initSupabase();
     const studentId = AppState.currentStudentId();
 
-    // ✅ 從 today_meals 查今日餐點
     const { data: meals, error } = await sb
       .from('today_meals')
       .select('amount, price')
@@ -137,7 +129,6 @@ async function loadUserTodayMeals(studentId) {
   try {
     const sb = await initSupabase();
 
-    // ✅ 從 today_meals 查今日餐點
     const { data: meals, error } = await sb
       .from('today_meals')
       .select('slot, restaurant, category, meal_name, amount, price, rated')
@@ -171,7 +162,6 @@ async function loadUserTodayMeals(studentId) {
       html += `<p style="color: var(--danger); margin-bottom: 8px;">⏰ 今日訂餐已截止</p>`;
     }
 
-    // 評分時間提示
     if (ratingTime) {
       html += `<p style="color: var(--success); margin-bottom: 8px; font-size: 0.85rem;">
         <i class="fas fa-star"></i> 評分時間 12:00-16:00，為喜歡的餐點評分吧！
@@ -223,7 +213,6 @@ async function loadUserTodayMeals(studentId) {
     html += '</ul>';
     container.innerHTML = html;
 
-    // 綁定評分按鈕
     container.querySelectorAll('.rating-btn').forEach(btn => {
       btn.addEventListener('click', function(e) {
         e.stopPropagation();
@@ -254,7 +243,6 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
   try {
     const sb = await initSupabase();
 
-    // ✅ 更新 today_meals 的 rated 欄位
     const { error } = await sb
       .from('today_meals')
       .update({ rated: rating })
@@ -262,7 +250,6 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
       .eq('slot', slotIndex);
 
     if (error) {
-      // 失敗 → 恢復
       if (ratingDiv && ratingDiv._originalHTML) {
         ratingDiv.innerHTML = ratingDiv._originalHTML;
         ratingDiv.querySelectorAll('.rating-btn').forEach(btn => {
@@ -279,7 +266,6 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
       return;
     }
 
-    // 成功
     const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
     const stars = '⭐'.repeat(rating);
     const successHtml = `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
@@ -305,7 +291,6 @@ async function enterMealOrderMode(event) {
     btn = document.querySelector('#mealSelection .btn-success');
   }
 
-  // ✅ 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   if (!isUserOrderTime()) {
@@ -352,10 +337,17 @@ async function checkUserOrderHistory() {
   try {
     const sb = await initSupabase();
 
-    // ✅ 從 order_items + orders 查歷史訂單
-    const { data: items, error } = await sb
-      .from('order_items')
-      .select('*, orders!inner(order_id, created_at, restaurant)')
+    const { data: rows, error } = await sb
+      .from('order_users')
+      .select(`
+        id,
+        user_id,
+        user_name,
+        user_total,
+        created_at,
+        orders!inner(order_id, restaurant, created_at),
+        order_items(meal_name, quantity, price, subtotal)
+      `)
       .eq('user_id', studentId)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -366,34 +358,23 @@ async function checkUserOrderHistory() {
 
     if (!historySection || !historyContainer) return;
 
-    if (error || !items || items.length === 0) {
+    if (error || !rows || rows.length === 0) {
       historySection.style.display = 'none';
       return;
     }
 
-    // 按訂單分組
-    const orderMap = {};
-    items.forEach(item => {
-      const oid = item.orders.order_id;
-      if (!orderMap[oid]) {
-        orderMap[oid] = {
-          orderId: oid,
-          timestamp: item.orders.created_at,
-          displayRestaurant: item.orders.restaurant,
-          items: [],
-          orderTotal: 0
-        };
-      }
-      orderMap[oid].items.push({
-        mealName: item.meal_name,
-        quantity: item.quantity,
-        price: item.price,
-        subtotal: item.subtotal
-      });
-      orderMap[oid].orderTotal += item.subtotal;
-    });
-
-    const userOrders = Object.values(orderMap);
+    const userOrders = rows.map(row => ({
+      orderId: row.orders.order_id,
+      timestamp: row.orders.created_at,
+      displayRestaurant: row.orders.restaurant,
+      orderTotal: Number(row.user_total),
+      items: (row.order_items || []).map(i => ({
+        mealName: i.meal_name,
+        quantity: Number(i.quantity),
+        price: Number(i.price),
+        subtotal: Number(i.subtotal)
+      }))
+    }));
 
     if (userOrders.length > 0) {
       historySection.style.display = 'block';
@@ -485,4 +466,4 @@ function displayUserOrderHistory(orders, container) {
 window.loadMealInfo = loadMealInfo;
 window.enterMealOrderMode = enterMealOrderMode;
 
-console.log('🍽️ 訂飯模組已載入');
+console.log('🍽️ 訂飯模組已載入（Supabase 版）');
