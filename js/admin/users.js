@@ -1,11 +1,8 @@
 // ==================== users.js ====================
-// 管理員用戶管理模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js
+// 管理員用戶管理模組（Supabase 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ====================================================
 
-/**
- * 確認更改學號（彈出確認視窗）
- */
 function confirmChangeUserId() {
   const oldUserId = document.getElementById('changeOldUserId').value.trim();
   const newUserId = document.getElementById('changeNewUserId').value.trim();
@@ -32,9 +29,6 @@ function confirmChangeUserId() {
   );
 }
 
-/**
- * 執行更改學號
- */
 async function changeUserId(oldUserId, newUserId) {
   const resultDiv = document.getElementById('changeUserIdResult');
   const btn = document.querySelector('#page-admin-users .btn-warning');
@@ -44,41 +38,51 @@ async function changeUserId(oldUserId, newUserId) {
     showConanLoading('changeUserIdResult', 'changeUserId');
   }
 
-  const result = await callAdminApi('changeUserId', {
-    oldUserId: oldUserId,
-    newUserId: newUserId
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    const { data, error } = await sb.rpc('change_user_id', {
+      p_old_user_id: oldUserId,
+      p_new_user_id: newUserId
+    });
 
-  if (result && result.success) {
-    let details = '';
-    if (result.results) {
-      details = '<ul style="margin-top: 10px; text-align: left;">';
-      if (result.results.users) details += '<li>✓ 使用者資料已更新</li>';
-      if (result.results.transactions) details += '<li>✓ 交易紀錄已更新</li>';
-      if (result.results.orderDetails) details += '<li>✓ 訂單歷史已更新</li>';
-      details += '</ul>';
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) {
+      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+      return;
     }
 
-    if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}${details}</div>`;
-    }
+    if (data.success) {
+      let details = '';
+      if (data.results) {
+        details = '<ul style="margin-top: 10px; text-align: left;">';
+        if (data.results.users) details += '<li>✓ 使用者資料已更新</li>';
+        if (data.results.transactions) details += '<li>✓ 交易紀錄已更新</li>';
+        if (data.results.orderDetails) details += '<li>✓ 訂單歷史已更新</li>';
+        details += '</ul>';
+      }
 
-    document.getElementById('changeOldUserId').value = '';
-    document.getElementById('changeNewUserId').value = '';
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(data.message)}${details}</div>`;
+      }
 
-    showMessageModal('✅ 成功', '學號更改成功');
-  } else {
-    if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result?.message || '更改失敗')}</div>`;
+      document.getElementById('changeOldUserId').value = '';
+      document.getElementById('changeNewUserId').value = '';
+
+      showMessageModal('✅ 成功', '學號更改成功');
+    } else {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
+      }
     }
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('更改學號失敗:', error);
+    if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
   }
 }
 
-/**
- * 初始化管理員用戶頁面
- */
 function initAdminUsersPage() {
   const resultDiv = document.getElementById('changeUserIdResult');
   if (resultDiv) resultDiv.innerHTML = '';
@@ -92,4 +96,4 @@ window.confirmChangeUserId = confirmChangeUserId;
 window.changeUserId = changeUserId;
 window.initAdminUsersPage = initAdminUsersPage;
 
-console.log('👥 管理員用戶模組已載入');
+console.log('👥 管理員用戶模組已載入（Supabase 版）');
