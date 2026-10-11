@@ -2,7 +2,7 @@
 // PWA Service Worker（自動判斷大改/小改）
 // ==========================================================
 
-const VERSION = '3.2.2';  // ⚠️ 只改這行
+const VERSION = '3.2.3';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
