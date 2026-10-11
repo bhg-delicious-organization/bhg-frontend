@@ -1,11 +1,8 @@
 // ==================== changepwd.js ====================
-// 使用者修改密碼模組
-// 依賴：api.js、state.js、ui.js、common.js、core.js
+// 使用者修改密碼模組（Supabase Auth 版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ====================================================
 
-/**
- * 載入修改密碼頁面
- */
 function loadChangePwdPage() {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
@@ -14,7 +11,6 @@ function loadChangePwdPage() {
     return;
   }
 
-  // 清空表單和結果
   const oldPwd = document.getElementById('changepwdOldPassword');
   const newPwd = document.getElementById('changepwdNewPassword');
   const confirmPwd = document.getElementById('changepwdConfirmPassword');
@@ -26,9 +22,6 @@ function loadChangePwdPage() {
   if (result) result.innerHTML = '';
 }
 
-/**
- * 提交修改密碼
- */
 async function submitChangePassword() {
   const oldPassword = document.getElementById('changepwdOldPassword').value;
   const newPassword = document.getElementById('changepwdNewPassword').value;
@@ -46,8 +39,8 @@ async function submitChangePassword() {
     return;
   }
 
-  if (newPassword.length < 4) {
-    showMessageModal('❌ 密碼太短', '新密碼長度至少需要4個字元');
+  if (newPassword.length < 6) {
+    showMessageModal('❌ 密碼太短', '新密碼長度至少需要6個字元');
     return;
   }
 
@@ -61,18 +54,39 @@ async function submitChangePassword() {
     showConanLoading('changepwdResult', 'changeMyPassword');
   }
 
-  const result = await callApi('changeMyPassword', {
-    userId: studentId,
-    oldPassword: oldPassword,
-    newPassword: newPassword
-  });
+  try {
+    const sb = await initSupabase();
+    const email = `${studentId}@bhg.local`;
 
-  if (result.success) {
-    if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(result.message)}</div>`;
+    // 1. 先用舊密碼登入驗證
+    const { error: signInError } = await sb.auth.signInWithPassword({
+      email: email,
+      password: oldPassword
+    });
+
+    if (signInError) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 原密碼錯誤</div>`;
+      }
+      return;
     }
 
-    // 清空表單
+    // 2. 更新密碼
+    const { error: updateError } = await sb.auth.updateUser({
+      password: newPassword
+    });
+
+    if (updateError) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(updateError.message)}</div>`;
+      }
+      return;
+    }
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success">✅ 密碼修改成功</div>`;
+    }
+
     document.getElementById('changepwdOldPassword').value = '';
     document.getElementById('changepwdNewPassword').value = '';
     document.getElementById('changepwdConfirmPassword').value = '';
@@ -80,9 +94,11 @@ async function submitChangePassword() {
     setTimeout(() => {
       if (resultDiv) resultDiv.innerHTML = '';
     }, 2000);
-  } else {
+
+  } catch (error) {
+    console.error('修改密碼失敗:', error);
     if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(result.message)}</div>`;
+      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
     }
   }
 }
@@ -90,4 +106,4 @@ async function submitChangePassword() {
 window.loadChangePwdPage = loadChangePwdPage;
 window.submitChangePassword = submitChangePassword;
 
-console.log('🔑 修改密碼模組已載入');
+console.log('🔑 修改密碼模組已載入（Supabase Auth 版）');
