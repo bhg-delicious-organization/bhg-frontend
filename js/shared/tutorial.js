@@ -32,25 +32,6 @@ const tutorialSteps = {
     }
   ],
 
-  // ===== 儲值頁教學（3 步驟）=====
-  recharge: [
-    {
-      title: '🎁 輸入禮包碼',
-      description: '請輸入 6 位數禮包碼。',
-      selector: '#giftCode'
-    },
-    {
-      title: '👤 輸入學號',
-      description: '請輸入您的 6 位數學號。',
-      selector: '#rechargeStudentId'
-    },
-    {
-      title: '✅ 確認儲值',
-      description: '點擊「確認儲值」按鈕，完成儲值。',
-      selector: '#page-user-recharge .btn-success'
-    }
-  ],
-
   // ===== 訂飯頁教學（3 步驟）=====
   meal: [
     {
