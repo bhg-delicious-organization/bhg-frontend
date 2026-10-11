@@ -1,6 +1,6 @@
 // ==================== meal-order.js ====================
 // 使用者點餐頁面模組（購物車模式）
-// 依賴：api.js、state.js、ui.js、common.js、core.js、navigation.js、time.js
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js、time.js、preload.js
 // ==================================================
 
 let menuCache = null;
@@ -17,7 +17,7 @@ async function loadMealOrderPage() {
     return;
   }
 
-  // ✅ 確保時間限制已載入
+  // 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   if (!isUserOrderTime()) {
@@ -44,33 +44,47 @@ async function loadMealOrderPage() {
 
   showConanLoading('orderMealsList', 'getRestaurantMenu');
 
-  // ✅ 用快取菜單 + 已點餐點
-  const [menuResult, mealsResult] = await Promise.all([
-    loadRestaurantMenu(restaurantName),   // ← 用快取
-    callApi('getUserTodayMeals', { userId: studentId })
-  ]);
+  try {
+    const sb = await initSupabase();
 
-  if (!menuResult.success) {
+    // 並行：讀菜單（快取）+ 讀今日餐點（Supabase）
+    const [menuResult, mealsResult] = await Promise.all([
+      loadRestaurantMenu(restaurantName),
+      sb.from('today_meals')
+        .select('slot, restaurant, category, meal_name, amount, price, rated')
+        .eq('user_id', studentId)
+        .order('slot')
+    ]);
+
+    if (!menuResult.success) {
+      const container = document.getElementById('orderMealsList');
+      if (container) {
+        container.innerHTML = `<div class="message error">❌ ${escapeHtml(menuResult.message || '載入菜單失敗')}</div>`;
+      }
+      return;
+    }
+
+    menuCache = menuResult;
+    renderCategorySelect(menuResult.categories);
+
+    if (!mealsResult.error && mealsResult.data && mealsResult.data.length > 0) {
+      cart = mealsResult.data.map(meal => ({
+        category: meal.category,
+        name: meal.meal_name,
+        price: Number(meal.price),
+        amount: Number(meal.amount)
+      }));
+    }
+
+    renderCart();
+
+  } catch (error) {
+    console.error('載入點餐頁面失敗:', error);
     const container = document.getElementById('orderMealsList');
     if (container) {
-      container.innerHTML = `<div class="message error">❌ ${escapeHtml(menuResult.message || '載入菜單失敗')}</div>`;
+      container.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message || '載入失敗')}</div>`;
     }
-    return;
   }
-
-  menuCache = menuResult;
-  renderCategorySelect(menuResult.categories);
-
-  if (mealsResult.success && mealsResult.meals && mealsResult.meals.length > 0) {
-    cart = mealsResult.meals.map(meal => ({
-      category: meal.category,
-      name: meal.name,
-      price: meal.cost,
-      amount: meal.amount
-    }));
-  }
-
-  renderCart();
 }
 
 function renderCategorySelect(categories) {
@@ -222,6 +236,13 @@ function adjustCartItem(idx, change) {
   renderCart();
 }
 
+/**
+ * 送出訂單（Supabase 版）
+ * 1. 查真實價格
+ * 2. 檢查餘額（不扣款）
+ * 3. 刪除舊 today_meals
+ * 4. 寫入新 today_meals
+ */
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
 
@@ -247,23 +268,99 @@ async function submitOrder(event) {
 
   if (btn) setButtonLoading(btn, true);
 
-  const result = await callApi('submitOrder', {
-    userId: studentId,
-    restaurant: restaurantName,
-    items: cart.map(item => ({
-      category: item.category,
-      name: item.name,
-      price: item.price,
-      amount: item.amount
-    }))
-  });
+  try {
+    const sb = await initSupabase();
 
-  if (btn) setButtonLoading(btn, false);
+    // 1. 查餐廳 ID
+    const { data: restaurantData, error: rErr } = await sb
+      .from('restaurants')
+      .select('id')
+      .eq('name', restaurantName)
+      .single();
 
-  if (result.success) {
-    showMessageModal('✅ 送出成功', result.message || `訂單已送出，總計 $${result.total || 0}`);
-  } else {
-    showMessageModal('❌ 送出失敗', result.message || '請稍後再試');
+    if (rErr || !restaurantData) {
+      throw new Error('找不到餐廳');
+    }
+
+    // 2. 查真實價格（防前端竄改）
+    const mealNames = cart.map(i => i.name);
+
+    const { data: menuItems, error: mErr } = await sb
+      .from('menu_items')
+      .select('meal_name, category, price')
+      .eq('restaurant_id', restaurantData.id)
+      .in('meal_name', mealNames);
+
+    if (mErr || !menuItems) {
+      throw new Error('查詢菜單失敗');
+    }
+
+    const priceMap = {};
+    menuItems.forEach(m => {
+      priceMap[m.meal_name] = {
+        price: Number(m.price),
+        category: m.category
+      };
+    });
+
+    // 3. 計算總計 + 檢查餘額
+    let total = 0;
+    const rows = cart.map((item, idx) => {
+      const real = priceMap[item.name];
+      if (!real) throw new Error(`找不到餐點：${item.name}`);
+
+      const subtotal = real.price * item.amount;
+      total += subtotal;
+
+      return {
+        user_id: studentId,
+        slot: idx,
+        restaurant: restaurantName,
+        category: real.category,
+        meal_name: item.name,
+        amount: item.amount,
+        price: real.price,
+        rated: 0
+      };
+    });
+
+    const { data: userData, error: uErr } = await sb
+      .from('users')
+      .select('balance')
+      .eq('user_id', studentId)
+      .single();
+
+    if (uErr || !userData) {
+      throw new Error('找不到使用者');
+    }
+
+    if (total > Number(userData.balance)) {
+      throw new Error(`餘額不足，需要 $${total}，目前 $${userData.balance}`);
+    }
+
+    // 4. 刪除舊 today_meals
+    const { error: dErr } = await sb
+      .from('today_meals')
+      .delete()
+      .eq('user_id', studentId);
+
+    if (dErr) throw new Error('清空舊餐點失敗：' + dErr.message);
+
+    // 5. 寫入新 today_meals
+    const { error: iErr } = await sb
+      .from('today_meals')
+      .insert(rows);
+
+    if (iErr) throw new Error('寫入餐點失敗：' + iErr.message);
+
+    if (btn) setButtonLoading(btn, false);
+
+    showMessageModal('✅ 送出成功', `訂單已送出，共 ${rows.length} 種餐點，總計 $${total}`);
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('送出訂單失敗:', error);
+    showMessageModal('❌ 送出失敗', error.message || '請稍後再試');
   }
 }
 
