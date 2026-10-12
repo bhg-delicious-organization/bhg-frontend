@@ -2,7 +2,7 @@
 // PWA Service Worker
 // ==========================================================
 
-const VERSION = '3.4.0';  // ⚠️ 只改這行
+const VERSION = '3.5.0';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -24,6 +24,7 @@ const URLS_TO_CACHE = [
   './js/core/core.js',
   './js/shared/notify.js',
   './js/shared/tutorial.js',
+  // ⚠️ user-register 已寫死，不在這裡
   './pages/admin-account.html',
   './pages/admin-analytics.html',
   './pages/admin-batch-deduct.html',
@@ -37,7 +38,6 @@ const URLS_TO_CACHE = [
   './pages/user-meal-order.html',
   './pages/user-meal.html',
   './pages/user-query.html',
-  './pages/user-register.html',
   './pages/user-system.html',
   './js/user/query.js',
   './js/user/register.js',
