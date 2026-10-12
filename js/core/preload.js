@@ -10,7 +10,7 @@ const TIME_LIMITS_CACHE_TTL = 60 * 60 * 1000;
 let _timeLimitsLoaded = false;
 let _timeLimitsPromise = null;
 
-// ==================== 單例保護：時間限制（含 localStorage 快取） ====================
+// ==================== 單例保護：時間限制 ====================
 
 async function preloadTimeLimits() {
   if (_timeLimitsLoaded) return;
@@ -21,7 +21,6 @@ async function preloadTimeLimits() {
     const cachedTime = localStorage.getItem(TIME_LIMITS_CACHE_TIME_KEY);
     const now = Date.now();
 
-    // 快取有效（1 小時）
     if (cached && cachedTime && (now - parseInt(cachedTime)) < TIME_LIMITS_CACHE_TTL) {
       try {
         const parsed = JSON.parse(cached);
@@ -34,7 +33,6 @@ async function preloadTimeLimits() {
         console.log('📦 使用快取時間限制:', TIME);
         _timeLimitsLoaded = true;
 
-        // 背景更新
         updateTimeLimitsFromSupabase();
 
         return;
@@ -43,7 +41,6 @@ async function preloadTimeLimits() {
       }
     }
 
-    // 從 Supabase 讀取
     console.log('⏰ 從 Supabase 預載入時間限制...');
     try {
       await updateTimeLimitsFromSupabase();
@@ -58,9 +55,6 @@ async function preloadTimeLimits() {
   return _timeLimitsPromise;
 }
 
-/**
- * 從 Supabase 讀取時間限制
- */
 async function updateTimeLimitsFromSupabase() {
   const sb = await initSupabase();
 
@@ -82,7 +76,6 @@ async function updateTimeLimitsFromSupabase() {
   const settings = {};
   data.forEach(item => { settings[item.key] = item.value; });
 
-  // 更新 TIME
   TIME.ORDER_START = parseInt(settings.ORDER_START) || 800;
   TIME.ORDER_END = parseInt(settings.today_order_end) || parseInt(settings.ORDER_END) || 1000;
   TIME.ADMIN_START = parseInt(settings.ADMIN_RESTAURANT_START) || 800;
@@ -91,9 +84,7 @@ async function updateTimeLimitsFromSupabase() {
   TIME.RATING_END = parseInt(settings.RATING_END) || 1600;
 
   console.log('✅ 時間限制已同步:', TIME);
-  console.log('   點餐時間範圍:', getOrderTimeRange());
 
-  // 寫入快取
   const limitsToCache = {
     ORDER_START: TIME.ORDER_START,
     ORDER_END: TIME.ORDER_END,
@@ -106,7 +97,7 @@ async function updateTimeLimitsFromSupabase() {
   localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
 }
 
-// ==================== 單例保護：今日餐廳（含日期快取） ====================
+// ==================== 單例保護：今日餐廳 ====================
 
 let _todayRestaurantLoaded = false;
 let _todayRestaurantPromise = null;
@@ -133,7 +124,6 @@ async function preloadTodayRestaurant() {
       AppState.setCurrentRestaurantName(cached || '');
       _todayRestaurantLoaded = true;
 
-      // 背景更新
       updateTodayRestaurantFromSupabase(cacheKey, cached);
 
       return;
@@ -153,9 +143,6 @@ async function preloadTodayRestaurant() {
   return _todayRestaurantPromise;
 }
 
-/**
- * 從 Supabase 讀取今日餐廳
- */
 async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
   const sb = await initSupabase();
 
@@ -256,13 +243,9 @@ async function loadRestaurantMenu(restaurantName) {
   return _menuLoadingPromise;
 }
 
-/**
- * 從 Supabase 讀取餐廳菜單
- */
 async function fetchMenuFromSupabase(restaurantName) {
   const sb = await initSupabase();
 
-  // 1. 查餐廳 ID
   const { data: restaurantData, error: restaurantError } = await sb
     .from('restaurants')
     .select('id, name')
@@ -274,7 +257,6 @@ async function fetchMenuFromSupabase(restaurantName) {
     return { success: false, message: '找不到該餐廳' };
   }
 
-  // 2. 查菜單
   const { data: menuData, error: menuError } = await sb
     .from('menu_items')
     .select('category, meal_name, price, order_count, rating_sum, rating_count')
@@ -287,7 +269,6 @@ async function fetchMenuFromSupabase(restaurantName) {
     return { success: false, message: menuError.message };
   }
 
-  // 3. 按分類分組
   const categoriesMap = {};
   menuData.forEach(item => {
     if (!categoriesMap[item.category]) {
@@ -297,7 +278,6 @@ async function fetchMenuFromSupabase(restaurantName) {
       };
     }
 
-    // 計算平均評分
     let rating = 0;
     if (item.rating_count > 0) {
       rating = Math.round((item.rating_sum / item.rating_count) * 100) / 100;
@@ -335,8 +315,9 @@ function getCachedRestaurantMenu() {
 // ==================== 預載入所有頁面 ====================
 
 async function preloadAllPages() {
+  // ⚠️ 注意：user-register 已寫死在 index.html，不在這裡
   const pages = [
-    'user-query', 'user-recharge', 'user-meal', 'user-register',
+    'user-query', 'user-meal',
     'user-account', 'user-system', 'user-changepwd', 'user-meal-order',
     'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
     'admin-query', 'admin-account', 'admin-analytics',
