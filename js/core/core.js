@@ -1,5 +1,5 @@
 // ==================== core.js ====================
-// 核心功能模組（強制登入版）
+// 核心功能模組（無載入動畫版）
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
 // ==================================================
 
@@ -28,9 +28,6 @@ async function checkSupabaseAdminLogin() {
   }
 }
 
-/**
- * 檢查使用者登入狀態
- */
 async function checkUserSession() {
   try {
     const sb = await initSupabase();
@@ -51,79 +48,6 @@ async function checkUserSession() {
     console.warn('檢查使用者登入失敗:', e);
     return { loggedIn: false };
   }
-}
-
-// ==================== 載入進度控制 ====================
-
-const LOADER_STEPS = [
-  { key: 'init',       label: '初始化系統核心' },
-  { key: 'modules',    label: '載入前端模組' },
-  { key: 'time',       label: '同步時間限制' },
-  { key: 'restaurant', label: '讀取今日餐廳' },
-  { key: 'user',       label: '檢查使用者狀態' },
-  { key: 'ui',         label: '準備使用者介面' },
-  { key: 'ready',      label: '即將進入系統' },
-  { key: 'done',       label: '系統啟動完成' }
-];
-
-let _stepStatus = {};
-
-function renderLoaderLogs() {
-  const logsEl = document.getElementById('loaderLogs');
-  if (!logsEl) return;
-
-  logsEl.innerHTML = '';
-
-  LOADER_STEPS.forEach(step => {
-    const status = _stepStatus[step.key] || 'pending';
-    const div = document.createElement('div');
-
-    if (status === 'done') {
-      div.style.color = '#4ade80';
-      div.innerHTML = `<span style="color: #22c55e;">[✓]</span> ${step.label}`;
-    } else if (status === 'running') {
-      div.style.color = '#60a5fa';
-      div.innerHTML = `<span style="color: #3b82f6;">[&gt;]</span> ${step.label}<span style="animation: blink 1s infinite;">_</span>`;
-    } else {
-      div.style.color = '#475569';
-      div.innerHTML = `<span style="color: #334155;">[ ]</span> ${step.label}`;
-    }
-
-    logsEl.appendChild(div);
-  });
-}
-
-function updateLoaderProgressBar(percent) {
-  const bar = document.getElementById('loaderBar');
-  const percentEl = document.getElementById('loaderPercent');
-
-  if (bar) bar.style.width = `${percent}%`;
-  if (percentEl) percentEl.textContent = `${percent}%`;
-}
-
-function markStepStart(key) {
-  _stepStatus[key] = 'running';
-  renderLoaderLogs();
-
-  const step = LOADER_STEPS.find(s => s.key === key);
-  const statusEl = document.getElementById('loaderStatus');
-  if (statusEl && step) statusEl.textContent = `${step.label}...`;
-}
-
-function markStepDone(key) {
-  _stepStatus[key] = 'done';
-  renderLoaderLogs();
-
-  const doneCount = Object.values(_stepStatus).filter(s => s === 'done').length;
-  const totalCount = LOADER_STEPS.length;
-  const percent = Math.round((doneCount / totalCount) * 100);
-  updateLoaderProgressBar(percent);
-}
-
-function updateLoaderProgress(percent, statusText) {
-  updateLoaderProgressBar(percent);
-  const statusEl = document.getElementById('loaderStatus');
-  if (statusEl && statusText) statusEl.textContent = statusText;
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -432,126 +356,65 @@ async function initApp() {
   AppState.init();
   setupPageLoadedListener();
 
-  markStepStart('init');
-  markStepDone('init');
-
-  // ========== 檢查管理員登入 ==========
+  // ========== 檢查登入狀態 ==========
   const isAdminLoggedIn = await checkSupabaseAdminLogin();
 
-  // ========== 檢查使用者登入 ==========
   let userSession = { loggedIn: false };
   if (!isAdminLoggedIn) {
     userSession = await checkUserSession();
   }
 
-  // ========== 判斷要導向哪裡 ==========
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
   if (isAdminLoggedIn) {
-    // 管理員模式
+    // ========== 管理員模式 ==========
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
     if (statusText) statusText.textContent = '已登入';
     if (statusIcon) statusIcon.style.color = 'var(--success)';
     updateAdminUI();
 
-    markStepStart('modules');
-    markStepDone('modules');
-
-    markStepStart('time');
     await ensureTimeLimitsLoaded();
-    markStepDone('time');
 
-    markStepStart('restaurant');
     await ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
       if (restaurantName) loadRestaurantMenu(restaurantName);
     });
-    markStepDone('restaurant');
 
-    markStepStart('user');
-    markStepDone('user');
-
-    markStepStart('ui');
     showTimeModeHint();
-    markStepDone('ui');
-
-    markStepStart('ready');
     switchToAdminMode();
-    markStepDone('ready');
-
-    markStepStart('done');
-    markStepDone('done');
 
     setTimeout(() => preloadAllPages(), 3000);
 
   } else if (userSession.loggedIn) {
-    // 使用者已登入
+    // ========== 使用者已登入 ==========
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.style.color = '';
     updateAdminUI();
 
-    markStepStart('modules');
-    markStepDone('modules');
-
-    markStepStart('time');
     await ensureTimeLimitsLoaded();
-    markStepDone('time');
 
-    markStepStart('restaurant');
     await ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
       if (restaurantName) loadRestaurantMenu(restaurantName);
     });
-    markStepDone('restaurant');
 
-    markStepStart('user');
-    markStepDone('user');
-
-    markStepStart('ui');
     showTimeModeHint();
-    markStepDone('ui');
-
-    markStepStart('ready');
     await navigateTo(getSmartHomePage());
-    markStepDone('ready');
-
-    markStepStart('done');
-    markStepDone('done');
 
     setTimeout(() => preloadAllPages(), 3000);
 
   } else {
-    // 未登入 → 強制到登入頁
+    // ========== 未登入 ==========
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'none';
 
-    markStepStart('modules');
-    markStepDone('modules');
-
-    markStepStart('time');
-    markStepDone('time');
-
-    markStepStart('restaurant');
-    markStepDone('restaurant');
-
-    markStepStart('user');
-    markStepDone('user');
-
-    markStepStart('ui');
     await navigateTo('user-register');
-    markStepDone('ui');
-
-    markStepStart('ready');
-    markStepDone('ready');
-
-    markStepStart('done');
-    markStepDone('done');
   }
 
   setTimeout(initEnterKeyBindings, 500);
@@ -568,10 +431,7 @@ window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.showTimeModeHint = showTimeModeHint;
 window.updateTimeModeHint = updateTimeModeHint;
 window.loadSystemInfo = loadSystemInfo;
-window.updateLoaderProgress = updateLoaderProgress;
-window.markStepStart = markStepStart;
-window.markStepDone = markStepDone;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
 
-console.log('⚙️ core.js 已載入（強制登入版）');
+console.log('⚙️ core.js 已載入（無載入動畫版）');
