@@ -1,5 +1,5 @@
 // ==================== core.js ====================
-// 核心功能模組（登入頁寫死版）
+// 核心功能模組（emoji header 版）
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
 // ==================================================
 
@@ -356,7 +356,6 @@ async function initApp() {
   AppState.init();
   setupPageLoadedListener();
 
-  // ========== 檢查登入狀態 ==========
   const isAdminLoggedIn = await checkSupabaseAdminLogin();
 
   let userSession = { loggedIn: false };
@@ -369,7 +368,6 @@ async function initApp() {
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
-  // 先隱藏首頁的登入頁（如果已登入）
   const loginPage = document.getElementById('page-user-register');
 
   if (isAdminLoggedIn) {
@@ -379,7 +377,7 @@ async function initApp() {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
     if (statusText) statusText.textContent = '已登入';
-    if (statusIcon) statusIcon.style.color = 'var(--success)';
+    if (statusIcon) statusIcon.textContent = '✅';
     updateAdminUI();
 
     await ensureTimeLimitsLoaded();
@@ -400,7 +398,7 @@ async function initApp() {
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
     if (statusText) statusText.textContent = '管理員';
-    if (statusIcon) statusIcon.style.color = '';
+    if (statusIcon) statusIcon.textContent = '🛡️';
     updateAdminUI();
 
     await ensureTimeLimitsLoaded();
@@ -419,10 +417,11 @@ async function initApp() {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'none';
 
-    // 登入頁已寫死在 index.html，直接初始化
+    if (statusText) statusText.textContent = '管理員';
+    if (statusIcon) statusIcon.textContent = '🛡️';
+
     if (typeof initRegisterPage === 'function') initRegisterPage();
 
-    // 清除 nav active
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
       item.classList.remove('active');
     });
@@ -445,4 +444,4 @@ window.loadSystemInfo = loadSystemInfo;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
 
-console.log('⚙️ core.js 已載入（登入頁寫死版）');
+console.log('⚙️ core.js 已載入（emoji header 版）');
