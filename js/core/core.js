@@ -1,5 +1,5 @@
 // ==================== core.js ====================
-// 核心功能模組（無載入動畫版）
+// 核心功能模組（登入頁寫死版）
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
 // ==================================================
 
@@ -369,8 +369,13 @@ async function initApp() {
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
+  // 先隱藏首頁的登入頁（如果已登入）
+  const loginPage = document.getElementById('page-user-register');
+
   if (isAdminLoggedIn) {
     // ========== 管理員模式 ==========
+    if (loginPage) loginPage.classList.remove('active');
+
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
     if (statusText) statusText.textContent = '已登入';
@@ -378,7 +383,6 @@ async function initApp() {
     updateAdminUI();
 
     await ensureTimeLimitsLoaded();
-
     await ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
       if (restaurantName) loadRestaurantMenu(restaurantName);
@@ -391,6 +395,8 @@ async function initApp() {
 
   } else if (userSession.loggedIn) {
     // ========== 使用者已登入 ==========
+    if (loginPage) loginPage.classList.remove('active');
+
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
     if (statusText) statusText.textContent = '管理員';
@@ -398,7 +404,6 @@ async function initApp() {
     updateAdminUI();
 
     await ensureTimeLimitsLoaded();
-
     await ensureTodayRestaurantLoaded().then(() => {
       const restaurantName = AppState.currentRestaurantName();
       if (restaurantName) loadRestaurantMenu(restaurantName);
@@ -414,7 +419,13 @@ async function initApp() {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'none';
 
-    await navigateTo('user-register');
+    // 登入頁已寫死在 index.html，直接初始化
+    if (typeof initRegisterPage === 'function') initRegisterPage();
+
+    // 清除 nav active
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+      item.classList.remove('active');
+    });
   }
 
   setTimeout(initEnterKeyBindings, 500);
@@ -434,4 +445,4 @@ window.loadSystemInfo = loadSystemInfo;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
 
-console.log('⚙️ core.js 已載入（無載入動畫版）');
+console.log('⚙️ core.js 已載入（登入頁寫死版）');
