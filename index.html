@@ -7,11 +7,9 @@
     <meta name="description" content="校園儲值與訂餐系統">
     <meta name="author" content="gtes10301">
 
-    <!-- Favicon -->
     <link rel="icon" type="image/png" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
     <title>大家政便當廠-儲值系統</title>
 
-    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2c3e50">
     <meta name="mobile-web-app-capable" content="yes">
@@ -20,10 +18,12 @@
     <meta name="apple-mobile-web-app-title" content="便當廠">
     <link rel="apple-touch-icon" href="https://i.ibb.co/1JJzGkTw/BHG-logo1.png">
 
-    <!-- OneSignal SDK（defer，非阻斷） -->
+    <link rel="preconnect" href="https://wvvmnombzkkrtxxxucqe.supabase.co" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm">
+
     <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.es6.js" defer></script>
 
-    <!-- Font Awesome（非阻斷載入） -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
           media="print"
@@ -33,11 +33,9 @@
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     </noscript>
 
-    <!-- 主要樣式表（必須阻斷，否則畫面全亂） -->
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- ==================== 頂部標題 ==================== -->
     <header class="header">
         <div class="logo-container">
             <img src="https://i.ibb.co/1JJzGkTw/BHG-logo1.png" alt="BHG-logo" class="site-logo">
@@ -54,10 +52,6 @@
                 <span id="adminStatusText">管理員</span>
             </button>
 
-            <button class="quick-id-btn" onclick="showQuickIdModal()" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
-                <i class="fas fa-id-card"></i> <span id="quickIdBtnText">學號</span>
-            </button>
-
             <button class="admin-btn" onclick="toggleNotifications(event)" style="margin: 0; padding: 4px 8px; font-size: 0.8rem;">
                 <i id="notifyIcon" class="fas fa-bell-slash"></i>
                 <span id="notifyText">通知</span>
@@ -65,18 +59,14 @@
         </div>
     </header>
 
-    <!-- ==================== 頁面容器 ==================== -->
     <div id="pageContent">
         <div id="page-loader" style="padding: 40px 20px; text-align: center;">
             <div style="max-width: 380px; margin: 0 auto;">
-
-                <!-- 標題 -->
                 <div style="font-size: 2.5rem; margin-bottom: 8px;">🍱</div>
                 <div style="font-family: monospace; font-size: 0.75rem; color: var(--gray); letter-spacing: 2px; margin-bottom: 20px;">
                     BHG SYSTEM v3.2.1
                 </div>
 
-                <!-- 終端機風格標籤 -->
                 <div id="loaderLogs" style="
                     font-family: monospace;
                     font-size: 0.72rem;
@@ -94,27 +84,22 @@
                     <div style="color: #64748b;">&gt; 系統啟動中...</div>
                 </div>
 
-                <!-- 進度條 -->
                 <div style="background: #e5e7eb; border-radius: 999px; height: 8px; overflow: hidden; margin-bottom: 8px;">
                     <div id="loaderBar" style="background: linear-gradient(90deg, var(--secondary), var(--primary)); height: 100%; width: 0%; transition: width 0.4s ease; border-radius: 999px;"></div>
                 </div>
 
-                <!-- 百分比 + 狀態 -->
                 <div style="display: flex; justify-content: space-between; font-family: monospace; font-size: 0.8rem; color: var(--gray);">
                     <span id="loaderStatus">正在啟動...</span>
                     <span id="loaderPercent">0%</span>
                 </div>
-
             </div>
         </div>
     </div>
 
-    <!-- ==================== 導覽列收合按鈕 ==================== -->
     <button id="navToggleBtn" class="nav-toggle-btn" style="display: none;">
         <i class="fas fa-chevron-down"></i>
     </button>
 
-    <!-- ==================== 使用者導覽列 ==================== -->
     <nav class="bottom-nav user-nav" style="display: none;">
         <a href="#" class="nav-item" data-page="user-query">
             <i class="fas fa-search-dollar nav-icon"></i>
@@ -123,10 +108,6 @@
         <a href="#" class="nav-item" data-page="user-meal">
             <i class="fas fa-utensils nav-icon"></i>
             <span>訂飯</span>
-        </a>
-        <a href="#" class="nav-item" data-page="user-register">
-            <i class="fas fa-edit nav-icon"></i>
-            <span>申請</span>
         </a>
         <a href="#" class="nav-item" data-page="user-account">
             <i class="fas fa-user-circle nav-icon"></i>
@@ -142,7 +123,6 @@
         </a>
     </nav>
 
-    <!-- ==================== 管理員導覽列 ==================== -->
     <nav class="bottom-nav admin-nav" style="display: none;">
         <a href="#" class="nav-item" data-page="admin-restaurant">
             <i class="fas fa-store nav-icon"></i>
@@ -182,54 +162,6 @@
         </a>
     </nav>
 
-    <!-- ==================== 學號登入模態視窗 ==================== -->
-    <div id="quickIdModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-id-card"></i> 學號管理</h3>
-                <button class="close-btn" onclick="hideQuickIdModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="quickIdNotLoggedIn" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">學號</label>
-                        <input type="text" id="quickIdInput" class="form-control" placeholder="6位數學號" maxlength="6">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">密碼</label>
-                        <input type="password" id="quickPasswordInput" class="form-control" placeholder="請輸入密碼">
-                    </div>
-                    <div class="form-text">若無密碼可留空</div>
-                    <div id="quickIdMessage"></div>
-                </div>
-                <div id="quickIdLoggedIn" style="display: none;">
-                    <div class="form-group">
-                        <label class="form-label">目前已登入學號</label>
-                        <div class="form-control" id="quickIdCurrentStudent" style="background: #f5f5f5;">載入中...</div>
-                    </div>
-                    <div class="form-text">您已登入，可點擊下方按鈕登出</div>
-                    <div id="quickIdLoggedInMessage"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <div id="quickIdFooterNotLoggedIn" style="display: none; width: 100%; gap: 10px;">
-                    <button class="btn btn-danger" onclick="clearRememberedId()" style="flex: 1;">
-                        <i class="fas fa-trash-alt"></i> 清除
-                    </button>
-                    <button class="btn btn-primary" onclick="saveQuickId()" style="flex: 1;">
-                        <i class="fas fa-check"></i> 登入
-                    </button>
-                </div>
-                <div id="quickIdFooterLoggedIn" style="display: none; width: 100%;">
-                    <button class="btn btn-danger" onclick="logoutFromQuickModal()" style="width: 100%;">
-                        <i class="fas fa-sign-out-alt"></i> 登出
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ==================== 管理員登入模態視窗 ==================== -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -256,7 +188,6 @@
         </div>
     </div>
 
-    <!-- ==================== 訊息模態視窗 ==================== -->
     <div id="messageModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -272,7 +203,6 @@
         </div>
     </div>
 
-    <!-- ==================== 確認動作彈窗 ==================== -->
     <div id="confirmModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -289,7 +219,6 @@
         </div>
     </div>
 
-    <!-- ==================== JavaScript 核心模組 ==================== -->
     <script src="api.js" defer></script>
     <script src="js/core/supabase.js" defer></script>
     <script src="js/core/state.js" defer></script>
@@ -298,10 +227,8 @@
     <script src="js/core/common.js" defer></script>
     <script src="js/core/navigation.js" defer></script>
     <script src="js/core/preload.js" defer></script>
-    <script src="js/core/quick-id.js" defer></script>
     <script src="js/core/core.js" defer></script>
 
-    <!-- ==================== 使用者模組 ==================== -->
     <script src="js/user/query.js" defer></script>
     <script src="js/user/register.js" defer></script>
     <script src="js/user/changepwd.js" defer></script>
@@ -309,7 +236,6 @@
     <script src="js/user/meal.js" defer></script>
     <script src="js/user/meal-order.js" defer></script>
 
-    <!-- ==================== 管理員模組 ==================== -->
     <script src="js/admin/auth.js" defer></script>
     <script src="js/admin/restaurant.js" defer></script>
     <script src="js/admin/recharge.js" defer></script>
@@ -319,11 +245,9 @@
     <script src="js/admin/users.js" defer></script>
     <script src="js/admin/deduct.js" defer></script>
 
-    <!-- ==================== 共用模組 ==================== -->
     <script src="js/shared/notify.js" defer></script>
     <script src="js/shared/tutorial.js" defer></script>
 
-    <!-- ==================== 新手教學浮層 ==================== -->
     <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
         <div id="tutorialHighlight" class="tutorial-highlight"></div>
         <div class="tutorial-card">
@@ -345,7 +269,6 @@
         </div>
     </div>
 
-    <!-- ==================== PWA Service Worker 註冊 ==================== -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
@@ -354,40 +277,25 @@
           })
             .then(function(registration) {
               console.log('✅ Service Worker 註冊成功');
-
-              registration.addEventListener('updatefound', function() {
-                const newWorker = registration.installing;
-                console.log('🔄 發現新版本，正在下載...');
-
-                newWorker.addEventListener('statechange', function() {
-                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('✅ 新版本已下載，等待啟動');
-                  }
-                });
-              });
             })
             .catch(function(error) {
               console.warn('⚠️ Service Worker 註冊失敗:', error);
             });
 
           navigator.serviceWorker.addEventListener('message', function(event) {
-              if (event.data && event.data.type === 'SW_UPDATED') {
-                const { oldVersion, newVersion, isMajorUpdate } = event.data;
-            
-                console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion} (${isMajorUpdate ? '大改' : '小改'})`);
-            
-                // ✅ 不管大改小改，自動重載
-                setTimeout(function() {
-                  const url = window.location.href.split('?')[0];
-                  window.location.href = url + '?_t=' + Date.now();
-                }, 300);
-              }
-            });
+            if (event.data && event.data.type === 'SW_UPDATED') {
+              const { oldVersion, newVersion, isMajorUpdate } = event.data;
+              console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion}`);
+              setTimeout(function() {
+                const url = window.location.href.split('?')[0];
+                window.location.href = url + '?_t=' + Date.now();
+              }, 300);
+            }
+          });
         });
       }
     </script>
 
-    <!-- ==================== OneSignal 初始化 ==================== -->
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function(OneSignal) {
@@ -395,9 +303,7 @@
           await OneSignal.init({
             appId: "fb14b87c-e10e-4aa0-8613-0f2b05e5c937",
             safari_web_id: "web.onesignal.auto.2510e921-2066-4b3b-be25-8e0e09bd836c",
-            notifyButton: {
-              enable: false
-            },
+            notifyButton: { enable: false },
             serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
             serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
             allowLocalhostAsSecureOrigin: true,
