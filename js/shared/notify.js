@@ -1,5 +1,5 @@
 // ==================== notify.js ====================
-// OneSignal 推播管理（Supabase 版）
+// OneSignal 推播管理（emoji 版）
 // 依賴：OneSignal SDK、supabase.js
 // ====================================================
 
@@ -67,7 +67,6 @@ async function saveSubscriptionById(subscriptionId, studentId = '') {
   try {
     const sb = await initSupabase();
 
-    // upsert：已存在就更新，不存在就新增
     const { data, error } = await sb
       .from('subscriptions')
       .upsert(
@@ -119,16 +118,10 @@ function updateNotifyButton() {
     const isSubscribed = OneSignal.User.PushSubscription.optedIn;
 
     if (isSubscribed) {
-      if (icon) {
-        icon.className = 'fas fa-bell';
-        icon.style.color = 'var(--warning)';
-      }
+      if (icon) icon.textContent = '🔔';
       if (text) text.textContent = '已開啟';
     } else {
-      if (icon) {
-        icon.className = 'fas fa-bell-slash';
-        icon.style.color = '';
-      }
+      if (icon) icon.textContent = '🔕';
       if (text) text.textContent = '通知';
     }
   } catch (error) {
@@ -172,4 +165,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.toggleNotifications = toggleNotifications;
 window.checkSubscriptionStatus = checkSubscriptionStatus;
 
-console.log('🔔 推播模組已載入（Supabase 版）');
+console.log('🔔 推播模組已載入（emoji 版）');
