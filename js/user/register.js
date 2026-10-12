@@ -1,7 +1,105 @@
 // ==================== register.js ====================
-// 使用者註冊模組（Supabase Auth）
-// 依賴：api.js、supabase.js、state.js、ui.js、common.js、core.js
-// ====================================================
+// 登入 / 註冊模組（強制登入版）
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js
+// ==================================================
+
+function initRegisterPage() {
+  const loginSection = document.getElementById('loginSection');
+  const registerSection = document.getElementById('registerSection');
+  if (loginSection) loginSection.style.display = 'block';
+  if (registerSection) registerSection.style.display = 'none';
+
+  const loginStudentId = document.getElementById('loginStudentId');
+  const loginPassword = document.getElementById('loginPassword');
+  if (loginStudentId) loginStudentId.value = '';
+  if (loginPassword) loginPassword.value = '';
+
+  const loginResult = document.getElementById('loginResult');
+  if (loginResult) loginResult.innerHTML = '';
+}
+
+function switchToRegister() {
+  const loginSection = document.getElementById('loginSection');
+  const registerSection = document.getElementById('registerSection');
+  if (loginSection) loginSection.style.display = 'none';
+  if (registerSection) registerSection.style.display = 'block';
+
+  const registerResult = document.getElementById('registerResult');
+  if (registerResult) registerResult.innerHTML = '';
+}
+
+function switchToLogin() {
+  const loginSection = document.getElementById('loginSection');
+  const registerSection = document.getElementById('registerSection');
+  if (loginSection) loginSection.style.display = 'block';
+  if (registerSection) registerSection.style.display = 'none';
+
+  const loginResult = document.getElementById('loginResult');
+  if (loginResult) loginResult.innerHTML = '';
+}
+
+/**
+ * 登入（從登入閘門）
+ */
+async function loginFromGate(event) {
+  const btn = event ? event.currentTarget : null;
+
+  const studentId = document.getElementById('loginStudentId').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const resultDiv = document.getElementById('loginResult');
+
+  if (!studentId || !/^\d{6}$/.test(studentId)) {
+    if (resultDiv) resultDiv.innerHTML = '<div class="message error">請輸入6位數學號</div>';
+    return;
+  }
+
+  if (!password) {
+    if (resultDiv) resultDiv.innerHTML = '<div class="message error">請輸入密碼</div>';
+    return;
+  }
+
+  if (btn) setButtonLoading(btn, true);
+  if (resultDiv) showConanLoading('loginResult', 'verifyUserPassword');
+
+  try {
+    const sb = await initSupabase();
+    const email = `${studentId}@bhg.app`;
+
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 學號或密碼錯誤</div>`;
+      }
+      return;
+    }
+
+    AppState.setCurrentStudentId(studentId);
+    fillAllStudentIdInputs(studentId, true);
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success">✅ 登入成功</div>`;
+    }
+
+    showMessageModal('✅ 登入成功', '歡迎回來');
+
+    setTimeout(() => {
+      navigateTo(getSmartHomePage());
+    }, 800);
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('登入失敗:', error);
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+    }
+  }
+}
 
 /**
  * 註冊新使用者
@@ -13,7 +111,6 @@ async function registerUser(event) {
   const name = document.getElementById('registerName').value.trim();
   const password = document.getElementById('registerPassword').value;
 
-  // ========== 輸入驗證 ==========
   if (!studentId) {
     showMessageModal('❌ 輸入錯誤', '請輸入學號');
     return;
@@ -51,18 +148,13 @@ async function registerUser(event) {
 
   const resultDiv = document.getElementById('registerResult');
 
-  if (btn) {
-    setButtonLoading(btn, true);
-  }
-
-  if (resultDiv) {
-    showConanLoading('registerResult', 'registerUser');
-  }
+  if (btn) setButtonLoading(btn, true);
+  if (resultDiv) showConanLoading('registerResult', 'registerUser');
 
   try {
     const sb = await initSupabase();
 
-    // ========== 1. 檢查學號是否已存在 ==========
+    // 1. 檢查學號是否已存在
     const { data: existing, error: checkError } = await sb
       .from('users')
       .select('user_id')
@@ -81,8 +173,8 @@ async function registerUser(event) {
       return;
     }
 
-    // ========== 2. 建立 Supabase Auth 帳號 ==========
-    const email = `${studentId}@bhg.local`;
+    // 2. 建立 Supabase Auth 帳號
+    const email = `${studentId}@bhg.app`;
     const { data: authData, error: authError } = await sb.auth.signUp({
       email: email,
       password: password
@@ -97,6 +189,8 @@ async function registerUser(event) {
         errorMessage = '該學號已註冊過';
       } else if (authError.message.includes('Password')) {
         errorMessage = '密碼格式錯誤';
+      } else if (authError.message.includes('invalid')) {
+        errorMessage = '學號格式錯誤';
       }
 
       if (resultDiv) {
@@ -113,7 +207,7 @@ async function registerUser(event) {
       return;
     }
 
-    // ========== 3. 寫入 users 表 ==========
+    // 3. 寫入 users 表
     const { error: insertError } = await sb
       .from('users')
       .insert({
@@ -133,31 +227,30 @@ async function registerUser(event) {
       return;
     }
 
-    // ========== 4. 成功 ==========
+    // 4. 註冊成功
     if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> 申請成功！請用學號和密碼登入</div>`;
+      resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> 申請成功！正在登入...</div>`;
     }
 
-    // 清空表單
-    document.getElementById('registerStudentId').value = '';
-    document.getElementById('registerName').value = '';
-    document.getElementById('registerPassword').value = '';
+    // 5. 自動登入
+    const { data: loginData, error: loginError } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
 
-    // ========== 5. 詢問是否記住學號 ==========
-    showConfirmModal(
-      '✅ 申請成功',
-      `學號 ${studentId} 申請成功！\n\n是否要記住這個學號？\n記住後下次會自動填入查詢頁面。`,
-      function() {
-        AppState.setCurrentStudentId(studentId);
-        const btnText = document.getElementById('quickIdBtnText');
-        if (btnText) btnText.textContent = studentId;
-        fillAllStudentIdInputs(studentId);
-        showMessageModal('✅ 已記住', `學號 ${studentId} 已儲存`);
-      },
-      function() {
-        showMessageModal('✅ 申請成功', `學號 ${studentId} 已建立，餘額 0 元`);
-      }
-    );
+    if (!loginError && loginData.session) {
+      AppState.setCurrentStudentId(studentId);
+      fillAllStudentIdInputs(studentId, true);
+
+      setTimeout(() => {
+        navigateTo(getSmartHomePage());
+      }, 800);
+    } else {
+      // 自動登入失敗 → 切回登入
+      showMessageModal('✅ 申請成功', '請用學號和密碼登入');
+      switchToLogin();
+      document.getElementById('loginStudentId').value = studentId;
+    }
 
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
@@ -169,9 +262,6 @@ async function registerUser(event) {
   }
 }
 
-/**
- * 清除註冊表單
- */
 function clearRegisterForm() {
   const studentIdInput = document.getElementById('registerStudentId');
   const nameInput = document.getElementById('registerName');
@@ -184,7 +274,11 @@ function clearRegisterForm() {
   if (resultDiv) resultDiv.innerHTML = '';
 }
 
+window.initRegisterPage = initRegisterPage;
+window.switchToRegister = switchToRegister;
+window.switchToLogin = switchToLogin;
+window.loginFromGate = loginFromGate;
 window.registerUser = registerUser;
 window.clearRegisterForm = clearRegisterForm;
 
-console.log('📝 註冊模組已載入');
+console.log('📝 登入 / 註冊模組已載入（強制登入版）');
