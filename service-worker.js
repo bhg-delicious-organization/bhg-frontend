@@ -1,8 +1,8 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker（自動判斷大改/小改）
+// PWA Service Worker
 // ==========================================================
 
-const VERSION = '3.2.7';  // ⚠️ 只改這行
+const VERSION = '3.3.0';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -21,7 +21,6 @@ const URLS_TO_CACHE = [
   './js/core/common.js',
   './js/core/navigation.js',
   './js/core/preload.js',
-  './js/core/quick-id.js',
   './js/core/core.js',
   './js/shared/notify.js',
   './js/shared/tutorial.js',
@@ -59,7 +58,6 @@ const URLS_TO_CACHE = [
   './js/admin/deduct.js'
 ];
 
-// ==================== 判斷是否為大改 ====================
 function isMajorUpdate(oldVersion, newVersion) {
   if (!oldVersion) return false;
   const oldParts = oldVersion.split('.').map(Number);
@@ -67,12 +65,9 @@ function isMajorUpdate(oldVersion, newVersion) {
   return oldParts[0] !== newParts[0];
 }
 
-// ==================== 安裝 ====================
 self.addEventListener('install', function(event) {
   console.log(`📦 新版本 ${VERSION} 安裝中...`);
-
   self.skipWaiting();
-
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
       return cache.addAll(URLS_TO_CACHE).catch(function(err) {
@@ -82,10 +77,8 @@ self.addEventListener('install', function(event) {
   );
 });
 
-// ==================== 啟用 ====================
 self.addEventListener('activate', function(event) {
   console.log(`✅ 新版本 ${VERSION} 已啟用`);
-
   event.waitUntil(
     caches.keys().then(function(cacheNames) {
       const oldCacheNames = cacheNames.filter(function(name) {
@@ -98,19 +91,13 @@ self.addEventListener('activate', function(event) {
       }
 
       const isMajor = isMajorUpdate(oldVersion, VERSION);
-      console.log(`🔍 舊版本: ${oldVersion || '無'} | 新版本: ${VERSION} | 大改: ${isMajor}`);
 
       return Promise.all(
         oldCacheNames.map(function(cacheName) {
-          console.log('🗑️ 清除舊快取:', cacheName);
           return caches.delete(cacheName);
         })
       ).then(function() {
-        return {
-          oldVersion: oldVersion,
-          newVersion: VERSION,
-          isMajorUpdate: isMajor
-        };
+        return { oldVersion, newVersion: VERSION, isMajorUpdate: isMajor };
       });
     }).then(function(updateInfo) {
       return self.clients.claim().then(function() {
@@ -131,7 +118,6 @@ self.addEventListener('activate', function(event) {
   );
 });
 
-// ==================== 攔截請求 ====================
 self.addEventListener('fetch', function(event) {
   if (event.request.method !== 'GET') return;
 
@@ -139,7 +125,6 @@ self.addEventListener('fetch', function(event) {
 
   if (!url.startsWith('http://') && !url.startsWith('https://')) return;
 
-  // 排除特定來源
   if (url.includes('script.google.com')) return;
   if (url.includes('supabase.co')) return;
   if (url.includes('onesignal.com')) return;
@@ -149,7 +134,6 @@ self.addEventListener('fetch', function(event) {
   if (url.includes('jsdelivr.net')) return;
   if (url.includes('/onesignal/')) return;
 
-  // index.html 走 Network First
   if (url.endsWith('/') || url.endsWith('/index.html') || url.includes('/index.html?')) {
     event.respondWith(
       fetch(event.request).then(function(response) {
@@ -165,7 +149,6 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // 其他資源走 Cache First
   event.respondWith(
     caches.match(event.request).then(function(response) {
       if (response) return response;
@@ -192,7 +175,6 @@ self.addEventListener('fetch', function(event) {
   );
 });
 
-// ==================== 接收訊息 ====================
 self.addEventListener('message', function(event) {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
