@@ -59,7 +59,93 @@
         </div>
     </header>
 
-    <div id="pageContent"></div>
+    <div id="pageContent">
+
+        <!-- ==================== 登入 / 註冊頁面（首頁寫死） ==================== -->
+        <div id="page-user-register" class="page-container active">
+
+            <!-- ========== 登入區塊 ========== -->
+            <div id="loginSection" class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-sign-in-alt"></i> 登入
+                    </h2>
+                </div>
+
+                <p style="color: var(--gray); margin-bottom: 16px;">
+                    請輸入學號和密碼登入系統
+                </p>
+
+                <div class="form-group">
+                    <label class="form-label">學號</label>
+                    <input type="text" id="loginStudentId" class="form-control" placeholder="請輸入6位數學號" maxlength="6" inputmode="numeric">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">密碼</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼">
+                </div>
+
+                <button class="btn btn-primary" onclick="loginFromGate(event)">
+                    <i class="fas fa-sign-in-alt"></i> 登入
+                </button>
+
+                <div id="loginResult" style="margin-top: 15px;"></div>
+
+                <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: var(--gray); margin-bottom: 12px;">還沒有帳號？</p>
+                    <button class="btn btn-secondary" onclick="switchToRegister()">
+                        <i class="fas fa-user-plus"></i> 申請帳號
+                    </button>
+                </div>
+            </div>
+
+            <!-- ========== 註冊區塊 ========== -->
+            <div id="registerSection" class="card" style="display: none;">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-user-plus"></i> 申請帳號
+                    </h2>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">學號</label>
+                    <input type="text" id="registerStudentId" class="form-control" placeholder="請輸入6位數學號" maxlength="6" inputmode="numeric">
+                    <div class="form-text">範例：123456</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">姓名</label>
+                    <input type="text" id="registerName" class="form-control" placeholder="請輸入真實姓名">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">密碼</label>
+                    <input type="password" id="registerPassword" class="form-control" placeholder="請設定密碼（至少 6 位）">
+                    <div class="form-text">密碼至少 6 位，註冊後可用學號和密碼登入</div>
+                </div>
+
+                <div class="message info" style="margin-bottom: 15px;">
+                    <i class="fas fa-info-circle"></i> 申請成功後餘額為 0 元。
+                </div>
+
+                <button class="btn btn-success" onclick="registerUser(event)">
+                    <i class="fas fa-check-circle"></i> 送出申請
+                </button>
+
+                <div id="registerResult" style="margin-top: 15px;"></div>
+
+                <div style="text-align: center; margin-top: 24px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="color: var(--gray); margin-bottom: 12px;">已經有帳號？</p>
+                    <button class="btn btn-secondary" onclick="switchToLogin()">
+                        <i class="fas fa-sign-in-alt"></i> 返回登入
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
 
     <button id="navToggleBtn" class="nav-toggle-btn" style="display: none;">
         <i class="fas fa-chevron-down"></i>
