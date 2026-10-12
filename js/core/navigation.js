@@ -1,17 +1,13 @@
 // ==================== navigation.js ====================
-// 導航控制模組（強制登入版）
+// 導航控制模組
 // 依賴：state.js、ui.js、time.js
 // ==================================================
 
-/**
- * 智慧首頁判斷
- */
 function getSmartHomePage() {
   const isAdminMode = AppState.isAdminMode();
   const studentId = AppState.currentStudentId();
   const currentTime = getCurrentTimeNumber();
 
-  // 管理員模式
   if (isAdminMode) {
     if (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) {
       return 'admin-restaurant';
@@ -19,12 +15,10 @@ function getSmartHomePage() {
     return 'admin-query';
   }
 
-  // 未登入 → 登入頁
   if (!studentId) {
     return 'user-register';
   }
 
-  // 三個 AND 條件
   const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
   const hasRestaurant = !!AppState.currentRestaurantName();
 
@@ -34,9 +28,6 @@ function getSmartHomePage() {
   return 'user-query';
 }
 
-/**
- * 導航到指定頁面
- */
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
@@ -80,9 +71,6 @@ async function navigateTo(pageName) {
       }
       const html = await response.text();
 
-      const loader = document.getElementById('page-loader');
-      if (loader) loader.remove();
-
       pageContent.insertAdjacentHTML('beforeend', html);
       targetPage = document.getElementById('page-' + pageName);
       console.log('✅ 頁面片段已載入:', pageName);
@@ -91,9 +79,6 @@ async function navigateTo(pageName) {
       showMessageModal('❌ 載入失敗', `無法載入頁面：${pageName}`);
       return;
     }
-  } else {
-    const loader = document.getElementById('page-loader');
-    if (loader) loader.remove();
   }
 
   if (targetPage) {
@@ -193,4 +178,4 @@ window.navigateTo = navigateTo;
 window.switchToAdminMode = switchToAdminMode;
 window.switchToUserMode = switchToUserMode;
 
-console.log('🧭 導航模組已載入（強制登入版）');
+console.log('🧭 導航模組已載入');
