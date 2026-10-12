@@ -2,7 +2,7 @@
 // PWA Service Worker
 // ==========================================================
 
-const VERSION = '3.3.0';  // ⚠️ 只改這行
+const VERSION = '3.4.0';  // ⚠️ 只改這行
 const CACHE_NAME = 'bhg-cache-' + VERSION;
 
 console.log(`📦 Service Worker 版本: ${VERSION}`);
@@ -24,7 +24,6 @@ const URLS_TO_CACHE = [
   './js/core/core.js',
   './js/shared/notify.js',
   './js/shared/tutorial.js',
-  // 頁面片段
   './pages/admin-account.html',
   './pages/admin-analytics.html',
   './pages/admin-batch-deduct.html',
@@ -40,14 +39,12 @@ const URLS_TO_CACHE = [
   './pages/user-query.html',
   './pages/user-register.html',
   './pages/user-system.html',
-  // 使用者模組
   './js/user/query.js',
   './js/user/register.js',
   './js/user/changepwd.js',
   './js/user/account.js',
   './js/user/meal.js',
   './js/user/meal-order.js',
-  // 管理員模組
   './js/admin/auth.js',
   './js/admin/restaurant.js',
   './js/admin/recharge.js',
