@@ -74,8 +74,14 @@ async function adminLogin(event) {
       return;
     }
 
-    // 檢查是否為管理員
-    if (data.user.email !== window.ADMIN_EMAIL) {
+    // 檢查是否為管理員（查 admins 表）
+    const { data: adminData } = await sb
+      .from('admins')
+      .select('auth_uid')
+      .eq('auth_uid', data.user.id)
+      .maybeSingle();
+    
+    if (!adminData) {
       await sb.auth.signOut();
       if (messageEl) {
         messageEl.innerHTML = '<div class="message error">此帳號不是管理員</div>';
