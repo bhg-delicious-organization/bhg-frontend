@@ -6,15 +6,20 @@
 window.navHidden = false;
 let lastScrollY = window.scrollY;
 
-window.ADMIN_EMAIL = 'hrir2580@gmail.com';
-
 async function checkSupabaseAdminLogin() {
   try {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
 
     if (session && session.user) {
-      if (session.user.email === ADMIN_EMAIL) {
+      // 查 admins 表
+      const { data } = await sb
+        .from('admins')
+        .select('auth_uid')
+        .eq('auth_uid', session.user.id)
+        .maybeSingle();
+
+      if (data) {
         AppState.setAdmin(true, session.access_token, null);
         console.log('✅ 管理員已登入:', session.user.email);
         return true;
