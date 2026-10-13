@@ -82,7 +82,7 @@ async function loginFromAccount() {
 
   try {
     const sb = await initSupabase();
-    const email = `${studentId}@bhg.local`;
+    const email = `${studentId}@bhg.app`;
 
     const { data, error } = await sb.auth.signInWithPassword({
       email: email,
