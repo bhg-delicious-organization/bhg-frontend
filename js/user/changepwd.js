@@ -56,7 +56,7 @@ async function submitChangePassword() {
 
   try {
     const sb = await initSupabase();
-    const email = `${studentId}@bhg.local`;
+    const email = `${studentId}@bhg.app`;
 
     // 1. 先用舊密碼登入驗證
     const { error: signInError } = await sb.auth.signInWithPassword({
