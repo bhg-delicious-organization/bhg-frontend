@@ -13,6 +13,7 @@ const AppState = (function() {
   let _isAdminMode = false;
   let _currentRestaurantName = '';
   let _lotteryList = [];
+  let _userDataCache = null;   // ← 新增
 
   // 觀察者列表
   let _observers = {
@@ -21,7 +22,8 @@ const AppState = (function() {
     studentId: [],
     adminMode: [],
     restaurant: [],
-    lotteryList: []
+    lotteryList: [],
+    userData: []   // ← 新增
   };
 
   // ========== 私有方法 ==========
@@ -44,6 +46,7 @@ const AppState = (function() {
     isAdminMode: () => _isAdminMode,
     currentRestaurantName: () => _currentRestaurantName,
     getLotteryList: () => _lotteryList,
+    getUserData: () => _userDataCache,   // ← 新增
 
     // 向後兼容：rememberedStudentId 等同 currentStudentId
     rememberedStudentId: () => _currentStudentId,
@@ -54,9 +57,6 @@ const AppState = (function() {
       _isAdmin = value;
       _adminToken = token || null;
       _csrfToken = csrfToken || null;
-
-      // ✅ 只保留記憶體狀態，不再寫入 localStorage / sessionStorage
-      // 管理員登入狀態由 Supabase Auth 管理
       _notify('admin', { old, new: value, token: _adminToken });
     },
 
@@ -94,16 +94,26 @@ const AppState = (function() {
       _notify('restaurant', { old, new: name });
     },
 
+    // ← 新增
+    setUserData: function(data) {
+      _userDataCache = data;
+      _notify('userData', data);
+    },
+
+    // ← 新增
+    clearUserData: function() {
+      _userDataCache = null;
+      _notify('userData', null);
+    },
+
     /**
      * 初始化（只讀學生學號，管理員狀態由 Supabase Auth 判斷）
-     * @returns {boolean} 永遠回傳 false（管理員狀態由 checkSupabaseAdminLogin 判斷）
      */
     init: function() {
       const savedStudentId = localStorage.getItem('currentStudentId');
       if (savedStudentId) {
         _currentStudentId = savedStudentId;
       }
-
       return false;
     },
 
@@ -111,11 +121,9 @@ const AppState = (function() {
       this.setAdmin(false, null, null);
       this.setAdminMode(false);
       this.setCurrentStudentId('');
+      this.clearUserData();   // ← 新增
     },
 
-    /**
-     * 訂閱狀態變更
-     */
     subscribe: function(event, callback) {
       if (_observers[event]) {
         _observers[event].push(callback);
@@ -135,7 +143,8 @@ const AppState = (function() {
         currentPage: _currentPage,
         currentStudentId: _currentStudentId,
         isAdminMode: _isAdminMode,
-        currentRestaurantName: _currentRestaurantName
+        currentRestaurantName: _currentRestaurantName,
+        userData: _userDataCache   // ← 新增
       };
     },
 
@@ -147,7 +156,6 @@ const AppState = (function() {
   };
 })();
 
-// 掛載到 window
 window.AppState = AppState;
 
 console.log('📦 AppState 已載入');
