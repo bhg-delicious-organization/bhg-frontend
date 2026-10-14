@@ -89,6 +89,15 @@ async function navigateTo(pageName) {
       case 'user-system':
         if (typeof loadSystemInfo === 'function') loadSystemInfo();
         break;
+      case 'user-query':
+        if (typeof refreshUserBalance === 'function') refreshUserBalance();
+        break;
+      case 'user-meal':
+        if (typeof refreshMealInfo === 'function') refreshMealInfo();
+        break;
+      case 'user-account':
+        if (typeof loadAccountPage === 'function') loadAccountPage();
+        break;
       case 'admin-restaurant':
         if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
         break;
@@ -114,9 +123,6 @@ async function navigateTo(pageName) {
         break;
       case 'user-meal-order':
         if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
-        break;
-      case 'user-account':
-        if (typeof loadAccountPage === 'function') loadAccountPage();
         break;
       case 'user-changepwd':
         if (typeof loadChangePwdPage === 'function') loadChangePwdPage();
