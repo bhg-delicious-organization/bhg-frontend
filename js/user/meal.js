@@ -1,8 +1,11 @@
 // ==================== meal.js ====================
-// 使用者訂飯模組（Supabase 版）
+// 使用者訂飯模組（Supabase 版 + 自動載入）
 // 依賴：supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
 // ==================================================
 
+/**
+ * 載入訂飯頁資訊（從 session 拿學號，不從輸入框）
+ */
 async function loadMealInfo(event) {
   let btn = null;
   if (event && event.currentTarget) {
@@ -11,19 +14,17 @@ async function loadMealInfo(event) {
     btn = document.querySelector('#page-user-meal .btn-primary');
   }
 
-  const inputElement = document.getElementById('mealStudentId');
-  if (!inputElement) {
-    console.warn('⚠️ 訂飯頁面尚未載入，跳過 loadMealInfo');
-    return;
-  }
-
-  const studentId = inputElement.value.trim();
+  // 從 session 拿學號
+  const studentId = AppState.currentStudentId();
   if (!studentId) {
-    showMessageModal('❌ 輸入錯誤', '請輸入學號');
+    showMessageModal('❌ 錯誤', '請重新登入');
+    navigateTo('user-register');
     return;
   }
 
-  AppState.setCurrentStudentId(studentId);
+  // 自動填入輸入框（唯讀）
+  const inputElement = document.getElementById('mealStudentId');
+  if (inputElement) inputElement.value = studentId;
 
   if (btn) setButtonLoading(btn, true);
 
@@ -84,6 +85,23 @@ async function loadMealInfo(event) {
   }
 }
 
+/**
+ * 背景重新整理訂飯頁資訊（navigation 呼叫）
+ */
+async function refreshMealInfo() {
+  const studentId = AppState.currentStudentId();
+  if (!studentId) return;
+
+  // 自動填入輸入框
+  const inputElement = document.getElementById('mealStudentId');
+  if (inputElement) inputElement.value = studentId;
+
+  // 若頁面還沒載入，跳過
+  if (!document.getElementById('mealStudentId')) return;
+
+  await loadMealInfo();
+}
+
 async function updateMealBalanceDisplay(balance) {
   try {
     const sb = await initSupabase();
@@ -124,7 +142,11 @@ async function loadUserTodayMeals(studentId) {
   const orderEnd = TIME.ORDER_END;
   const ratingTime = isRatingTime();
 
-  showConanLoading('todayMealDisplay', 'getUserTodayMeals');
+  // 優先使用快取
+  const cached = AppState.getUserData();
+  if (cached?.meals && document.getElementById('todayMealDisplay')) {
+    // 有快取，先渲染
+  }
 
   try {
     const sb = await initSupabase();
@@ -223,6 +245,10 @@ async function loadUserTodayMeals(studentId) {
       });
     });
 
+    // 更新快取
+    const cached = AppState.getUserData() || {};
+    AppState.setUserData({ ...cached, meals: meals || [] });
+
   } catch (error) {
     console.error('載入今日餐點失敗:', error);
     const container = document.getElementById('todayMealDisplay');
@@ -300,7 +326,8 @@ async function enterMealOrderMode(event) {
   }
 
   if (!AppState.currentStudentId()) {
-    showMessageModal('❌ 錯誤', '請先在訂飯頁面輸入學號並載入');
+    showMessageModal('❌ 錯誤', '請先登入');
+    navigateTo('user-register');
     return;
   }
 
@@ -464,6 +491,7 @@ function displayUserOrderHistory(orders, container) {
 }
 
 window.loadMealInfo = loadMealInfo;
+window.refreshMealInfo = refreshMealInfo;
 window.enterMealOrderMode = enterMealOrderMode;
 
-console.log('🍽️ 訂飯模組已載入（Supabase 版）');
+console.log('🍽️ 訂飯模組已載入（Supabase 版 + 自動載入）');
