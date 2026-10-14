@@ -1,5 +1,5 @@
 // ==================== account.js ====================
-// 使用者帳號管理模組（Supabase 版）
+// 使用者帳號管理模組（Supabase 版 + session 為準）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ====================================================
 
@@ -25,7 +25,14 @@ async function loadAccountPage() {
     const studentIdEl = document.getElementById('accountStudentId');
     if (studentIdEl) studentIdEl.textContent = studentId;
 
-    showConanLoading('accountUserName', 'getUserBalance');
+    // 先用快取
+    const cached = AppState.getUserData();
+    if (cached?.user) {
+      const userNameEl = document.getElementById('accountUserName');
+      if (userNameEl) userNameEl.textContent = cached.user.name || '未知';
+    } else {
+      showConanLoading('accountUserName', 'getUserBalance');
+    }
 
     try {
       const sb = await initSupabase();
@@ -76,6 +83,11 @@ async function loginFromAccount() {
     return;
   }
 
+  if (!password) {
+    if (errorDiv) errorDiv.innerHTML = '<div class="message error">請輸入密碼</div>';
+    return;
+  }
+
   if (errorDiv) {
     showConanLoading('accountLoginError', 'verifyUserPassword');
   }
@@ -100,6 +112,12 @@ async function loginFromAccount() {
 
     AppState.setCurrentStudentId(studentId);
     fillAllStudentIdInputs(studentId, true);
+
+    // 預載資料
+    if (typeof preloadUserData === 'function') {
+      preloadUserData(studentId).catch(e => console.warn(e));
+    }
+
     loadAccountPage();
 
   } catch (error) {
@@ -117,7 +135,7 @@ async function logoutFromAccount() {
     console.warn('登出失敗:', e);
   }
 
-  AppState.setCurrentStudentId('');
+  AppState.logout();
 
   const inputs = ['queryStudentId', 'deductStudentId', 'statsStudentId', 'mealStudentId', 'directRechargeUserId'];
   inputs.forEach(id => {
@@ -126,7 +144,7 @@ async function logoutFromAccount() {
   });
 
   showMessageModal('✅ 已登出', '您已成功登出');
-  loadAccountPage();
+  navigateTo('user-register');
 }
 
 window.loadAccountPage = loadAccountPage;
