@@ -1,11 +1,8 @@
 // ==================== meal.js ====================
-// 使用者訂飯模組（Supabase 版 + 自動載入）
+// 使用者訂飯模組（Supabase 版 + 自動載入 + 星星評分）
 // 依賴：supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
 // ==================================================
 
-/**
- * 載入訂飯頁資訊（從 session 拿學號，不從輸入框）
- */
 async function loadMealInfo(event) {
   let btn = null;
   if (event && event.currentTarget) {
@@ -14,7 +11,6 @@ async function loadMealInfo(event) {
     btn = document.querySelector('#page-user-meal .btn-primary');
   }
 
-  // 從 session 拿學號
   const studentId = AppState.currentStudentId();
   if (!studentId) {
     showMessageModal('❌ 錯誤', '請重新登入');
@@ -22,7 +18,6 @@ async function loadMealInfo(event) {
     return;
   }
 
-  // 自動填入輸入框（唯讀）
   const inputElement = document.getElementById('mealStudentId');
   if (inputElement) inputElement.value = studentId;
 
@@ -37,7 +32,7 @@ async function loadMealInfo(event) {
       .from('users')
       .select('balance, name')
       .eq('user_id', studentId)
-      .single();
+      .maybeSingle();
 
     if (btn) setButtonLoading(btn, false);
 
@@ -85,18 +80,13 @@ async function loadMealInfo(event) {
   }
 }
 
-/**
- * 背景重新整理訂飯頁資訊（navigation 呼叫）
- */
 async function refreshMealInfo() {
   const studentId = AppState.currentStudentId();
   if (!studentId) return;
 
-  // 自動填入輸入框
   const inputElement = document.getElementById('mealStudentId');
   if (inputElement) inputElement.value = studentId;
 
-  // 若頁面還沒載入，跳過
   if (!document.getElementById('mealStudentId')) return;
 
   await loadMealInfo();
@@ -141,12 +131,6 @@ async function loadUserTodayMeals(studentId) {
   const orderStart = TIME.ORDER_START;
   const orderEnd = TIME.ORDER_END;
   const ratingTime = isRatingTime();
-
-  // 優先使用快取
-  const cached = AppState.getUserData();
-  if (cached?.meals && document.getElementById('todayMealDisplay')) {
-    // 有快取，先渲染
-  }
 
   try {
     const sb = await initSupabase();
@@ -202,30 +186,19 @@ async function loadUserTodayMeals(studentId) {
     html += '<ul style="list-style: none; padding: 0;">';
 
     meals.forEach(meal => {
-      const isNotRated = (!meal.rated || meal.rated === 0);
-      const hasRated = meal.rated && meal.rated !== 0;
+      const currentRating = meal.rated || 0;
 
       html += `<li style="padding: 12px; background: #f8f9fa; margin-bottom: 12px; border-radius: 8px;" data-slot="${meal.slot}">`;
       html += `<div><strong>${escapeHtml(meal.meal_name)}</strong> x${meal.amount}</div>`;
       html += `<div style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(meal.restaurant)} - ${escapeHtml(meal.category)}</div>`;
 
-      const showRatingButtons = ratingTime && isNotRated;
-
-      if (showRatingButtons) {
-        html += `
-          <div class="rating-buttons" data-slot="${meal.slot}" style="display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap;">
-            <button class="btn rating-btn" data-rating="5" style="flex: 1; padding: 6px 8px; background: #f39c12; color: white; font-size: 0.7rem; width: auto;">⭐ 夯爆了</button>
-            <button class="btn rating-btn" data-rating="4" style="flex: 1; padding: 6px 8px; background: #2ecc71; color: white; font-size: 0.7rem; width: auto;">🔥 頂級</button>
-            <button class="btn rating-btn" data-rating="3" style="flex: 1; padding: 6px 8px; background: #3498db; color: white; font-size: 0.7rem; width: auto;">👑 人上人</button>
-            <button class="btn rating-btn" data-rating="2" style="flex: 1; padding: 6px 8px; background: #95a5a6; color: white; font-size: 0.7rem; width: auto;">🎭 NPC</button>
-            <button class="btn rating-btn" data-rating="1" style="flex: 1; padding: 6px 8px; background: #e74c3c; color: white; font-size: 0.7rem; width: auto;">💩 拉完了</button>
-          </div>
-        `;
-      } else if (hasRated) {
-        const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
-        const stars = '⭐'.repeat(meal.rated);
+      if (ratingTime) {
+        // 星星評分（可修改）
+        html += renderStarRating(meal.slot, currentRating);
+      } else if (currentRating > 0) {
+        // 非評分時間，但已評分 → 只顯示
         html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
-          <i class="fas fa-check-circle"></i> 已評分：${ratingText[meal.rated]} ${stars} (${meal.rated}分)
+          <i class="fas fa-check-circle"></i> 已評分：${currentRating} 分
         </div>`;
       }
 
@@ -235,17 +208,14 @@ async function loadUserTodayMeals(studentId) {
     html += '</ul>';
     container.innerHTML = html;
 
-    container.querySelectorAll('.rating-btn').forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const rating = parseInt(this.dataset.rating);
-        const li = this.closest('li');
-        const slotIndex = parseInt(li.dataset.slot);
-        submitRating(studentId, slotIndex, rating, li);
+    // 綁定星星點擊
+    if (ratingTime) {
+      container.querySelectorAll('.star-rating').forEach(starContainer => {
+        const slot = parseInt(starContainer.dataset.slot);
+        bindStarRating(starContainer, studentId, slot);
       });
-    });
+    }
 
-    // 更新快取
     const cached = AppState.getUserData() || {};
     AppState.setUserData({ ...cached, meals: meals || [] });
 
@@ -258,13 +228,49 @@ async function loadUserTodayMeals(studentId) {
   }
 }
 
-async function submitRating(studentId, slotIndex, rating, liElement) {
-  const ratingDiv = liElement.querySelector('.rating-buttons');
-
-  if (ratingDiv) {
-    ratingDiv._originalHTML = ratingDiv.innerHTML;
-    ratingDiv.innerHTML = '<div style="text-align: center; padding: 8px;"><i class="fas fa-spinner fa-spin"></i> 送出評分中...</div>';
+/**
+ * 產生星星評分 HTML
+ * @param {number} slot - 餐點 slot
+ * @param {number} currentRating - 目前評分（0-5）
+ */
+function renderStarRating(slot, currentRating) {
+  let html = `<div class="star-rating" data-slot="${slot}">`;
+  for (let i = 1; i <= 5; i++) {
+    const activeClass = i <= currentRating ? 'active' : '';
+    html += `<i class="fas fa-star ${activeClass}" data-value="${i}"></i>`;
   }
+  html += '</div>';
+  return html;
+}
+
+/**
+ * 綁定星星點擊事件
+ */
+function bindStarRating(container, studentId, slotIndex) {
+  const stars = container.querySelectorAll('i');
+  stars.forEach(star => {
+    star.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const rating = parseInt(this.dataset.value);
+      submitRating(studentId, slotIndex, rating, container);
+    });
+  });
+}
+
+/**
+ * 送出評分
+ */
+async function submitRating(studentId, slotIndex, rating, starContainer) {
+  // 立即視覺回饋
+  const stars = starContainer.querySelectorAll('i');
+  stars.forEach(star => {
+    const val = parseInt(star.dataset.value);
+    if (val <= rating) {
+      star.classList.add('active');
+    } else {
+      star.classList.remove('active');
+    }
+  });
 
   try {
     const sb = await initSupabase();
@@ -276,32 +282,12 @@ async function submitRating(studentId, slotIndex, rating, liElement) {
       .eq('slot', slotIndex);
 
     if (error) {
-      if (ratingDiv && ratingDiv._originalHTML) {
-        ratingDiv.innerHTML = ratingDiv._originalHTML;
-        ratingDiv.querySelectorAll('.rating-btn').forEach(btn => {
-          btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const newRating = parseInt(this.dataset.rating);
-            const li = this.closest('li');
-            const slot = parseInt(li.dataset.slot);
-            submitRating(studentId, slot, newRating, li);
-          });
-        });
-      }
       showMessageModal('❌ 評分失敗', error.message);
+      // 失敗時還原（需要重新載入）
       return;
     }
 
-    const ratingText = {1: '拉完了', 2: 'NPC', 3: '人上人', 4: '頂級', 5: '夯爆了'};
-    const stars = '⭐'.repeat(rating);
-    const successHtml = `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
-      <i class="fas fa-check-circle"></i> 已評分：${ratingText[rating]} ${stars} (${rating}分)
-    </div>`;
-
-    if (ratingDiv) ratingDiv.remove();
-    liElement.insertAdjacentHTML('beforeend', successHtml);
-
-    showMessageModal('✅ 評分成功', `評分：${ratingText[rating]}`);
+    showMessageModal('✅ 評分成功', `已評分 ${rating} 顆星`);
 
   } catch (error) {
     console.error('評分失敗:', error);
@@ -494,4 +480,4 @@ window.loadMealInfo = loadMealInfo;
 window.refreshMealInfo = refreshMealInfo;
 window.enterMealOrderMode = enterMealOrderMode;
 
-console.log('🍽️ 訂飯模組已載入（Supabase 版 + 自動載入）');
+console.log('🍽️ 訂飯模組已載入（星星評分版）');
