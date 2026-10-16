@@ -1,7 +1,7 @@
 // ==================== meal-order.js ====================
 // 使用者點餐頁面模組（購物車模式 + 餘額檢查）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js、time.js、preload.js
-// ====================================================
+// ==================================================
 
 let menuCache = null;
 let cart = [];
@@ -27,7 +27,29 @@ async function loadMealOrderPage() {
     return;
   }
 
-  const restaurantName = AppState.currentRestaurantName();
+  // ⚠️ 修正：AppState 沒有就從 Supabase 讀
+  let restaurantName = AppState.currentRestaurantName();
+
+  if (!restaurantName) {
+    console.log('⚠️ AppState 無餐廳，從 Supabase 讀取...');
+    try {
+      const sb = await initSupabase();
+      const { data: setting } = await sb
+        .from('system_settings')
+        .select('value')
+        .eq('key', 'today_restaurant')
+        .maybeSingle();
+
+      restaurantName = setting?.value || '';
+      if (restaurantName) {
+        AppState.setCurrentRestaurantName(restaurantName);
+        console.log('✅ 已從 Supabase 載入餐廳:', restaurantName);
+      }
+    } catch (e) {
+      console.warn('從 Supabase 讀取餐廳失敗:', e);
+    }
+  }
+
   if (!restaurantName) {
     showMessageModal('❌ 今日餐廳尚未設定', '請稍後再試');
     navigateTo('user-meal');
@@ -60,7 +82,6 @@ async function loadMealOrderPage() {
         .maybeSingle()
     ]);
 
-    // 存餘額
     if (userResult.data) {
       userBalance = Number(userResult.data.balance) || 0;
     }
@@ -185,7 +206,6 @@ function renderCart() {
       </div>
     `;
 
-    // 沒餐點 → 禁用送出
     const submitBtn = document.getElementById('submitOrderBtn');
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -228,7 +248,6 @@ function renderCart() {
 
   html += '</div>';
 
-  // ========== 餘額與總計區塊 ==========
   const remaining = userBalance - grandTotal;
   const isOverBudget = remaining < 0;
 
@@ -262,7 +281,6 @@ function renderCart() {
 
   container.innerHTML = html;
 
-  // 綁定調整按鈕
   container.querySelectorAll('.meal-adjust-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -272,7 +290,6 @@ function renderCart() {
     });
   });
 
-  // ========== 禁用/啟用送出按鈕 ==========
   const submitBtn = document.getElementById('submitOrderBtn');
   if (submitBtn) {
     if (isOverBudget || cart.length === 0) {
@@ -330,7 +347,6 @@ async function submitOrder(event) {
   try {
     const sb = await initSupabase();
 
-    // 1. 查餐廳 ID
     const { data: restaurantData, error: rErr } = await sb
       .from('restaurants')
       .select('id')
@@ -341,7 +357,6 @@ async function submitOrder(event) {
       throw new Error('找不到餐廳');
     }
 
-    // 2. 查真實價格（防前端竄改）
     const mealNames = cart.map(i => i.name);
 
     const { data: menuItems, error: mErr } = await sb
@@ -362,7 +377,6 @@ async function submitOrder(event) {
       };
     });
 
-    // 3. 計算總計 + 檢查餘額
     let total = 0;
     const rows = cart.map((item, idx) => {
       const real = priceMap[item.name];
@@ -397,7 +411,6 @@ async function submitOrder(event) {
       throw new Error(`餘額不足，需要 $${total}，目前 $${userData.balance}`);
     }
 
-    // 4. 刪除舊 today_meals
     const { error: dErr } = await sb
       .from('today_meals')
       .delete()
@@ -405,7 +418,6 @@ async function submitOrder(event) {
 
     if (dErr) throw new Error('清空舊餐點失敗：' + dErr.message);
 
-    // 5. 寫入新 today_meals
     const { error: iErr } = await sb
       .from('today_meals')
       .insert(rows);
@@ -416,7 +428,6 @@ async function submitOrder(event) {
 
     showMessageModal('✅ 送出成功', `訂單已送出，共 ${rows.length} 種餐點，總計 $${total}`);
 
-    // 更新餘額顯示
     userBalance = Number(userData.balance);
 
   } catch (error) {
