@@ -1,6 +1,6 @@
 // ==================== navigation.js ====================
 // 導航控制模組
-// 依賴：state.js、ui.js、time.js
+// 依賴：state.js、ui.js、time.js、core.js
 // ==================================================
 
 function getSmartHomePage() {
@@ -85,6 +85,11 @@ async function navigateTo(pageName) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
+    // 更新導覽列可見性（每次切頁都確認一次）
+    if (typeof updateNavigationVisibility === 'function') {
+      updateNavigationVisibility();
+    }
+
     switch (pageName) {
       case 'user-system':
         if (typeof loadSystemInfo === 'function') loadSystemInfo();
@@ -105,9 +110,7 @@ async function navigateTo(pageName) {
         if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
         break;
       case 'admin-giftcode':
-        if (typeof loadRecentGiftCodes === 'function') {
-          setTimeout(loadRecentGiftCodes, 100);
-        }
+        // 已無禮包碼
         break;
       case 'admin-query':
         if (typeof loadAdminQuery === 'function') loadAdminQuery();
@@ -147,16 +150,15 @@ function switchToAdminMode() {
   if (AppState.isAdminMode()) return;
 
   AppState.setAdminMode(true);
+  window.navHidden = false;
 
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
-  const toggleBtn = document.getElementById('navToggleBtn');
+  if (userNav) userNav.classList.remove('hidden');
+  if (adminNav) adminNav.classList.remove('hidden');
 
-  if (userNav) { userNav.style.display = 'none'; userNav.classList.remove('hidden'); }
-  if (adminNav) { adminNav.style.display = 'flex'; adminNav.classList.remove('hidden'); }
-  if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
-
-  window.navHidden = false;
+  updateNavigationVisibility();
+  updateTimeModeHint();
 
   navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 }
@@ -165,16 +167,15 @@ function switchToUserMode() {
   if (!AppState.isAdminMode()) return;
 
   AppState.setAdminMode(false);
+  window.navHidden = false;
 
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
-  const toggleBtn = document.getElementById('navToggleBtn');
+  if (userNav) userNav.classList.remove('hidden');
+  if (adminNav) adminNav.classList.remove('hidden');
 
-  if (adminNav) { adminNav.style.display = 'none'; adminNav.classList.remove('hidden'); }
-  if (userNav) { userNav.style.display = 'flex'; userNav.classList.remove('hidden'); }
-  if (toggleBtn) { toggleBtn.style.display = 'flex'; toggleBtn.classList.remove('nav-hidden'); }
-
-  window.navHidden = false;
+  updateNavigationVisibility();
+  updateTimeModeHint();
 
   navigateTo(getSmartHomePage());
 }
