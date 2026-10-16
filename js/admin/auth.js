@@ -1,11 +1,8 @@
 // ==================== auth.js ====================
 // 管理員認證模組
-// 依賴：api.js、supabase.js、state.js、ui.js、common.js、core.js、navigation.js
+// 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js
 // ====================================================
 
-/**
- * 顯示管理員登入模態窗
- */
 function showAdminModal() {
   if (!AppState.isAdmin()) {
     const email = document.getElementById('adminEmail');
@@ -26,18 +23,12 @@ function showAdminModal() {
   }
 }
 
-/**
- * 關閉管理員登入模態窗
- */
 function hideAdminModal() {
   const modal = document.getElementById('adminModal');
   if (modal) modal.classList.remove('active');
   if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
 }
 
-/**
- * 管理員登入
- */
 async function adminLogin(event) {
   const btn = event ? event.currentTarget : null;
   const email = document.getElementById('adminEmail').value.trim();
@@ -68,8 +59,14 @@ async function adminLogin(event) {
     }
 
     if (error) {
+      let errorMsg = '登入失敗';
+      if (error.message.includes('Invalid login') || error.message.includes('invalid')) {
+        errorMsg = 'Email 或密碼錯誤';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMsg = 'Email 尚未驗證';
+      }
       if (messageEl) {
-        messageEl.innerHTML = `<div class="message error">${escapeHtml(error.message)}</div>`;
+        messageEl.innerHTML = `<div class="message error">${errorMsg}</div>`;
       }
       return;
     }
@@ -80,7 +77,7 @@ async function adminLogin(event) {
       .select('auth_uid')
       .eq('auth_uid', data.user.id)
       .maybeSingle();
-    
+
     if (!adminData) {
       await sb.auth.signOut();
       if (messageEl) {
@@ -95,10 +92,15 @@ async function adminLogin(event) {
     const statusText = document.getElementById('adminStatusText');
     const statusIcon = document.getElementById('adminStatusIcon');
     if (statusText) statusText.textContent = '已登入';
-    if (statusIcon) statusIcon.style.color = 'var(--success)';
+    if (statusIcon) statusIcon.textContent = '✅';
 
     showMessageModal('✅ 成功', '管理員登入成功');
     hideAdminModal();
+
+    // 隱藏登入頁
+    const loginPage = document.getElementById('page-user-register');
+    if (loginPage) loginPage.classList.remove('active');
+
     switchToAdminMode();
 
   } catch (error) {
@@ -112,9 +114,6 @@ async function adminLogin(event) {
   }
 }
 
-/**
- * 管理員登出
- */
 async function adminLogout() {
   try {
     const sb = await initSupabase();
@@ -124,29 +123,20 @@ async function adminLogout() {
   }
 
   AppState.logout();
-  AppState.setAdminMode(false);
 
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
   if (statusText) statusText.textContent = '管理員';
-  if (statusIcon) statusIcon.style.color = 'white';
+  if (statusIcon) statusIcon.textContent = '🛡️';
 
   updateAdminUI();
+  updateNavigationVisibility();
+  updateTimeModeHint();
 
-  const userNav = document.querySelector('.user-nav');
-  const adminNav = document.querySelector('.admin-nav');
-  const toggleBtn = document.getElementById('navToggleBtn');
-  if (adminNav) adminNav.style.display = 'none';
-  if (userNav) userNav.style.display = 'flex';
-  if (toggleBtn) toggleBtn.style.display = 'flex';
-
-  navigateTo(getSmartHomePage());
+  navigateTo('user-register');
   showMessageModal('✅ 已登出', '管理員已登出');
 }
 
-/**
- * 管理員更改密碼
- */
 async function changeAdminPassword(event) {
   const btn = event ? event.currentTarget : null;
 
@@ -159,8 +149,8 @@ async function changeAdminPassword(event) {
     return;
   }
 
-  if (newPassword.length < 4) {
-    showMessageModal('❌ 密碼太短', '新密碼長度至少需要4個字元');
+  if (newPassword.length < 6) {
+    showMessageModal('❌ 密碼太短', '新密碼長度至少需要6個字元');
     return;
   }
 
