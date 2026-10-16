@@ -1,10 +1,11 @@
 // ==================== meal-order.js ====================
-// 使用者點餐頁面模組（購物車模式）
+// 使用者點餐頁面模組（購物車模式 + 餘額檢查）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js、time.js、preload.js
-// ==================================================
+// ====================================================
 
 let menuCache = null;
 let cart = [];
+let userBalance = 0;
 
 /**
  * 載入點餐頁面
@@ -17,7 +18,6 @@ async function loadMealOrderPage() {
     return;
   }
 
-  // 確保時間限制已載入
   await ensureTimeLimitsLoaded();
 
   if (!isUserOrderTime()) {
@@ -41,20 +41,29 @@ async function loadMealOrderPage() {
 
   cart = [];
   menuCache = null;
+  userBalance = 0;
 
   showConanLoading('orderMealsList', 'getRestaurantMenu');
 
   try {
     const sb = await initSupabase();
 
-    // 並行：讀菜單（快取）+ 讀今日餐點（Supabase）
-    const [menuResult, mealsResult] = await Promise.all([
+    const [menuResult, mealsResult, userResult] = await Promise.all([
       loadRestaurantMenu(restaurantName),
       sb.from('today_meals')
         .select('slot, restaurant, category, meal_name, amount, price, rated')
         .eq('user_id', studentId)
-        .order('slot')
+        .order('slot'),
+      sb.from('users')
+        .select('balance')
+        .eq('user_id', studentId)
+        .maybeSingle()
     ]);
+
+    // 存餘額
+    if (userResult.data) {
+      userBalance = Number(userResult.data.balance) || 0;
+    }
 
     if (!menuResult.success) {
       const container = document.getElementById('orderMealsList');
@@ -166,7 +175,23 @@ function renderCart() {
   if (!container) return;
 
   if (cart.length === 0) {
-    container.innerHTML = '<p style="color: var(--gray);">尚未點餐</p>';
+    container.innerHTML = `
+      <p style="color: var(--gray);">尚未點餐</p>
+      <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>💰 目前餘額</span>
+          <span style="font-size: 1.3rem; font-weight: bold;">$${userBalance}</span>
+        </div>
+      </div>
+    `;
+
+    // 沒餐點 → 禁用送出
+    const submitBtn = document.getElementById('submitOrderBtn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+    }
     return;
   }
 
@@ -203,17 +228,41 @@ function renderCart() {
 
   html += '</div>';
 
+  // ========== 餘額與總計區塊 ==========
+  const remaining = userBalance - grandTotal;
+  const isOverBudget = remaining < 0;
+
   html += `
     <div style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <span><i class="fas fa-calculator"></i> <strong>今日餐點總計</strong></span>
-        <span style="font-size: 1.3rem; font-weight: bold;">$${grandTotal}</span>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span>💰 目前餘額</span>
+        <span style="font-weight: bold;">$${userBalance}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span>🍱 今日餐點總計</span>
+        <span style="font-weight: bold;">$${grandTotal}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3);">
+        <span><strong>${isOverBudget ? '不足金額' : '剩餘可用'}</strong></span>
+        <span style="font-size: 1.3rem; font-weight: bold; ${isOverBudget ? 'color: #ffcccc;' : ''}">
+          ${isOverBudget ? `-$${Math.abs(remaining)}` : `$${remaining}`}
+        </span>
       </div>
     </div>
   `;
 
+  if (isOverBudget) {
+    html += `
+      <div class="message error" style="margin-top: 10px;">
+        <i class="fas fa-exclamation-triangle"></i>
+        餘額不足！還需要 <strong>$${Math.abs(remaining)}</strong>，請先儲值或減少餐點。
+      </div>
+    `;
+  }
+
   container.innerHTML = html;
 
+  // 綁定調整按鈕
   container.querySelectorAll('.meal-adjust-btn').forEach(btn => {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
@@ -222,6 +271,20 @@ function renderCart() {
       adjustCartItem(idx, change);
     });
   });
+
+  // ========== 禁用/啟用送出按鈕 ==========
+  const submitBtn = document.getElementById('submitOrderBtn');
+  if (submitBtn) {
+    if (isOverBudget || cart.length === 0) {
+      submitBtn.disabled = true;
+      submitBtn.style.opacity = '0.5';
+      submitBtn.style.cursor = 'not-allowed';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '';
+      submitBtn.style.cursor = '';
+    }
+  }
 }
 
 function adjustCartItem(idx, change) {
@@ -238,10 +301,6 @@ function adjustCartItem(idx, change) {
 
 /**
  * 送出訂單（Supabase 版）
- * 1. 查真實價格
- * 2. 檢查餘額（不扣款）
- * 3. 刪除舊 today_meals
- * 4. 寫入新 today_meals
  */
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
@@ -314,7 +373,7 @@ async function submitOrder(event) {
 
       return {
         user_id: studentId,
-        slot: idx +1,
+        slot: idx + 1,
         restaurant: restaurantName,
         category: real.category,
         meal_name: item.name,
@@ -328,7 +387,7 @@ async function submitOrder(event) {
       .from('users')
       .select('balance')
       .eq('user_id', studentId)
-      .single();
+      .maybeSingle();
 
     if (uErr || !userData) {
       throw new Error('找不到使用者');
@@ -357,6 +416,9 @@ async function submitOrder(event) {
 
     showMessageModal('✅ 送出成功', `訂單已送出，共 ${rows.length} 種餐點，總計 $${total}`);
 
+    // 更新餘額顯示
+    userBalance = Number(userData.balance);
+
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
     console.error('送出訂單失敗:', error);
@@ -369,4 +431,4 @@ window.onRestaurantCategoryChange = onRestaurantCategoryChange;
 window.addOrderRestaurantMeal = addOrderRestaurantMeal;
 window.submitOrder = submitOrder;
 
-console.log('🍽️ 點餐模組已載入');
+console.log('🍽️ 點餐模組已載入（餘額檢查版）');
