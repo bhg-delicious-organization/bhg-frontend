@@ -1,5 +1,5 @@
 // ==================== recharge.js ====================
-// 管理員直接儲值模組（Supabase 版）
+// 管理員直接儲值模組（Supabase 版 + 二次確認）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ==================================================
 
@@ -8,6 +8,9 @@ function setDirectAmount(amount) {
   if (amountInput) amountInput.value = amount;
 }
 
+/**
+ * 確認儲值（先查姓名，再彈確認）
+ */
 async function directRecharge(event) {
   const btn = event ? event.currentTarget : null;
 
@@ -36,9 +39,64 @@ async function directRecharge(event) {
     return;
   }
 
+  // 查姓名
+  if (btn) setButtonLoading(btn, true);
+
   const resultDiv = document.getElementById('directRechargeResult');
+  if (resultDiv) showConanLoading('directRechargeResult', 'adminDirectRecharge');
+
+  let userData = null;
+  try {
+    const sb = await initSupabase();
+    const { data } = await sb
+      .from('users')
+      .select('name, balance')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    userData = data;
+  } catch (e) {
+    console.warn('查姓名失敗:', e);
+  }
+
+  if (btn) setButtonLoading(btn, false);
+  if (resultDiv) resultDiv.innerHTML = '';
+
+  if (!userData) {
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message error">❌ 查無此學號（${escapeHtml(userId)}）</div>`;
+    }
+    return;
+  }
+
+  // 彈出確認
+  const confirmMsg =
+    `學號：${userId}\n` +
+    `姓名：${userData.name}\n` +
+    `目前餘額：$${userData.balance}\n` +
+    `儲值金額：$${amountNum}\n` +
+    `儲值後餘額：$${Number(userData.balance) + amountNum}\n` +
+    `備註：${note || '（無）'}\n\n` +
+    `確定要儲值嗎？`;
+
+  showConfirmModal(
+    '⚠️ 確認儲值',
+    confirmMsg,
+    function() {
+      executeDirectRecharge(userId, amountNum, note, event);
+    }
+  );
+}
+
+/**
+ * 執行儲值
+ */
+async function executeDirectRecharge(userId, amountNum, note, event) {
+  const btn = event ? event.currentTarget : null;
 
   if (btn) setButtonLoading(btn, true);
+
+  const resultDiv = document.getElementById('directRechargeResult');
   if (resultDiv) showConanLoading('directRechargeResult', 'adminDirectRecharge');
 
   try {
@@ -85,4 +143,4 @@ async function directRecharge(event) {
 window.setDirectAmount = setDirectAmount;
 window.directRecharge = directRecharge;
 
-console.log('⚡ 直接儲值模組已載入（Supabase 版）');
+console.log('⚡ 直接儲值模組已載入（二次確認版）');
