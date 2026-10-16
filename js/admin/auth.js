@@ -223,16 +223,37 @@ async function changeAdminPassword(event) {
       return;
     }
 
+    // 4. 密碼修改成功 → 強制登出，要求重新登入
     if (resultDiv) {
-      resultDiv.innerHTML = `<div class="message success">✅ 密碼修改成功</div>`;
+      resultDiv.innerHTML = `
+        <div class="message success">
+          ✅ 密碼修改成功！<br>
+          <span style="font-size: 0.85rem;">3 秒後自動登出，請用新密碼重新登入...</span>
+        </div>
+      `;
     }
 
-    setTimeout(() => {
-      document.getElementById('adminOldPassword').value = '';
-      document.getElementById('adminNewPassword').value = '';
-      document.getElementById('adminConfirmPassword').value = '';
-      if (resultDiv) resultDiv.innerHTML = '';
-    }, 2000);
+    // 清空表單
+    document.getElementById('adminOldPassword').value = '';
+    document.getElementById('adminNewPassword').value = '';
+    document.getElementById('adminConfirmPassword').value = '';
+
+    // 3 秒後登出
+    setTimeout(async () => {
+      try {
+        await sb.auth.signOut();
+      } catch (e) {
+        console.warn('登出失敗:', e);
+      }
+
+      AppState.logout();
+      updateAdminUI();
+      updateNavigationVisibility();
+      updateTimeModeHint();
+
+      navigateTo('user-register');
+      showMessageModal('✅ 已登出', '請用新密碼重新登入');
+    }, 3000);
 
   } catch (error) {
     if (btn) {
