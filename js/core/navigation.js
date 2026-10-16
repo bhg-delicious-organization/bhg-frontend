@@ -31,6 +31,10 @@ function getSmartHomePage() {
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
+  // 每次切頁都更新導覽列與橫幅
+  if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
+  if (typeof updateTimeModeHint === 'function') updateTimeModeHint();
+
   const adminPages = [
     'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
     'admin-query', 'admin-account', 'admin-analytics',
@@ -85,11 +89,6 @@ async function navigateTo(pageName) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
-    // 更新導覽列可見性（每次切頁都確認一次）
-    if (typeof updateNavigationVisibility === 'function') {
-      updateNavigationVisibility();
-    }
-
     switch (pageName) {
       case 'user-system':
         if (typeof loadSystemInfo === 'function') loadSystemInfo();
@@ -108,9 +107,6 @@ async function navigateTo(pageName) {
         break;
       case 'admin-batch-deduct':
         if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
-        break;
-      case 'admin-giftcode':
-        // 已無禮包碼
         break;
       case 'admin-query':
         if (typeof loadAdminQuery === 'function') loadAdminQuery();
@@ -149,16 +145,13 @@ function switchToAdminMode() {
   }
   if (AppState.isAdminMode()) return;
 
-  AppState.setAdminMode(true);
+  AppState.setAdminMode(true);  // ← 會觸發訂閱，自動更新 UI
   window.navHidden = false;
 
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
   if (userNav) userNav.classList.remove('hidden');
   if (adminNav) adminNav.classList.remove('hidden');
-
-  updateNavigationVisibility();
-  updateTimeModeHint();
 
   navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 }
@@ -166,16 +159,13 @@ function switchToAdminMode() {
 function switchToUserMode() {
   if (!AppState.isAdminMode()) return;
 
-  AppState.setAdminMode(false);
+  AppState.setAdminMode(false);  // ← 會觸發訂閱，自動更新 UI
   window.navHidden = false;
 
   const userNav = document.querySelector('.user-nav');
   const adminNav = document.querySelector('.admin-nav');
   if (userNav) userNav.classList.remove('hidden');
   if (adminNav) adminNav.classList.remove('hidden');
-
-  updateNavigationVisibility();
-  updateTimeModeHint();
 
   navigateTo(getSmartHomePage());
 }
