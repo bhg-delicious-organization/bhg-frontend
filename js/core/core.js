@@ -1,5 +1,5 @@
 // ==================== core.js ====================
-// 核心功能模組（emoji header 版）
+// 核心功能模組
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
 // ==================================================
 
@@ -12,7 +12,6 @@ async function checkSupabaseAdminLogin() {
     const { data: { session } } = await sb.auth.getSession();
 
     if (session && session.user) {
-      // 查 admins 表
       const { data } = await sb
         .from('admins')
         .select('auth_uid')
@@ -53,6 +52,80 @@ async function checkUserSession() {
     console.warn('檢查使用者登入失敗:', e);
     return { loggedIn: false };
   }
+}
+
+// ==================== 導覽列與時間橫幅的可見性 ====================
+
+/**
+ * 統一更新導覽列與 navToggleBtn 的可見性
+ */
+function updateNavigationVisibility() {
+  const isAdmin = AppState.isAdmin();
+  const isAdminMode = AppState.isAdminMode();
+  const isLoggedIn = !!AppState.currentStudentId();
+
+  const userNav = document.querySelector('.user-nav');
+  const adminNav = document.querySelector('.admin-nav');
+  const toggleBtn = document.getElementById('navToggleBtn');
+
+  // 未登入且非管理員 → 全部隱藏
+  if (!isAdmin && !isLoggedIn) {
+    if (userNav) userNav.style.display = 'none';
+    if (adminNav) adminNav.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'none';
+    return;
+  }
+
+  // 管理員模式
+  if (isAdminMode) {
+    if (userNav) userNav.style.display = 'none';
+    if (adminNav) adminNav.style.display = 'flex';
+    if (toggleBtn) toggleBtn.style.display = 'flex';
+  } else {
+    // 使用者模式
+    if (userNav) userNav.style.display = 'flex';
+    if (adminNav) adminNav.style.display = 'none';
+    if (toggleBtn) toggleBtn.style.display = 'flex';
+  }
+}
+
+/**
+ * 更新時間橫幅（依登入狀態 + 時間）
+ */
+function updateTimeModeHint() {
+  const existingHint = document.querySelector('.time-hint');
+  if (existingHint) existingHint.remove();
+
+  const isAdmin = AppState.isAdmin();
+  const isLoggedIn = !!AppState.currentStudentId();
+
+  if (!isAdmin && !isLoggedIn) return;
+
+  showTimeModeHint();
+}
+
+/**
+ * 顯示時間橫幅
+ */
+function showTimeModeHint() {
+  if (document.querySelector('.time-hint')) return;
+
+  const isOrderTime = isUserOrderTime();
+  const timeRange = getOrderTimeRange();
+
+  const message = isOrderTime
+    ? `🍱 點餐時間（${timeRange}）`
+    : `🔍 查詢時間（點餐已截止）`;
+
+  const bgColor = isOrderTime ? 'var(--success)' : 'var(--gray)';
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  const hint = document.createElement('div');
+  hint.className = 'time-hint';
+  hint.innerHTML = `<i class="fas fa-clock"></i> ${message}`;
+  hint.style.cssText = `background:${bgColor};color:white;text-align:center;padding:6px;font-size:0.9rem;margin-bottom:8px;`;
+  header.parentNode.insertBefore(hint, header.nextSibling);
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -102,17 +175,6 @@ function initEnterKeyBindings() {
   const mealStudentId = document.getElementById('mealStudentId');
   if (mealStudentId && typeof loadMealInfo === 'function') {
     bindEnterKey(mealStudentId, () => loadMealInfo());
-  }
-
-  const accountLoginStudentId = document.getElementById('accountLoginStudentId');
-  const accountLoginPassword = document.getElementById('accountLoginPassword');
-  if (accountLoginStudentId) {
-    bindEnterKey(accountLoginStudentId, () => {
-      if (accountLoginPassword) accountLoginPassword.focus();
-    });
-  }
-  if (accountLoginPassword && typeof loginFromAccount === 'function') {
-    bindEnterKey(accountLoginPassword, () => loginFromAccount());
   }
 
   const changepwdOldPassword = document.getElementById('changepwdOldPassword');
@@ -296,33 +358,45 @@ async function loadSystemInfo() {
   }
 }
 
-// ==================== 時間橫幅 ====================
+// ==================== 使用者資料預載 ====================
 
-function showTimeModeHint() {
-  if (document.querySelector('.time-hint')) return;
+async function preloadUserData(studentId) {
+  if (!studentId) return null;
 
-  const isOrderTime = isUserOrderTime();
-  const timeRange = getOrderTimeRange();
+  try {
+    const sb = await initSupabase();
 
-  const message = isOrderTime
-    ? `🍱 點餐時間（${timeRange}）`
-    : `🔍 查詢時間（點餐已截止）`;
+    const [userRes, mealsRes, transRes] = await Promise.allSettled([
+      sb.from('users').select('name, balance').eq('user_id', studentId).maybeSingle(),
+      sb.from('today_meals')
+        .select('slot, restaurant, category, meal_name, amount, price, rated')
+        .eq('user_id', studentId)
+        .order('slot'),
+      sb.from('transactions')
+        .select('*')
+        .eq('user_id', studentId)
+        .order('created_at', { ascending: false })
+        .limit(5)
+    ]);
 
-  const bgColor = isOrderTime ? 'var(--success)' : 'var(--gray)';
-  const header = document.querySelector('.header');
-  if (!header) return;
+    const data = {
+      user: userRes.status === 'fulfilled' ? userRes.value.data : null,
+      meals: mealsRes.status === 'fulfilled' ? (mealsRes.value.data || []) : [],
+      transactions: transRes.status === 'fulfilled' ? (transRes.value.data || []) : [],
+      loadedAt: Date.now()
+    };
 
-  const hint = document.createElement('div');
-  hint.className = 'time-hint';
-  hint.innerHTML = `<i class="fas fa-clock"></i> ${message}`;
-  hint.style.cssText = `background:${bgColor};color:white;text-align:center;padding:6px;font-size:0.9rem;margin-bottom:8px;`;
-  header.parentNode.insertBefore(hint, header.nextSibling);
+    AppState.setUserData(data);
+    console.log('✅ 使用者資料已預載:', data);
+    return data;
+  } catch (error) {
+    console.error('預載使用者資料失敗:', error);
+    return null;
+  }
 }
 
-function updateTimeModeHint() {
-  const existingHint = document.querySelector('.time-hint');
-  if (existingHint) existingHint.remove();
-  showTimeModeHint();
+async function refreshUserData(studentId) {
+  return preloadUserData(studentId);
 }
 
 // ==================== 系統初始化 ====================
@@ -368,8 +442,6 @@ async function initApp() {
     userSession = await checkUserSession();
   }
 
-  const userNav = document.querySelector('.user-nav');
-  const adminNav = document.querySelector('.admin-nav');
   const statusText = document.getElementById('adminStatusText');
   const statusIcon = document.getElementById('adminStatusIcon');
 
@@ -379,8 +451,6 @@ async function initApp() {
     // ========== 管理員模式 ==========
     if (loginPage) loginPage.classList.remove('active');
 
-    if (userNav) userNav.style.display = 'none';
-    if (adminNav) adminNav.style.display = 'flex';
     if (statusText) statusText.textContent = '已登入';
     if (statusIcon) statusIcon.textContent = '✅';
     updateAdminUI();
@@ -391,8 +461,11 @@ async function initApp() {
       if (restaurantName) loadRestaurantMenu(restaurantName);
     });
 
-    showTimeModeHint();
-    switchToAdminMode();
+    AppState.setAdminMode(true);
+    updateNavigationVisibility();
+    updateTimeModeHint();
+
+    navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 
     setTimeout(() => preloadAllPages(), 3000);
 
@@ -400,8 +473,6 @@ async function initApp() {
     // ========== 使用者已登入 ==========
     if (loginPage) loginPage.classList.remove('active');
 
-    if (userNav) userNav.style.display = 'flex';
-    if (adminNav) adminNav.style.display = 'none';
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.textContent = '🛡️';
     updateAdminUI();
@@ -412,18 +483,24 @@ async function initApp() {
       if (restaurantName) loadRestaurantMenu(restaurantName);
     });
 
-    showTimeModeHint();
+    updateNavigationVisibility();
+    updateTimeModeHint();
+
+    preloadUserData(userSession.studentId).catch(e => {
+      console.warn('預載使用者資料失敗:', e);
+    });
+
     await navigateTo(getSmartHomePage());
 
     setTimeout(() => preloadAllPages(), 3000);
 
   } else {
     // ========== 未登入 ==========
-    if (userNav) userNav.style.display = 'none';
-    if (adminNav) adminNav.style.display = 'none';
-
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.textContent = '🛡️';
+
+    updateNavigationVisibility();
+    updateTimeModeHint();
 
     if (typeof initRegisterPage === 'function') initRegisterPage();
 
@@ -433,6 +510,7 @@ async function initApp() {
   }
 
   setTimeout(initEnterKeyBindings, 500);
+  setInterval(updateTimeModeHint, 60000);
   console.log('✅ 系統初始化完成');
 }
 
@@ -445,8 +523,11 @@ window.handleFrontendError = handleFrontendError;
 window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.showTimeModeHint = showTimeModeHint;
 window.updateTimeModeHint = updateTimeModeHint;
+window.updateNavigationVisibility = updateNavigationVisibility;
 window.loadSystemInfo = loadSystemInfo;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
+window.preloadUserData = preloadUserData;
+window.refreshUserData = refreshUserData;
 
-console.log('⚙️ core.js 已載入（emoji header 版）');
+console.log('⚙️ core.js 已載入');
