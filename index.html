@@ -97,6 +97,10 @@
                     <button class="btn btn-secondary" onclick="switchToRegister()">
                         <i class="fas fa-user-plus"></i> 申請帳號
                     </button>
+
+                    <button class="btn btn-info" onclick="showAdminModal()" style="margin-top: 10px;">
+                        <i class="fas fa-user-shield"></i> 管理員登入
+                    </button>
                 </div>
             </div>
 
@@ -335,7 +339,7 @@
 
           navigator.serviceWorker.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'SW_UPDATED') {
-              const { oldVersion, newVersion, isMajorUpdate } = event.data;
+              const { oldVersion, newVersion } = event.data;
               console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion}`);
               setTimeout(function() {
                 const url = window.location.href.split('?')[0];
