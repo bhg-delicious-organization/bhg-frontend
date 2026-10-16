@@ -1023,6 +1023,34 @@ body.tutorial-active {
   }
 }
 
+/* ==================== 星星評分 ==================== */
+.star-rating {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.star-rating i {
+  font-size: 1.8rem;
+  color: #ddd;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.star-rating i.active {
+  color: #f39c12;
+}
+
+.star-rating i:hover {
+  transform: scale(1.1);
+}
+
+.star-rating i:active {
+  transform: scale(0.95);
+}
+
 /* ==================== 載入終端機閃爍 ==================== */
 @keyframes blink {
   0%, 50% { opacity: 1; }
