@@ -1,38 +1,5 @@
 <!-- ==================== 使用者帳號頁面 ==================== -->
 <div id="page-user-account" class="page-container">
-    <!-- 未登入狀態 -->
-    <div id="accountNotLoggedIn" class="card" style="text-align: center;">
-        <div class="card-header">
-            <h2 class="card-title">
-                <i class="fas fa-user-circle"></i> 我的帳號
-            </h2>
-            <button class="btn btn-info" onclick="startTutorial('account')" style="width: auto; padding: 6px 12px; margin: 0; font-size: 0.8rem;">
-                <i class="fas fa-graduation-cap"></i> 教學
-            </button>
-        </div>
-
-        <i class="fas fa-user-circle" style="font-size: 4rem; color: var(--gray); margin-bottom: 16px;"></i>
-        <h3>尚未登入</h3>
-        <p style="color: var(--gray); margin-bottom: 20px;">請輸入學號和密碼登入</p>
-
-        <div class="form-group" style="text-align: left;">
-            <label class="form-label">學號</label>
-            <input type="text" id="accountLoginStudentId" class="form-control" placeholder="請輸入學號" maxlength="6">
-        </div>
-
-        <div class="form-group" style="text-align: left;">
-            <label class="form-label">密碼</label>
-            <input type="password" id="accountLoginPassword" class="form-control" placeholder="請輸入密碼">
-            <div class="form-text">若無密碼可留空</div>
-        </div>
-
-        <button class="btn btn-primary" onclick="loginFromAccount()" style="width: 100%;">
-            <i class="fas fa-sign-in-alt"></i> 登入
-        </button>
-
-        <div id="accountLoginError" style="margin-top: 12px;"></div>
-    </div>
-
     <!-- 已登入狀態 -->
     <div id="accountLoggedIn" class="card" style="display: none;">
         <div class="card-header">
