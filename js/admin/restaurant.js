@@ -31,7 +31,7 @@ async function loadTodayRestaurantStatus() {
       .from('system_settings')
       .select('value')
       .eq('key', 'today_restaurant')
-      .single();
+      .maybeSingle();
 
     const restaurant = setting?.value || '';
 
@@ -42,7 +42,7 @@ async function loadTodayRestaurantStatus() {
           .from('system_settings')
           .select('value')
           .eq('key', 'today_order_end')
-          .single();
+          .maybeSingle();
         if (endSetting?.value) {
           endTimeStr = formatTimeStr(parseInt(endSetting.value));
         }
@@ -136,24 +136,23 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   try {
     const sb = await initSupabase();
 
-    const now = new Date().toISOString();
-
-    // 1. 設定今日餐廳
-    const { error: e1 } = await sb
-      .from('system_settings')
-      .upsert({ key: 'today_restaurant', value: restaurantName, updated_at: now });
-
-    if (e1) throw new Error('設定餐廳失敗：' + e1.message);
-
-    // 2. 設定截止時間
-    const { error: e2 } = await sb
-      .from('system_settings')
-      .upsert({ key: 'today_order_end', value: String(orderEndTime), updated_at: now });
-
-    if (e2) throw new Error('設定截止時間失敗：' + e2.message);
+    // 用 RPC 原子寫入
+    const { data, error } = await sb.rpc('set_today_restaurant', {
+      p_restaurant: restaurantName,
+      p_order_end: String(orderEndTime)
+    });
 
     if (btn) setButtonLoading(btn, false);
 
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (!data || !data.success) {
+      throw new Error(data?.message || '設定失敗');
+    }
+
+    // 更新前端狀態
     AppState.setCurrentRestaurantName(restaurantName);
     TIME.ORDER_END = parseInt(orderEndTime);
 
@@ -164,7 +163,7 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
       resultDiv.innerHTML = `<div class="message success">✅ 今日餐廳「${escapeHtml(restaurantName)}」設定成功，截止時間 ${formatTimeStr(orderEndTime)}</div>`;
     }
 
-    // 3. 發通知（走 GAS）
+    // 發通知（走 GAS）
     try {
       await fetch('https://script.google.com/macros/s/AKfycbwGpChoVd0K6InXzM6T962y0y5bLcVwNCJO0uy1RIcsyrMmz7-q5CMcNlh_9qDZfDPXUA/exec', {
         method: 'POST',
@@ -202,7 +201,7 @@ async function showTodayRestaurantStats(event) {
       .from('system_settings')
       .select('value')
       .eq('key', 'today_restaurant')
-      .single();
+      .maybeSingle();
 
     const restaurantName = setting?.value || '';
     if (!restaurantName) throw new Error('今日餐廳尚未設定');
@@ -211,7 +210,7 @@ async function showTodayRestaurantStats(event) {
       .from('restaurants')
       .select('id')
       .eq('name', restaurantName)
-      .single();
+      .maybeSingle();
 
     if (!restData) throw new Error('找不到餐廳');
 
@@ -263,7 +262,7 @@ async function copyRestaurantStatsList(event) {
       .from('system_settings')
       .select('value')
       .eq('key', 'today_restaurant')
-      .single();
+      .maybeSingle();
 
     const restaurantName = setting?.value || '';
     if (!restaurantName) throw new Error('今日餐廳尚未設定');
@@ -272,7 +271,7 @@ async function copyRestaurantStatsList(event) {
       .from('restaurants')
       .select('id')
       .eq('name', restaurantName)
-      .single();
+      .maybeSingle();
 
     const { data: items, error } = await sb
       .from('menu_items')
@@ -385,9 +384,6 @@ async function cutOffOrder() {
   );
 }
 
-/**
- * 執行截止訂餐
- */
 async function executeCutOffOrder() {
   const btn = document.querySelector('#page-admin-restaurant .btn-warning');
   if (btn) setButtonLoading(btn, true);
@@ -434,8 +430,6 @@ async function executeCutOffOrder() {
   }
 }
 
-window.cutOffOrder = cutOffOrder;
-
 window.setEndTimeQuick = setEndTimeQuick;
 window.loadTodayRestaurantStatus = loadTodayRestaurantStatus;
 window.setTodayRestaurant = setTodayRestaurant;
@@ -443,4 +437,4 @@ window.showTodayRestaurantStats = showTodayRestaurantStats;
 window.copyRestaurantStatsList = copyRestaurantStatsList;
 window.cutOffOrder = cutOffOrder;
 
-console.log('🏪 餐廳模組已載入（Supabase 版）');
+console.log('🏪 餐廳模組已載入（Supabase 版 + 原子寫入）');
