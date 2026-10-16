@@ -321,49 +321,120 @@ async function copyRestaurantStatsList(event) {
   }
 }
 
-function cutOffOrder() {
+async function cutOffOrder() {
+  const btn = document.querySelector('#page-admin-restaurant .btn-warning');
+
+  // 先查今天的訂餐狀況
+  if (btn) setButtonLoading(btn, true);
+
+  let stats = null;
+  try {
+    const sb = await initSupabase();
+
+    const { data: meals, error } = await sb
+      .from('today_meals')
+      .select('user_id, amount, price');
+
+    if (error) throw error;
+
+    if (!meals || meals.length === 0) {
+      if (btn) setButtonLoading(btn, false);
+      showMessageModal('ℹ️ 無訂餐', '今天還沒有人訂餐，不需要截止');
+      return;
+    }
+
+    // 計算人數與總金額
+    const userIds = new Set();
+    let totalAmount = 0;
+    meals.forEach(m => {
+      userIds.add(m.user_id);
+      totalAmount += (Number(m.amount) || 0) * (Number(m.price) || 0);
+    });
+
+    stats = {
+      userCount: userIds.size,
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      mealCount: meals.length
+    };
+
+  } catch (error) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('查詢訂餐統計失敗:', error);
+    showMessageModal('❌ 錯誤', '無法查詢訂餐狀況：' + error.message);
+    return;
+  }
+
+  if (btn) setButtonLoading(btn, false);
+
+  // 組合確認訊息
+  const restaurantName = AppState.currentRestaurantName() || '未知餐廳';
+  const confirmMsg =
+    `餐廳：${restaurantName}\n` +
+    `訂購人數：${stats.userCount} 位\n` +
+    `餐點總數：${stats.mealCount} 份\n` +
+    `扣款總金額：$${stats.totalAmount}\n\n` +
+    `⚠️ 此操作將對所有訂購者扣款，且無法復原。\n\n` +
+    `確定要截止訂餐嗎？`;
+
   showConfirmModal(
     '⚠️ 截止訂餐',
-    '確定要截止訂餐並計算所有人扣款嗎？',
+    confirmMsg,
     async function() {
-      const btn = document.querySelector('#page-admin-restaurant .btn-warning');
-      if (btn) setButtonLoading(btn, true);
-
-      const resultDiv = document.getElementById('cutOffResult');
-      if (resultDiv) showConanLoading('cutOffResult', 'cutOffOrder');
-
-      try {
-        const sb = await initSupabase();
-        const { data, error } = await sb.rpc('cut_off_order');
-
-        if (btn) setButtonLoading(btn, false);
-
-        if (error) {
-          showMessageModal('❌ 截止失敗', error.message);
-          return;
-        }
-
-        const result = data;
-
-        if (result.success) {
-          showMessageModal('✅ 截止訂餐', result.message);
-          AppState.setCurrentRestaurantName('');
-
-          if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
-          if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
-
-          loadTodayRestaurantStatus();
-        } else {
-          showMessageModal('❌ 截止失敗', result.message);
-        }
-      } catch (err) {
-        if (btn) setButtonLoading(btn, false);
-        console.error('截止訂餐失敗:', err);
-        showMessageModal('❌ 截止失敗', err.message || '請稍後再試');
-      }
+      await executeCutOffOrder();
     }
   );
 }
+
+/**
+ * 執行截止訂餐
+ */
+async function executeCutOffOrder() {
+  const btn = document.querySelector('#page-admin-restaurant .btn-warning');
+  if (btn) setButtonLoading(btn, true);
+
+  const resultDiv = document.getElementById('cutOffResult');
+  if (resultDiv) showConanLoading('cutOffResult', 'cutOffOrder');
+
+  try {
+    const sb = await initSupabase();
+    const { data, error } = await sb.rpc('cut_off_order');
+
+    if (btn) setButtonLoading(btn, false);
+
+    if (error) {
+      showMessageModal('❌ 截止失敗', error.message);
+      return;
+    }
+
+    const result = data;
+
+    if (result.success) {
+      let msg = result.message;
+      if (result.errors && result.errors.length > 0) {
+        msg += `\n\n⚠️ ${result.errors.length} 位使用者扣款失敗：`;
+        result.errors.forEach(e => {
+          msg += `\n• ${e.user_id} ${e.name}：${e.reason}`;
+        });
+      }
+      showMessageModal('✅ 截止訂餐', msg);
+
+      AppState.setCurrentRestaurantName('');
+
+      if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
+      if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
+
+      loadTodayRestaurantStatus();
+    } else {
+      showMessageModal('❌ 截止失敗', result.message);
+    }
+  } catch (err) {
+    if (btn) setButtonLoading(btn, false);
+    console.error('截止訂餐失敗:', err);
+    showMessageModal('❌ 截止失敗', err.message || '請稍後再試');
+  }
+}
+
+window.cutOffOrder = cutOffOrder;
 
 window.setEndTimeQuick = setEndTimeQuick;
 window.loadTodayRestaurantStatus = loadTodayRestaurantStatus;
