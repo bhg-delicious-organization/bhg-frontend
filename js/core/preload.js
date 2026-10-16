@@ -119,22 +119,19 @@ async function preloadTodayRestaurant() {
     const cacheKey = `bhg_todayRestaurant_${today}`;
     const cached = localStorage.getItem(cacheKey);
 
-    if (cached !== null) {
-      console.log('📦 使用今日餐廳快取:', cached || '（未設定）');
-      AppState.setCurrentRestaurantName(cached || '');
-      _todayRestaurantLoaded = true;
-
-      updateTodayRestaurantFromSupabase(cacheKey, cached);
-
-      return;
-    }
-
+    // ⚠️ 修正：先從 Supabase 讀取最新值（背景更新改為 await）
     console.log('📡 從 Supabase 預載入今日餐廳...');
     try {
-      await updateTodayRestaurantFromSupabase(cacheKey, null);
+      await updateTodayRestaurantFromSupabase(cacheKey, cached);
       _todayRestaurantLoaded = true;
     } catch (error) {
       console.warn('預載入今日餐廳失敗:', error);
+
+      // 讀取失敗時，才用快取
+      if (cached !== null) {
+        console.log('📦 使用快取（讀取失敗備援）:', cached || '（未設定）');
+        AppState.setCurrentRestaurantName(cached || '');
+      }
     } finally {
       _todayRestaurantPromise = null;
     }
@@ -150,11 +147,11 @@ async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
     .from('system_settings')
     .select('value')
     .eq('key', 'today_restaurant')
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('讀取今日餐廳失敗:', error);
-    return;
+    throw error;
   }
 
   const restaurant = data?.value || '';
@@ -162,10 +159,10 @@ async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
   AppState.setCurrentRestaurantName(restaurant);
   localStorage.setItem(cacheKey, restaurant);
 
-  if (oldValue === null) {
+  if (oldValue === null || oldValue === undefined) {
     console.log('✅ 今日餐廳已載入:', restaurant || '（未設定）');
   } else if (restaurant !== oldValue) {
-    console.log('🔄 背景更新今日餐廳:', restaurant || '（未設定）');
+    console.log('🔄 更新今日餐廳:', oldValue || '（未設定）', '→', restaurant || '（未設定）');
 
     if (AppState.currentPage() === 'user-meal') {
       if (typeof loadMealInfo === 'function') {
@@ -173,7 +170,7 @@ async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
       }
     }
   } else {
-    console.log('✅ 背景確認今日餐廳無變');
+    console.log('✅ 今日餐廳無變更:', restaurant || '（未設定）');
   }
 }
 
@@ -250,7 +247,7 @@ async function fetchMenuFromSupabase(restaurantName) {
     .from('restaurants')
     .select('id, name')
     .eq('name', restaurantName)
-    .single();
+    .maybeSingle();
 
   if (restaurantError || !restaurantData) {
     console.error('找不到餐廳:', restaurantName);
@@ -315,7 +312,6 @@ function getCachedRestaurantMenu() {
 // ==================== 預載入所有頁面 ====================
 
 async function preloadAllPages() {
-  // ⚠️ 注意：user-register 已寫死在 index.html，不在這裡
   const pages = [
     'user-query', 'user-meal',
     'user-account', 'user-system', 'user-changepwd', 'user-meal-order',
