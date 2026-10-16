@@ -56,9 +56,6 @@ async function checkUserSession() {
 
 // ==================== 導覽列與時間橫幅的可見性 ====================
 
-/**
- * 統一更新導覽列與 navToggleBtn 的可見性
- */
 function updateNavigationVisibility() {
   const isAdmin = AppState.isAdmin();
   const isAdminMode = AppState.isAdminMode();
@@ -68,7 +65,6 @@ function updateNavigationVisibility() {
   const adminNav = document.querySelector('.admin-nav');
   const toggleBtn = document.getElementById('navToggleBtn');
 
-  // 未登入且非管理員 → 全部隱藏
   if (!isAdmin && !isLoggedIn) {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'none';
@@ -76,22 +72,17 @@ function updateNavigationVisibility() {
     return;
   }
 
-  // 管理員模式
   if (isAdminMode) {
     if (userNav) userNav.style.display = 'none';
     if (adminNav) adminNav.style.display = 'flex';
     if (toggleBtn) toggleBtn.style.display = 'flex';
   } else {
-    // 使用者模式
     if (userNav) userNav.style.display = 'flex';
     if (adminNav) adminNav.style.display = 'none';
     if (toggleBtn) toggleBtn.style.display = 'flex';
   }
 }
 
-/**
- * 更新時間橫幅（依登入狀態 + 時間）
- */
 function updateTimeModeHint() {
   const existingHint = document.querySelector('.time-hint');
   if (existingHint) existingHint.remove();
@@ -104,9 +95,6 @@ function updateTimeModeHint() {
   showTimeModeHint();
 }
 
-/**
- * 顯示時間橫幅
- */
 function showTimeModeHint() {
   if (document.querySelector('.time-hint')) return;
 
@@ -126,6 +114,52 @@ function showTimeModeHint() {
   hint.innerHTML = `<i class="fas fa-clock"></i> ${message}`;
   hint.style.cssText = `background:${bgColor};color:white;text-align:center;padding:6px;font-size:0.9rem;margin-bottom:8px;`;
   header.parentNode.insertBefore(hint, header.nextSibling);
+}
+
+/**
+ * 計算距離下一個時間點還有多久，設 setTimeout 精準更新
+ */
+function scheduleNextTimeHintUpdate() {
+  const nowDate = new Date();
+  const currentMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
+
+  const points = [
+    TIME.ORDER_START,
+    TIME.ORDER_END,
+    TIME.RATING_START,
+    TIME.RATING_END
+  ]
+    .filter(t => t != null && !isNaN(t))
+    .map(t => Math.floor(t / 100) * 60 + (t % 100));
+
+  if (points.length === 0) return;
+
+  let nextMinutes = null;
+  const sortedPoints = [...points].sort((a, b) => a - b);
+  for (const p of sortedPoints) {
+    if (p > currentMinutes) {
+      nextMinutes = p;
+      break;
+    }
+  }
+
+  let delayMs;
+  if (nextMinutes === null) {
+    const firstPoint = sortedPoints[0];
+    const minutesUntilMidnight = 24 * 60 - currentMinutes;
+    delayMs = (minutesUntilMidnight + firstPoint) * 60 * 1000;
+  } else {
+    delayMs = (nextMinutes - currentMinutes) * 60 * 1000;
+  }
+
+  delayMs += 1000;
+
+  console.log(`⏰ 下次時間橫幅更新：${Math.round(delayMs / 1000)} 秒後`);
+
+  setTimeout(() => {
+    updateTimeModeHint();
+    scheduleNextTimeHintUpdate();
+  }, delayMs);
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -433,6 +467,21 @@ async function initApp() {
 
   initAutoHideNav();
   AppState.init();
+
+  // ========== 訂閱 AppState 變更，自動更新 UI 可見性 ==========
+  AppState.subscribe('studentId', () => {
+    updateNavigationVisibility();
+    updateTimeModeHint();
+  });
+  AppState.subscribe('admin', () => {
+    updateNavigationVisibility();
+    updateTimeModeHint();
+  });
+  AppState.subscribe('adminMode', () => {
+    updateNavigationVisibility();
+    updateTimeModeHint();
+  });
+
   setupPageLoadedListener();
 
   const isAdminLoggedIn = await checkSupabaseAdminLogin();
@@ -448,7 +497,6 @@ async function initApp() {
   const loginPage = document.getElementById('page-user-register');
 
   if (isAdminLoggedIn) {
-    // ========== 管理員模式 ==========
     if (loginPage) loginPage.classList.remove('active');
 
     if (statusText) statusText.textContent = '已登入';
@@ -470,7 +518,6 @@ async function initApp() {
     setTimeout(() => preloadAllPages(), 3000);
 
   } else if (userSession.loggedIn) {
-    // ========== 使用者已登入 ==========
     if (loginPage) loginPage.classList.remove('active');
 
     if (statusText) statusText.textContent = '管理員';
@@ -495,7 +542,6 @@ async function initApp() {
     setTimeout(() => preloadAllPages(), 3000);
 
   } else {
-    // ========== 未登入 ==========
     if (statusText) statusText.textContent = '管理員';
     if (statusIcon) statusIcon.textContent = '🛡️';
 
@@ -510,7 +556,10 @@ async function initApp() {
   }
 
   setTimeout(initEnterKeyBindings, 500);
-  setInterval(updateTimeModeHint, 60000);
+
+  // 精準排程下一個時間點
+  scheduleNextTimeHintUpdate();
+
   console.log('✅ 系統初始化完成');
 }
 
@@ -524,6 +573,7 @@ window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.showTimeModeHint = showTimeModeHint;
 window.updateTimeModeHint = updateTimeModeHint;
 window.updateNavigationVisibility = updateNavigationVisibility;
+window.scheduleNextTimeHintUpdate = scheduleNextTimeHintUpdate;
 window.loadSystemInfo = loadSystemInfo;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
