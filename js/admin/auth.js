@@ -150,7 +150,7 @@ async function changeAdminPassword(event) {
   }
 
   if (newPassword.length < 6) {
-    showMessageModal('❌ 密碼太短', '新密碼長度至少需要6個字元');
+    showMessageModal('❌ 密碼太短', '新密碼長度至少需要 6 個字元');
     return;
   }
 
@@ -173,7 +173,41 @@ async function changeAdminPassword(event) {
 
   try {
     const sb = await initSupabase();
-    const { data, error } = await sb.auth.updateUser({
+
+    // 1. 取得當前登入的 email
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session || !session.user) {
+      if (btn) {
+        btn.innerHTML = btn._originalHTML || '確認修改密碼';
+        btn.disabled = false;
+      }
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 請重新登入</div>`;
+      }
+      return;
+    }
+
+    const email = session.user.email;
+
+    // 2. 用舊密碼驗證
+    const { error: signInError } = await sb.auth.signInWithPassword({
+      email: email,
+      password: oldPassword
+    });
+
+    if (signInError) {
+      if (btn) {
+        btn.innerHTML = btn._originalHTML || '確認修改密碼';
+        btn.disabled = false;
+      }
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 原密碼錯誤</div>`;
+      }
+      return;
+    }
+
+    // 3. 更新密碼
+    const { error: updateError } = await sb.auth.updateUser({
       password: newPassword
     });
 
@@ -182,9 +216,9 @@ async function changeAdminPassword(event) {
       btn.disabled = false;
     }
 
-    if (error) {
+    if (updateError) {
       if (resultDiv) {
-        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
+        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(updateError.message)}</div>`;
       }
       return;
     }
