@@ -246,7 +246,7 @@ async function refreshUserBalance() {
 /**
  * 手動查詢（保留給「重新整理」按鈕）
  */
-async function queryUserInfo(skipRecord = false, event) {
+async function queryUserInfo(event) {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
     showMessageModal('❌ 錯誤', '請重新登入');
