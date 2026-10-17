@@ -15,22 +15,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// ==================== 2. Token 取得 ====================
-
-function getAdminToken() {
-  if (typeof AppState !== 'undefined' && AppState.adminToken) {
-    return AppState.adminToken();
-  }
-  return null;
-}
-
-function getCsrfToken() {
-  if (typeof AppState !== 'undefined' && AppState.csrfToken) {
-    return AppState.csrfToken();
-  }
-  return null;
-}
-
 // ==================== 3. 模態窗輔助 ====================
 
 function closeChangePasswordModal() {
