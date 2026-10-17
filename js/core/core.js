@@ -54,7 +54,7 @@ async function checkUserSession() {
   }
 }
 
-// ==================== 導覽列與時間橫幅的可見性 ====================
+// ==================== 導覽列可見性 ====================
 
 function updateNavigationVisibility() {
   const isAdmin = AppState.isAdmin();
@@ -81,85 +81,6 @@ function updateNavigationVisibility() {
     if (adminNav) adminNav.style.display = 'none';
     if (toggleBtn) toggleBtn.style.display = 'flex';
   }
-}
-
-function updateTimeModeHint() {
-  const existingHint = document.querySelector('.time-hint');
-  if (existingHint) existingHint.remove();
-
-  const isAdmin = AppState.isAdmin();
-  const isLoggedIn = !!AppState.currentStudentId();
-
-  if (!isAdmin && !isLoggedIn) return;
-
-  showTimeModeHint();
-}
-
-function showTimeModeHint() {
-  if (document.querySelector('.time-hint')) return;
-
-  const isOrderTime = isUserOrderTime();
-  const timeRange = getOrderTimeRange();
-
-  const message = isOrderTime
-    ? `🍱 點餐時間（${timeRange}）`
-    : `🔍 查詢時間（點餐已截止）`;
-
-  const bgColor = isOrderTime ? 'var(--success)' : 'var(--gray)';
-  const header = document.querySelector('.header');
-  if (!header) return;
-
-  const hint = document.createElement('div');
-  hint.className = 'time-hint';
-  hint.innerHTML = `<i class="fas fa-clock"></i> ${message}`;
-  hint.style.cssText = `background:${bgColor};color:white;text-align:center;padding:6px;font-size:0.9rem;margin-bottom:8px;`;
-  header.parentNode.insertBefore(hint, header.nextSibling);
-}
-
-/**
- * 計算距離下一個時間點還有多久，設 setTimeout 精準更新
- */
-function scheduleNextTimeHintUpdate() {
-  const nowDate = new Date();
-  const currentMinutes = nowDate.getHours() * 60 + nowDate.getMinutes();
-
-  const points = [
-    TIME.ORDER_START,
-    TIME.ORDER_END,
-    TIME.RATING_START,
-    TIME.RATING_END
-  ]
-    .filter(t => t != null && !isNaN(t))
-    .map(t => Math.floor(t / 100) * 60 + (t % 100));
-
-  if (points.length === 0) return;
-
-  let nextMinutes = null;
-  const sortedPoints = [...points].sort((a, b) => a - b);
-  for (const p of sortedPoints) {
-    if (p > currentMinutes) {
-      nextMinutes = p;
-      break;
-    }
-  }
-
-  let delayMs;
-  if (nextMinutes === null) {
-    const firstPoint = sortedPoints[0];
-    const minutesUntilMidnight = 24 * 60 - currentMinutes;
-    delayMs = (minutesUntilMidnight + firstPoint) * 60 * 1000;
-  } else {
-    delayMs = (nextMinutes - currentMinutes) * 60 * 1000;
-  }
-
-  delayMs += 1000;
-
-  console.log(`⏰ 下次時間橫幅更新：${Math.round(delayMs / 1000)} 秒後`);
-
-  setTimeout(() => {
-    updateTimeModeHint();
-    scheduleNextTimeHintUpdate();
-  }, delayMs);
 }
 
 // ==================== Enter 鍵綁定 ====================
@@ -468,19 +389,10 @@ async function initApp() {
   initAutoHideNav();
   AppState.init();
 
-  // ========== 訂閱 AppState 變更，自動更新 UI 可見性 ==========
-  AppState.subscribe('studentId', () => {
-    updateNavigationVisibility();
-    updateTimeModeHint();
-  });
-  AppState.subscribe('admin', () => {
-    updateNavigationVisibility();
-    updateTimeModeHint();
-  });
-  AppState.subscribe('adminMode', () => {
-    updateNavigationVisibility();
-    updateTimeModeHint();
-  });
+  // 訂閱 AppState 變更
+  AppState.subscribe('studentId', () => updateNavigationVisibility());
+  AppState.subscribe('admin', () => updateNavigationVisibility());
+  AppState.subscribe('adminMode', () => updateNavigationVisibility());
 
   setupPageLoadedListener();
 
@@ -511,7 +423,6 @@ async function initApp() {
 
     AppState.setAdminMode(true);
     updateNavigationVisibility();
-    updateTimeModeHint();
 
     navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
 
@@ -531,7 +442,6 @@ async function initApp() {
     });
 
     updateNavigationVisibility();
-    updateTimeModeHint();
 
     preloadUserData(userSession.studentId).catch(e => {
       console.warn('預載使用者資料失敗:', e);
@@ -546,7 +456,6 @@ async function initApp() {
     if (statusIcon) statusIcon.textContent = '🛡️';
 
     updateNavigationVisibility();
-    updateTimeModeHint();
 
     if (typeof initRegisterPage === 'function') initRegisterPage();
 
@@ -556,9 +465,6 @@ async function initApp() {
   }
 
   setTimeout(initEnterKeyBindings, 500);
-
-  // 精準排程下一個時間點
-  scheduleNextTimeHintUpdate();
 
   console.log('✅ 系統初始化完成');
 }
@@ -570,10 +476,7 @@ window.toggleNav = toggleNav;
 window.copyToClipboard = copyToClipboard;
 window.handleFrontendError = handleFrontendError;
 window.fillAllStudentIdInputs = fillAllStudentIdInputs;
-window.showTimeModeHint = showTimeModeHint;
-window.updateTimeModeHint = updateTimeModeHint;
 window.updateNavigationVisibility = updateNavigationVisibility;
-window.scheduleNextTimeHintUpdate = scheduleNextTimeHintUpdate;
 window.loadSystemInfo = loadSystemInfo;
 window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
