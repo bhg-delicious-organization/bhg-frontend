@@ -711,16 +711,6 @@ details.custom-arrow[open] > summary::before {
     }
 }
 
-/* 時間提示橫幅 */
-.time-hint {
-    text-align: center;
-    padding: 6px;
-    font-size: 0.8rem;
-    margin-bottom: 8px;
-    background: var(--secondary);
-    color: white;
-}
-
 /* ==================== 新手教學樣式 ==================== */
 .tutorial-overlay {
     position: fixed;
