@@ -131,7 +131,6 @@ async function adminLogout() {
 
   updateAdminUI();
   updateNavigationVisibility();
-  updateTimeModeHint();
 
   navigateTo('user-register');
   showMessageModal('✅ 已登出', '管理員已登出');
