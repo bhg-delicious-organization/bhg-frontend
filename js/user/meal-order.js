@@ -347,6 +347,7 @@ async function submitOrder(event) {
   try {
     const sb = await initSupabase();
 
+    // 1. 查餐廳 ID
     const { data: restaurantData, error: rErr } = await sb
       .from('restaurants')
       .select('id')
@@ -357,6 +358,7 @@ async function submitOrder(event) {
       throw new Error('找不到餐廳');
     }
 
+    // 2. 查真實價格（防前端竄改）
     const mealNames = cart.map(i => i.name);
 
     const { data: menuItems, error: mErr } = await sb
@@ -377,8 +379,9 @@ async function submitOrder(event) {
       };
     });
 
+    // 3. 檢查每個餐點都存在
     let total = 0;
-    const rows = cart.map((item, idx) => {
+    const itemsPayload = cart.map(item => {
       const real = priceMap[item.name];
       if (!real) throw new Error(`找不到餐點：${item.name}`);
 
@@ -386,17 +389,14 @@ async function submitOrder(event) {
       total += subtotal;
 
       return {
-        user_id: studentId,
-        slot: idx + 1,
-        restaurant: restaurantName,
         category: real.category,
         meal_name: item.name,
         amount: item.amount,
-        price: real.price,
-        rated: 0
+        price: real.price
       };
     });
 
+    // 4. 檢查使用者餘額（前端先驗證）
     const { data: userData, error: uErr } = await sb
       .from('users')
       .select('balance')
@@ -411,23 +411,26 @@ async function submitOrder(event) {
       throw new Error(`餘額不足，需要 $${total}，目前 $${userData.balance}`);
     }
 
-    const { error: dErr } = await sb
-      .from('today_meals')
-      .delete()
-      .eq('user_id', studentId);
-
-    if (dErr) throw new Error('清空舊餐點失敗：' + dErr.message);
-
-    const { error: iErr } = await sb
-      .from('today_meals')
-      .insert(rows);
-
-    if (iErr) throw new Error('寫入餐點失敗：' + iErr.message);
+    // 5. 用 RPC 原子送出（刪除+寫入）
+    const { data: rpcResult, error: rpcError } = await sb.rpc('submit_order', {
+      p_user_id: studentId,
+      p_restaurant: restaurantName,
+      p_items: itemsPayload
+    });
 
     if (btn) setButtonLoading(btn, false);
 
-    showMessageModal('✅ 送出成功', `訂單已送出，共 ${rows.length} 種餐點，總計 $${total}`);
+    if (rpcError) {
+      throw new Error(rpcError.message);
+    }
 
+    if (!rpcResult || !rpcResult.success) {
+      throw new Error(rpcResult?.message || '送出失敗');
+    }
+
+    showMessageModal('✅ 送出成功', `訂單已送出，共 ${rpcResult.itemCount} 種餐點，總計 $${rpcResult.total}`);
+
+    // 更新餘額顯示
     userBalance = Number(userData.balance);
 
   } catch (error) {
