@@ -1,5 +1,5 @@
 // ==================== meal.js ====================
-// 使用者訂飯模組（Supabase 版 + 自動載入 + 星星評分）
+// 使用者訂飯模組（Supabase 版 + 自動載入 + 星星評分 + 禁用說明）
 // 依賴：supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
 // ==================================================
 
@@ -46,19 +46,63 @@ async function loadMealInfo(event) {
       .from('system_settings')
       .select('value')
       .eq('key', 'today_restaurant')
-      .single();
+      .maybeSingle();
 
-    const hasRestaurant = restaurantData && restaurantData.value;
+    const hasRestaurant = !!(restaurantData && restaurantData.value);
 
     await updateMealBalanceDisplay(userData.balance);
 
-    const showMealSelection = hasRestaurant && isUserOrderTime();
+    // ========== 點餐按鈕狀態 ==========
+    const isOrderTime = isUserOrderTime();
+    const canOrder = hasRestaurant && isOrderTime;
+
     const mealSelectionDiv = document.getElementById('mealSelection');
     if (mealSelectionDiv) {
-      mealSelectionDiv.style.display = showMealSelection ? 'flex' : 'none';
-    }
+      mealSelectionDiv.style.display = 'flex';
 
-    if (isUserOrderTime() || isOrderEnded()) {
+      const orderBtn = mealSelectionDiv.querySelector('.btn-success');
+      const hintEl = document.getElementById('mealSelectionHint');
+
+      if (canOrder) {
+        if (orderBtn) {
+          orderBtn.disabled = false;
+          orderBtn.style.opacity = '';
+          orderBtn.style.cursor = '';
+          orderBtn.innerHTML = '<i class="fas fa-utensils"></i> 點餐';
+        }
+        if (hintEl) hintEl.style.display = 'none';
+      } else {
+        if (orderBtn) {
+          orderBtn.disabled = true;
+          orderBtn.style.opacity = '0.5';
+          orderBtn.style.cursor = 'not-allowed';
+          orderBtn.innerHTML = '<i class="fas fa-lock"></i> 點餐';
+        }
+
+        if (hintEl) {
+          let hintText = '';
+          const timeRange = getOrderTimeRange();
+
+          if (!hasRestaurant && !isOrderTime) {
+            hintText = `⏰ 點餐時間為 ${timeRange}<br>🍽️ 今日餐廳尚未設定`;
+          } else if (!hasRestaurant) {
+            hintText = `🍽️ 今日餐廳尚未設定，請稍後再試`;
+          } else if (!isOrderTime) {
+            if (isOrderEnded()) {
+              hintText = `⏰ 今日訂餐已截止（點餐時間 ${timeRange}）`;
+            } else {
+              hintText = `⏰ 點餐時間為 ${timeRange}，尚未開始`;
+            }
+          }
+
+          hintEl.innerHTML = hintText;
+          hintEl.style.display = 'block';
+        }
+      }
+    }
+    // ========== 點餐按鈕狀態結束 ==========
+
+    if (isOrderTime || isOrderEnded()) {
       await loadUserTodayMeals(studentId);
     } else {
       const display = document.getElementById('todayMealDisplay');
@@ -193,10 +237,8 @@ async function loadUserTodayMeals(studentId) {
       html += `<div style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(meal.restaurant)} - ${escapeHtml(meal.category)}</div>`;
 
       if (ratingTime) {
-        // 星星評分（可修改）
         html += renderStarRating(meal.slot, currentRating);
       } else if (currentRating > 0) {
-        // 非評分時間，但已評分 → 只顯示
         html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
           <i class="fas fa-check-circle"></i> 已評分：${currentRating} 分
         </div>`;
@@ -208,7 +250,6 @@ async function loadUserTodayMeals(studentId) {
     html += '</ul>';
     container.innerHTML = html;
 
-    // 綁定星星點擊
     if (ratingTime) {
       container.querySelectorAll('.star-rating').forEach(starContainer => {
         const slot = parseInt(starContainer.dataset.slot);
@@ -228,11 +269,6 @@ async function loadUserTodayMeals(studentId) {
   }
 }
 
-/**
- * 產生星星評分 HTML
- * @param {number} slot - 餐點 slot
- * @param {number} currentRating - 目前評分（0-5）
- */
 function renderStarRating(slot, currentRating) {
   let html = `<div class="star-rating" data-slot="${slot}">`;
   for (let i = 1; i <= 5; i++) {
@@ -243,9 +279,6 @@ function renderStarRating(slot, currentRating) {
   return html;
 }
 
-/**
- * 綁定星星點擊事件
- */
 function bindStarRating(container, studentId, slotIndex) {
   const stars = container.querySelectorAll('i');
   stars.forEach(star => {
@@ -257,11 +290,7 @@ function bindStarRating(container, studentId, slotIndex) {
   });
 }
 
-/**
- * 送出評分
- */
 async function submitRating(studentId, slotIndex, rating, starContainer) {
-  // 立即視覺回饋
   const stars = starContainer.querySelectorAll('i');
   stars.forEach(star => {
     const val = parseInt(star.dataset.value);
@@ -283,7 +312,6 @@ async function submitRating(studentId, slotIndex, rating, starContainer) {
 
     if (error) {
       showMessageModal('❌ 評分失敗', error.message);
-      // 失敗時還原（需要重新載入）
       return;
     }
 
@@ -326,7 +354,7 @@ async function enterMealOrderMode(event) {
       .from('system_settings')
       .select('value')
       .eq('key', 'today_restaurant')
-      .single();
+      .maybeSingle();
 
     if (btn) setButtonLoading(btn, false);
 
@@ -480,4 +508,4 @@ window.loadMealInfo = loadMealInfo;
 window.refreshMealInfo = refreshMealInfo;
 window.enterMealOrderMode = enterMealOrderMode;
 
-console.log('🍽️ 訂飯模組已載入（星星評分版）');
+console.log('🍽️ 訂飯模組已載入（星星評分 + 禁用說明版）');
