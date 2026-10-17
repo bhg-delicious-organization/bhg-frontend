@@ -12,7 +12,6 @@ const AppState = (function() {
   let _currentStudentId = '';
   let _isAdminMode = false;
   let _currentRestaurantName = '';
-  let _lotteryList = [];
   let _userDataCache = null;   // ← 新增
 
   // 觀察者列表
@@ -22,7 +21,6 @@ const AppState = (function() {
     studentId: [],
     adminMode: [],
     restaurant: [],
-    lotteryList: [],
     userData: []   // ← 新增
   };
 
@@ -45,7 +43,6 @@ const AppState = (function() {
     currentStudentId: () => _currentStudentId,
     isAdminMode: () => _isAdminMode,
     currentRestaurantName: () => _currentRestaurantName,
-    getLotteryList: () => _lotteryList,
     getUserData: () => _userDataCache,   // ← 新增
 
     // 向後兼容：rememberedStudentId 等同 currentStudentId
@@ -146,12 +143,6 @@ const AppState = (function() {
         currentRestaurantName: _currentRestaurantName,
         userData: _userDataCache   // ← 新增
       };
-    },
-
-    setLotteryList: function(list) {
-      const old = _lotteryList;
-      _lotteryList = Array.isArray(list) ? list : [];
-      _notify('lotteryList', { old, new: _lotteryList });
     }
   };
 })();
