@@ -24,10 +24,11 @@
             <p>請點擊載入查看餐點</p>
         </div>
 
-        <div class="meal-links" id="mealSelection" style="display: none;">
+        <div class="meal-links" id="mealSelection" style="display: none; flex-direction: column; gap: 8px;">
             <button class="btn btn-success" onclick="enterMealOrderMode(event)">
                 <i class="fas fa-utensils"></i> 點餐
             </button>
+            <div id="mealSelectionHint" style="display: none; text-align: center; font-size: 0.85rem; color: var(--gray); line-height: 1.6;"></div>
         </div>
     </div>
 
