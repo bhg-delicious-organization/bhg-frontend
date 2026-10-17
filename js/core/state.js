@@ -45,9 +45,6 @@ const AppState = (function() {
     currentRestaurantName: () => _currentRestaurantName,
     getUserData: () => _userDataCache,   // ← 新增
 
-    // 向後兼容：rememberedStudentId 等同 currentStudentId
-    rememberedStudentId: () => _currentStudentId,
-
     // ========== Setters ==========
     setAdmin: function(value, token, csrfToken) {
       const old = _isAdmin;
@@ -72,11 +69,6 @@ const AppState = (function() {
         localStorage.removeItem('currentStudentId');
       }
       _notify('studentId', { old, new: id });
-    },
-
-    // 向後兼容
-    setRememberedStudentId: function(id) {
-      this.setCurrentStudentId(id);
     },
 
     setAdminMode: function(mode) {
