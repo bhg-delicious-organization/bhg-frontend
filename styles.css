@@ -185,7 +185,7 @@ body {
     color: white;
 }
 
-.admin-btn, .quick-id-btn {
+.admin-btn{
     background: rgba(255,255,255,0.2);
     border: none;
     color: white;
@@ -201,45 +201,13 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
-.admin-btn span, .quick-id-btn span {
+.admin-btn span{
     display: inline;
 }
 
-.admin-btn span:first-child, .quick-id-btn span:first-child {
+.admin-btn span:first-child{
     font-size: 1rem;
     line-height: 1;
-}
-
-/* 記住學號提示條 */
-.remembered-id-bar {
-    background: #e8f0fe;
-    border-bottom: 1px solid #cbd5e1;
-    padding: 8px 12px;
-    font-size: 0.85rem;
-    animation: slideDown 0.3s ease;
-}
-
-.remembered-id-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.remembered-id-content i {
-    color: var(--secondary);
-}
-
-.remembered-id-content strong {
-    color: var(--primary);
-}
-
-.remembered-id-content .btn {
-    width: auto;
-    padding: 4px 10px;
-    margin: 0;
-    font-size: 0.75rem;
 }
 
 /* ==================== 頁面容器 ==================== */
