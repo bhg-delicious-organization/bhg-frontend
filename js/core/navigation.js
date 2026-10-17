@@ -31,9 +31,8 @@ function getSmartHomePage() {
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
-  // 每次切頁都更新導覽列與橫幅
+  // 每次切頁都更新導覽列
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
-  if (typeof updateTimeModeHint === 'function') updateTimeModeHint();
 
   const adminPages = [
     'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
