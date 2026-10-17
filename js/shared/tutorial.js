@@ -72,28 +72,6 @@ const tutorialSteps = {
     }
   ],
 
-  // ===== 帳號頁教學 - 未登入 =====
-  accountNotLoggedIn: [
-    {
-      title: '🔐 登入',
-      description: '請輸入您的 6 位數學號。<br>若無密碼可留空，直接點擊「登入」。',
-      selector: '#accountLoginStudentId',
-      cardPosition: 'top'
-    },
-    {
-      title: '🔑 密碼',
-      description: '輸入您的密碼（若已設定）。<br>若無密碼可留空。',
-      selector: '#accountLoginPassword',
-      cardPosition: 'bottom'
-    },
-    {
-      title: '✅ 登入',
-      description: '點擊「登入」按鈕，完成登入。',
-      selector: '#accountNotLoggedIn .btn-primary',
-      cardPosition: 'bottom'
-    }
-  ],
-
   // ===== 帳號頁教學 - 已登入 =====
   accountLoggedIn: [
     {
