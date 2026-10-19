@@ -262,23 +262,10 @@ async function registerUser(event) {
   }
 }
 
-function clearRegisterForm() {
-  const studentIdInput = document.getElementById('registerStudentId');
-  const nameInput = document.getElementById('registerName');
-  const passwordInput = document.getElementById('registerPassword');
-  const resultDiv = document.getElementById('registerResult');
-
-  if (studentIdInput) studentIdInput.value = '';
-  if (nameInput) nameInput.value = '';
-  if (passwordInput) passwordInput.value = '';
-  if (resultDiv) resultDiv.innerHTML = '';
-}
-
 window.initRegisterPage = initRegisterPage;
 window.switchToRegister = switchToRegister;
 window.switchToLogin = switchToLogin;
 window.loginFromGate = loginFromGate;
 window.registerUser = registerUser;
-window.clearRegisterForm = clearRegisterForm;
 
 console.log('📝 登入 / 註冊模組已載入（強制登入版）');
