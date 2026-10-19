@@ -319,6 +319,9 @@ function adjustCartItem(idx, change) {
 /**
  * 送出訂單（Supabase 版）
  */
+/**
+ * 送出訂單（Sprint 1.6：只送 meal_name 和 amount）
+ */
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
 
@@ -347,71 +350,15 @@ async function submitOrder(event) {
   try {
     const sb = await initSupabase();
 
-    // 1. 查餐廳 ID
-    const { data: restaurantData, error: rErr } = await sb
-      .from('restaurants')
-      .select('id')
-      .eq('name', restaurantName)
-      .single();
+    // ═══════════════════════════════════════
+    // 只送 meal_name 和 amount（後端會重查價格）
+    // ═══════════════════════════════════════
+    const itemsPayload = cart.map(item => ({
+      meal_name: item.name,
+      amount: item.amount
+    }));
 
-    if (rErr || !restaurantData) {
-      throw new Error('找不到餐廳');
-    }
-
-    // 2. 查真實價格（防前端竄改）
-    const mealNames = cart.map(i => i.name);
-
-    const { data: menuItems, error: mErr } = await sb
-      .from('menu_items')
-      .select('meal_name, category, price')
-      .eq('restaurant_id', restaurantData.id)
-      .in('meal_name', mealNames);
-
-    if (mErr || !menuItems) {
-      throw new Error('查詢菜單失敗');
-    }
-
-    const priceMap = {};
-    menuItems.forEach(m => {
-      priceMap[m.meal_name] = {
-        price: Number(m.price),
-        category: m.category
-      };
-    });
-
-    // 3. 檢查每個餐點都存在
-    let total = 0;
-    const itemsPayload = cart.map(item => {
-      const real = priceMap[item.name];
-      if (!real) throw new Error(`找不到餐點：${item.name}`);
-
-      const subtotal = real.price * item.amount;
-      total += subtotal;
-
-      return {
-        category: real.category,
-        meal_name: item.name,
-        amount: item.amount,
-        price: real.price
-      };
-    });
-
-    // 4. 檢查使用者餘額（前端先驗證）
-    const { data: userData, error: uErr } = await sb
-      .from('users')
-      .select('balance')
-      .eq('user_id', studentId)
-      .maybeSingle();
-
-    if (uErr || !userData) {
-      throw new Error('找不到使用者');
-    }
-
-    if (total > Number(userData.balance)) {
-      throw new Error(`餘額不足，需要 $${total}，目前 $${userData.balance}`);
-    }
-
-    // 5. 用 RPC 原子送出（刪除+寫入）
+    // 呼叫 RPC（後端負責驗證、重算、寫入）
     const { data: rpcResult, error: rpcError } = await sb.rpc('submit_order', {
       p_user_id: studentId,
       p_restaurant: restaurantName,
@@ -428,10 +375,18 @@ async function submitOrder(event) {
       throw new Error(rpcResult?.message || '送出失敗');
     }
 
-    showMessageModal('✅ 送出成功', `訂單已送出，共 ${rpcResult.itemCount} 種餐點，總計 $${rpcResult.total}`);
+    showMessageModal(
+      '✅ 送出成功',
+      `訂單已送出，共 ${rpcResult.itemCount} 種餐點，總計 $${rpcResult.total}`
+    );
 
-    // 更新餘額顯示
-    userBalance = Number(userData.balance);
+    // 清空購物車
+    cart = [];
+
+    // 重新載入頁面顯示最新狀態
+    if (typeof loadMealOrderPage === 'function') {
+      await loadMealOrderPage();
+    }
 
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
