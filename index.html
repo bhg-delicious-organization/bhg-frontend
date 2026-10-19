@@ -78,12 +78,28 @@
 
                 <div class="form-group">
                     <label class="form-label">學號</label>
-                    <input type="text" id="loginStudentId" class="form-control" placeholder="請輸入6位數學號" maxlength="6" inputmode="numeric">
+                    <input 
+                        type="text" 
+                        id="loginStudentId" 
+                        class="form-control" 
+                        placeholder="請輸入6位數學號" 
+                        maxlength="6" 
+                        inputmode="numeric" 
+                        pattern="\d{6}"
+                        autocomplete="username"
+                    >
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">密碼</label>
-                    <input type="password" id="loginPassword" class="form-control" placeholder="請輸入密碼">
+                    <input 
+                        type="password" 
+                        id="loginPassword" 
+                        class="form-control" 
+                        placeholder="請輸入密碼" 
+                        inputmode="text"
+                        autocomplete="current-password"
+                    >
                 </div>
 
                 <button class="btn btn-primary" onclick="loginFromGate(event)">
@@ -114,18 +130,42 @@
 
                 <div class="form-group">
                     <label class="form-label">學號</label>
-                    <input type="text" id="registerStudentId" class="form-control" placeholder="請輸入6位數學號" maxlength="6" inputmode="numeric">
+                    <input 
+                        type="text" 
+                        id="registerStudentId" 
+                        class="form-control" 
+                        placeholder="請輸入6位數學號" 
+                        maxlength="6" 
+                        inputmode="numeric" 
+                        pattern="\d{6}"
+                        autocomplete="username"
+                    >
                     <div class="form-text">範例：123456</div>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">姓名</label>
-                    <input type="text" id="registerName" class="form-control" placeholder="請輸入真實姓名">
+                    <input 
+                        type="text" 
+                        id="registerName" 
+                        class="form-control" 
+                        placeholder="請輸入真實姓名" 
+                        maxlength="20"
+                        autocomplete="name"
+                    >
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">密碼</label>
-                    <input type="password" id="registerPassword" class="form-control" placeholder="請設定密碼（至少 6 位）">
+                    <input 
+                        type="password" 
+                        id="registerPassword" 
+                        class="form-control" 
+                        placeholder="請設定密碼（至少 6 位）" 
+                        minlength="6"
+                        inputmode="text"
+                        autocomplete="new-password"
+                    >
                     <div class="form-text">密碼至少 6 位，註冊後可用學號和密碼登入</div>
                 </div>
 
@@ -226,11 +266,25 @@
             <div class="modal-body">
                 <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" id="adminEmail" class="form-control" placeholder="請輸入 Email">
+                    <input 
+                        type="email" 
+                        id="adminEmail" 
+                        class="form-control" 
+                        placeholder="請輸入 Email" 
+                        inputmode="email"
+                        autocomplete="username"
+                    >
                 </div>
                 <div class="form-group">
                     <label class="form-label">密碼</label>
-                    <input type="password" id="adminPassword" class="form-control" placeholder="請輸入密碼">
+                    <input 
+                        type="password" 
+                        id="adminPassword" 
+                        class="form-control" 
+                        placeholder="請輸入密碼" 
+                        inputmode="text"
+                        autocomplete="current-password"
+                    >
                 </div>
                 <div id="loginMessage"></div>
             </div>
@@ -361,7 +415,7 @@
             notifyButton: { enable: false },
             serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
             serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
-            allowLocalhostAsSecureOrigin: true,
+            allowLocalhostAsSecureOrigin: location.hostname === 'localhost',
           });
           console.log('✅ OneSignal 已初始化');
         } catch (error) {
