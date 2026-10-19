@@ -1,7 +1,7 @@
 // ==================== recharge.js ====================
-// 管理員直接儲值模組（Supabase 版 + 二次確認）
+// 管理員直接儲值模組（Supabase 版 + 二次確認 + 按鈕防重複）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js
-// ==================================================
+// ====================================================
 
 function setDirectAmount(amount) {
   const amountInput = document.getElementById('directRechargeAmount');
@@ -79,21 +79,24 @@ async function directRecharge(event) {
     `備註：${note || '（無）'}\n\n` +
     `確定要儲值嗎？`;
 
+  // ═══════════════════════════════════════════════════════════════
+  // Sprint 2.1：把按鈕實例存起來，傳給 executeDirectRecharge
+  // ═══════════════════════════════════════════════════════════════
+  const btnForCallback = btn;
+
   showConfirmModal(
     '⚠️ 確認儲值',
     confirmMsg,
     function() {
-      executeDirectRecharge(userId, amountNum, note, event);
+      executeDirectRecharge(userId, amountNum, note, btnForCallback);
     }
   );
 }
 
 /**
- * 執行儲值
+ * 執行儲值（★ Sprint 2.1：參數改成 btn，不再從 event 取）
  */
-async function executeDirectRecharge(userId, amountNum, note, event) {
-  const btn = event ? event.currentTarget : null;
-
+async function executeDirectRecharge(userId, amountNum, note, btn) {
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('directRechargeResult');
@@ -143,4 +146,4 @@ async function executeDirectRecharge(userId, amountNum, note, event) {
 window.setDirectAmount = setDirectAmount;
 window.directRecharge = directRecharge;
 
-console.log('⚡ 直接儲值模組已載入（二次確認版）');
+console.log('⚡ 直接儲值模組已載入（Sprint 2.1：防重複點擊版）');
