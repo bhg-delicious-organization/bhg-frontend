@@ -127,11 +127,13 @@ async function loadTodayOrders(event) {
     let html = '';
 
     orders.forEach(order => {
-      const orderDate = new Date(order.created_at);
-      const dateStr = orderDate.toLocaleString('zh-TW', {
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit'
-      });
+      const orderDate = order.created_at ? new Date(order.created_at) : null;
+      const dateStr = orderDate
+        ? orderDate.toLocaleString('zh-TW', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+          })
+        : '—';
 
       const users = usersByOrder[order.id] || [];
       const userCount = users.length;
