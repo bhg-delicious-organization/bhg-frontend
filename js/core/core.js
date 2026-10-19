@@ -11,18 +11,29 @@ async function checkSupabaseAdminLogin() {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
 
-    if (session && session.user) {
-      const { data } = await sb
-        .from('admins')
-        .select('auth_uid')
-        .eq('auth_uid', session.user.id)
-        .maybeSingle();
+    if (!session || !session.user) {
+      return false;
+    }
 
-      if (data) {
-        AppState.setAdmin(true, session.access_token, null);
-        console.log('✅ 管理員已登入:', session.user.email);
-        return true;
-      }
+    // 檢查 session 是否過期
+    const expiresAt = session.expires_at;
+    if (expiresAt && expiresAt * 1000 < Date.now()) {
+      console.warn('⚠️ 管理員 session 已過期，登出');
+      await sb.auth.signOut();
+      return false;
+    }
+
+    // 確認在 admins 表中
+    const { data } = await sb
+      .from('admins')
+      .select('auth_uid')
+      .eq('auth_uid', session.user.id)
+      .maybeSingle();
+
+    if (data) {
+      AppState.setAdmin(true, session.access_token, null);
+      console.log('✅ 管理員已登入:', session.user.email);
+      return true;
     }
 
     return false;
@@ -31,7 +42,6 @@ async function checkSupabaseAdminLogin() {
     return false;
   }
 }
-
 async function checkUserSession() {
   try {
     const sb = await initSupabase();
@@ -423,11 +433,20 @@ async function initApp() {
 
   setupPageLoadedListener();
 
-  const isAdminLoggedIn = await checkSupabaseAdminLogin();
+  const isAdminLoggedIn = await AdminLogin();
 
   let userSession = { loggedIn: false };
   if (!isAdminLoggedIn) {
     userSession = await checkUserSession();
+  
+    // Sprint 2.5：session 無效時，清掉 localStorage 殘留的學號
+    if (!userSession.loggedIn) {
+      const staleStudentId = localStorage.getItem('currentStudentId');
+      if (staleStudentId) {
+        console.warn('⚠️ Session 無效，清除 localStorage 的學號:', staleStudentId);
+        AppState.setCurrentStudentId('');
+      }
+    }
   }
 
   const statusText = document.getElementById('adminStatusText');
@@ -505,7 +524,7 @@ window.handleFrontendError = handleFrontendError;
 window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.updateNavigationVisibility = updateNavigationVisibility;
 window.loadSystemInfo = loadSystemInfo;
-window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
+window.AdminLogin = AdminLogin;
 window.checkUserSession = checkUserSession;
 window.preloadUserData = preloadUserData;
 window.refreshUserData = refreshUserData;
