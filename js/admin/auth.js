@@ -17,7 +17,7 @@ function showAdminModal() {
     setTimeout(() => {
       if (email) email.focus();
       if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
-      if (typeof bindAdminLoginForm === 'function') bindAdminLoginForm();  // ← 加這行
+      if (typeof bindAdminLoginForm === 'function') bindAdminLoginForm();
     }, 100);
   } else {
     adminLogout();
@@ -61,7 +61,7 @@ async function adminLogin(event) {
 
     if (error) {
       let errorMsg = '登入失敗';
-    
+
       if (error.status === 400 && /invalid login credentials/i.test(error.message)) {
         errorMsg = 'Email 或密碼錯誤';
       } else if (/email not confirmed/i.test(error.message)) {
@@ -73,7 +73,7 @@ async function adminLogin(event) {
       } else if (error.message) {
         errorMsg = escapeHtml(error.message);
       }
-    
+
       if (messageEl) {
         messageEl.innerHTML = `<div class="message error">${errorMsg}</div>`;
       }
@@ -182,7 +182,19 @@ async function changeAdminPassword(event) {
   try {
     const sb = await initSupabase();
 
-    // 1. 取得當前登入的 email
+    // 0. 新舊密碼不可相同
+    if (newPassword === oldPassword) {
+      if (btn) {
+        btn.innerHTML = btn._originalHTML || '確認修改密碼';
+        btn.disabled = false;
+      }
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 新密碼不可與舊密碼相同</div>`;
+      }
+      return;
+    }
+
+    // 1. 取得當前 session
     const { data: { session } } = await sb.auth.getSession();
     if (!session || !session.user) {
       if (btn) {
@@ -195,15 +207,23 @@ async function changeAdminPassword(event) {
       return;
     }
 
-    const email = session.user.email;
-
-    // 2. 用舊密碼驗證
-    const { error: signInError } = await sb.auth.signInWithPassword({
-      email: email,
-      password: oldPassword
+    // 2. 用 RPC 驗證舊密碼
+    const { data: isCorrect, error: verifyError } = await sb.rpc('verify_my_password', {
+      p_password: oldPassword
     });
 
-    if (signInError) {
+    if (verifyError) {
+      if (btn) {
+        btn.innerHTML = btn._originalHTML || '確認修改密碼';
+        btn.disabled = false;
+      }
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 驗證失敗：${escapeHtml(verifyError.message)}</div>`;
+      }
+      return;
+    }
+
+    if (!isCorrect) {
       if (btn) {
         btn.innerHTML = btn._originalHTML || '確認修改密碼';
         btn.disabled = false;
@@ -219,11 +239,13 @@ async function changeAdminPassword(event) {
       password: newPassword
     });
 
+    // 恢復按鈕狀態
     if (btn) {
       btn.innerHTML = btn._originalHTML || '確認修改密碼';
       btn.disabled = false;
     }
 
+    // 檢查更新是否成功
     if (updateError) {
       if (resultDiv) {
         resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(updateError.message)}</div>`;
@@ -231,7 +253,7 @@ async function changeAdminPassword(event) {
       return;
     }
 
-    // 4. 密碼修改成功 → 強制登出，要求重新登入
+    // 4. 密碼修改成功 → 顯示成功訊息
     if (resultDiv) {
       resultDiv.innerHTML = `
         <div class="message success">
@@ -291,4 +313,4 @@ window.adminLogin = adminLogin;
 window.adminLogout = adminLogout;
 window.changeAdminPassword = changeAdminPassword;
 
-console.log('🔐 管理員認證模組已載入');
+console.log('🔐 管理員認證模組已載入（Sprint 2.2）');
