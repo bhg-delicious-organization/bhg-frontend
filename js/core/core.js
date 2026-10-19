@@ -433,6 +433,9 @@ async function initApp() {
 
   setupPageLoadedListener();
 
+  if (typeof bindLoginForm === 'function') bindLoginForm();
+  if (typeof bindRegisterForm === 'function') bindRegisterForm();
+
   const isAdminLoggedIn = await checkSupabaseAdminLogin();
 
   let userSession = { loggedIn: false };
