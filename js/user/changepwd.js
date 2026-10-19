@@ -1,5 +1,5 @@
 // ==================== changepwd.js ====================
-// 使用者修改密碼模組（Supabase Auth 版）
+// 使用者修改密碼模組（Supabase Auth 版 + Sprint 2.2 RPC 驗證）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js
 // ====================================================
 
@@ -56,15 +56,28 @@ async function submitChangePassword() {
 
   try {
     const sb = await initSupabase();
-    const email = `${studentId}@bhg.app`;
 
-    // 1. 先用舊密碼登入驗證
-    const { error: signInError } = await sb.auth.signInWithPassword({
-      email: email,
-      password: oldPassword
+    // 0. 新舊密碼不可相同
+    if (newPassword === oldPassword) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 新密碼不可與舊密碼相同</div>`;
+      }
+      return;
+    }
+
+    // 1. 用 RPC 驗證舊密碼
+    const { data: isCorrect, error: verifyError } = await sb.rpc('verify_my_password', {
+      p_password: oldPassword
     });
 
-    if (signInError) {
+    if (verifyError) {
+      if (resultDiv) {
+        resultDiv.innerHTML = `<div class="message error">❌ 驗證失敗：${escapeHtml(verifyError.message)}</div>`;
+      }
+      return;
+    }
+
+    if (!isCorrect) {
       if (resultDiv) {
         resultDiv.innerHTML = `<div class="message error">❌ 原密碼錯誤</div>`;
       }
@@ -76,6 +89,7 @@ async function submitChangePassword() {
       password: newPassword
     });
 
+    // 檢查更新是否成功
     if (updateError) {
       if (resultDiv) {
         resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(updateError.message)}</div>`;
@@ -83,14 +97,17 @@ async function submitChangePassword() {
       return;
     }
 
+    // 3. 密碼修改成功
     if (resultDiv) {
       resultDiv.innerHTML = `<div class="message success">✅ 密碼修改成功</div>`;
     }
 
+    // 清空表單
     document.getElementById('changepwdOldPassword').value = '';
     document.getElementById('changepwdNewPassword').value = '';
     document.getElementById('changepwdConfirmPassword').value = '';
 
+    // 2 秒後清空訊息
     setTimeout(() => {
       if (resultDiv) resultDiv.innerHTML = '';
     }, 2000);
@@ -106,4 +123,4 @@ async function submitChangePassword() {
 window.loadChangePwdPage = loadChangePwdPage;
 window.submitChangePassword = submitChangePassword;
 
-console.log('🔑 修改密碼模組已載入（Supabase Auth 版）');
+console.log('🔑 修改密碼模組已載入（Sprint 2.2 版）');
