@@ -81,8 +81,6 @@ function showConanLoading(elementId, action = 'default') {
 // ==================== 5. 掛載到 window ====================
 
 window.escapeHtml = escapeHtml;
-window.getAdminToken = getAdminToken;
-window.getCsrfToken = getCsrfToken;
 window.closeChangePasswordModal = closeChangePasswordModal;
 window.getLoadingMessage = getLoadingMessage;
 window.showConanLoading = showConanLoading;
