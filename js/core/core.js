@@ -433,7 +433,7 @@ async function initApp() {
 
   setupPageLoadedListener();
 
-  const isAdminLoggedIn = await AdminLogin();
+  const isAdminLoggedIn = await checkSupabaseAdminLogin();
 
   let userSession = { loggedIn: false };
   if (!isAdminLoggedIn) {
@@ -524,7 +524,7 @@ window.handleFrontendError = handleFrontendError;
 window.fillAllStudentIdInputs = fillAllStudentIdInputs;
 window.updateNavigationVisibility = updateNavigationVisibility;
 window.loadSystemInfo = loadSystemInfo;
-window.AdminLogin = AdminLogin;
+window.checkSupabaseAdminLogin = checkSupabaseAdminLogin;
 window.checkUserSession = checkUserSession;
 window.preloadUserData = preloadUserData;
 window.refreshUserData = refreshUserData;
