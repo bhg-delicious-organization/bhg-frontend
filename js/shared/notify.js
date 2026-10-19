@@ -37,17 +37,19 @@ async function toggleNotifications(event) {
     } else {
       await OneSignal.User.PushSubscription.optIn();
       await new Promise(r => setTimeout(r, 2000));
-
+    
       const subId = OneSignal.User.PushSubscription.id;
       const studentId = AppState.currentStudentId();
-
-      if (subId) {
-        await saveSubscriptionById(subId, studentId || '');
+    
+      // 只有已登入才寫入 DB
+      if (subId && studentId) {
+        await saveSubscriptionById(subId, studentId);
+      } else {
+        console.log('ℹ️ 匿名使用者開啟通知，僅在 OneSignal 端訂閱');
       }
-
+    
       showMessageModal('🔔 已開啟通知', '您將收到今日餐廳等通知');
     }
-
     updateNotifyButton();
   } catch (error) {
     console.error('切換通知失敗:', error);
