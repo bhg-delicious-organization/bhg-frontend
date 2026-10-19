@@ -147,8 +147,11 @@ async function checkSubscriptionStatus() {
       const subId = OneSignal.User.PushSubscription.id;
       const studentId = AppState.currentStudentId();
 
-      if (subId) {
-        await saveSubscriptionById(subId, studentId || '');
+      // 匿名不回報到 DB，只留在 OneSignal 端
+      if (subId && studentId) {
+        await saveSubscriptionById(subId, studentId);
+      } else {
+        console.log('ℹ️ 匿名使用者，訂閱僅保留在 OneSignal 端，不寫入資料庫');
       }
     }
 
