@@ -63,7 +63,7 @@ function switchToLogin() {
 
 // ─── 登入（保留原樣，Sprint 2 才改） ───
 async function loginFromGate(event) {
-  const btn = event ? event.currentTarget : null;
+  const btn = document.querySelector('#loginForm button[type="submit"]');
 
   const studentId = document.getElementById('loginStudentId').value.trim();
   const password = document.getElementById('loginPassword').value;
@@ -124,7 +124,7 @@ async function loginFromGate(event) {
 
 // ─── 註冊（★ Sprint 1.4 重寫） ───
 async function registerUser(event) {
-  const btn = event ? event.currentTarget : null;
+  const btn = document.querySelector('#registerForm button[type="submit"]');
 
   const studentId = document.getElementById('registerStudentId').value.trim();
   const name = document.getElementById('registerName').value.trim();
