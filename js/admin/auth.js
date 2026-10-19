@@ -248,8 +248,6 @@ async function changeAdminPassword(event) {
       AppState.logout();
       updateAdminUI();
       updateNavigationVisibility();
-      updateTimeModeHint();
-
       navigateTo('user-register');
       showMessageModal('✅ 已登出', '請用新密碼重新登入');
     }, 3000);
