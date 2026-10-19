@@ -15,7 +15,17 @@
         </div>
 
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-            <input type="text" id="mealStudentId" class="form-control" placeholder="請輸入學號" style="flex: 1; padding: 10px 12px;">
+            <input 
+                type="text" 
+                id="mealStudentId" 
+                class="form-control" 
+                placeholder="請輸入學號" 
+                style="flex: 1; padding: 10px 12px;" 
+                maxlength="6"
+                inputmode="numeric" 
+                pattern="\d{6}"
+                autocomplete="off"
+            >
             <button class="btn btn-primary" onclick="loadMealInfo(event)" style="width: auto; flex-shrink: 0; padding: 10px 16px;">載入</button>
         </div>
 
