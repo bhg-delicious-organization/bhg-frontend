@@ -307,7 +307,37 @@ async function registerUser(event) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// 表單綁定（支援瀏覽器密碼管理員）
+// ═══════════════════════════════════════════════════════════════
+
+function bindLoginForm() {
+  const form = document.getElementById('loginForm');
+  if (!form || form._loginBound) return;
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    loginFromGate(e);
+  });
+
+  form._loginBound = true;
+}
+
+function bindRegisterForm() {
+  const form = document.getElementById('registerForm');
+  if (!form || form._registerBound) return;
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    registerUser(e);
+  });
+
+  form._registerBound = true;
+}
+
 // ─── 掛載到 window ───
+window.bindLoginForm = bindLoginForm;
+window.bindRegisterForm = bindRegisterForm;
 window.initRegisterPage = initRegisterPage;
 window.switchToRegister = switchToRegister;
 window.switchToLogin = switchToLogin;
