@@ -15,13 +15,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
-// ==================== 3. 模態窗輔助 ====================
-
-function closeChangePasswordModal() {
-  const modal = document.getElementById('changePasswordModal');
-  if (modal) modal.classList.remove('active');
-}
-
 // ==================== 4. 柯南載入動畫 ====================
 
 const LOADING_MESSAGES = {
@@ -43,7 +36,7 @@ const LOADING_MESSAGES = {
   'verifyAdminLogin': '正在驗證管理員身分',
   'deductBalance': '正在執行扣款',
   'getBasicStats': '正在搜集統計資料',
-  'changeUserId': '正在更改學號',
+  'UserId': '正在更改學號',
   'setTodayRestaurant': '正在設定餐廳',
   'cutOffOrder': '正在截止訂餐',
   'adminDirectRecharge': '正在儲值',
@@ -81,7 +74,6 @@ function showConanLoading(elementId, action = 'default') {
 // ==================== 5. 掛載到 window ====================
 
 window.escapeHtml = escapeHtml;
-window.closeChangePasswordModal = closeChangePasswordModal;
 window.getLoadingMessage = getLoadingMessage;
 window.showConanLoading = showConanLoading;
 
