@@ -17,6 +17,7 @@ function showAdminModal() {
     setTimeout(() => {
       if (email) email.focus();
       if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
+      if (typeof bindAdminLoginForm === 'function') bindAdminLoginForm();  // ← 加這行
     }, 100);
   } else {
     adminLogout();
@@ -30,7 +31,7 @@ function hideAdminModal() {
 }
 
 async function adminLogin(event) {
-  const btn = event ? event.currentTarget : null;
+  const btn = document.querySelector('#adminLoginForm button[type="submit"]');
   const email = document.getElementById('adminEmail').value.trim();
   const password = document.getElementById('adminPassword').value;
   const messageEl = document.getElementById('loginMessage');
@@ -271,6 +272,19 @@ async function changeAdminPassword(event) {
   }
 }
 
+function bindAdminLoginForm() {
+  const form = document.getElementById('adminLoginForm');
+  if (!form || form._adminBound) return;
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    adminLogin(e);
+  });
+
+  form._adminBound = true;
+}
+
+window.bindAdminLoginForm = bindAdminLoginForm;
 window.showAdminModal = showAdminModal;
 window.hideAdminModal = hideAdminModal;
 window.adminLogin = adminLogin;
