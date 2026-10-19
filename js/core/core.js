@@ -37,17 +37,44 @@ async function checkUserSession() {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
 
-    if (session && session.user) {
-      const email = session.user.email || '';
-      const studentId = email.split('@')[0];
-
-      if (/^\d{6}$/.test(studentId)) {
-        AppState.setCurrentStudentId(studentId);
-        return { loggedIn: true, studentId };
-      }
+    // 1. 沒有 session → 未登入
+    if (!session || !session.user) {
+      return { loggedIn: false };
     }
 
-    return { loggedIn: false };
+    // 2. session 過期 → 登出
+    const expiresAt = session.expires_at;
+    if (expiresAt && expiresAt * 1000 < Date.now()) {
+      console.warn('⚠️ Session 已過期，登出');
+      await sb.auth.signOut();
+      return { loggedIn: false };
+    }
+
+    // 3. 從 email 解析學號
+    const email = session.user.email || '';
+    const studentId = email.split('@')[0];
+
+    if (!/^\d{6}$/.test(studentId)) {
+      return { loggedIn: false };
+    }
+
+    // 4. 確認 users 表有對應資料
+    const { data: userData, error: userError } = await sb
+      .from('users')
+      .select('user_id, name')
+      .eq('user_id', studentId)
+      .maybeSingle();
+
+    if (userError || !userData) {
+      console.warn('⚠️ Session 有效但 users 表無對應資料');
+      await sb.auth.signOut();
+      return { loggedIn: false, reason: 'no_user_data' };
+    }
+
+    // 5. 全部通過
+    AppState.setCurrentStudentId(studentId);
+    return { loggedIn: true, studentId, name: userData.name };
+
   } catch (e) {
     console.warn('檢查使用者登入失敗:', e);
     return { loggedIn: false };
