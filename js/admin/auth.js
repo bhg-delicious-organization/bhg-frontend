@@ -60,11 +60,19 @@ async function adminLogin(event) {
 
     if (error) {
       let errorMsg = '登入失敗';
-      if (error.message.includes('Invalid login') || error.message.includes('invalid')) {
+    
+      if (error.status === 400 && /invalid login credentials/i.test(error.message)) {
         errorMsg = 'Email 或密碼錯誤';
-      } else if (error.message.includes('Email not confirmed')) {
+      } else if (/email not confirmed/i.test(error.message)) {
         errorMsg = 'Email 尚未驗證';
+      } else if (/invalid email/i.test(error.message)) {
+        errorMsg = 'Email 格式錯誤';
+      } else if (/rate limit|too many/i.test(error.message)) {
+        errorMsg = '嘗試次數過多，請稍後再試';
+      } else if (error.message) {
+        errorMsg = escapeHtml(error.message);
       }
+    
       if (messageEl) {
         messageEl.innerHTML = `<div class="message error">${errorMsg}</div>`;
       }
