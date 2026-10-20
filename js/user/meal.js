@@ -257,8 +257,8 @@ async function loadUserTodayMeals(studentId) {
       });
     }
 
-    const cached = AppState.getUserData() || {};
-    AppState.setUserData({ ...cached, meals: meals || [] });
+    const cached = AppState.getUserData(studentId) || {};
+    AppState.setUserData(studentId, { ...cached, meals: meals || [] });
 
   } catch (error) {
     console.error('載入今日餐點失敗:', error);
