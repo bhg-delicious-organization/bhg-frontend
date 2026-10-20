@@ -120,23 +120,19 @@ async function executeDirectRecharge(userId, amountNum, note, btn) {
 
     assertRpcSuccess(data, 'admin_recharge');
 
-    if (data.success) {
-      if (resultDiv) {
-        resultDiv.innerHTML = `
-          <div class="message success">
-            <i class="fas fa-check-circle"></i> ✅ 儲值成功！<br>
-            <strong>${escapeHtml(data.name)} (${escapeHtml(data.user_id)})</strong><br>
-            儲值金額: $${data.amount}<br>
-            新餘額: $${data.new_balance}
-          </div>
-        `;
-      }
-      document.getElementById('directRechargeUserId').value = '';
-      document.getElementById('directRechargeAmount').value = '';
-      document.getElementById('directRechargeNote').value = '';
-    } else {
-      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
+    if (resultDiv) {
+      resultDiv.innerHTML = `
+        <div class="message success">
+          <i class="fas fa-check-circle"></i> ✅ 儲值成功！<br>
+          <strong>${escapeHtml(data.name)} (${escapeHtml(data.user_id)})</strong><br>
+          儲值金額: $${data.amount}<br>
+          新餘額: $${data.new_balance}
+        </div>
+      `;
     }
+    document.getElementById('directRechargeUserId').value = '';
+    document.getElementById('directRechargeAmount').value = '';
+    document.getElementById('directRechargeNote').value = '';
 
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
