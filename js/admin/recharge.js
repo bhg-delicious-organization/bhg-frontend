@@ -118,6 +118,8 @@ async function executeDirectRecharge(userId, amountNum, note, btn) {
       return;
     }
 
+    assertRpcSuccess(data, 'admin_recharge');
+
     if (data.success) {
       if (resultDiv) {
         resultDiv.innerHTML = `
