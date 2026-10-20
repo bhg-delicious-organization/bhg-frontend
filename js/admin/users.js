@@ -53,6 +53,8 @@ async function changeUserId(oldUserId, newUserId) {
       return;
     }
 
+    assertRpcSuccess(data, 'change_user_id');
+
     if (data.success) {
       let details = '';
       if (data.results) {
