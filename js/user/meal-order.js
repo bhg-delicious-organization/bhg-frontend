@@ -373,10 +373,6 @@ async function submitOrder(event) {
 
     assertRpcSuccess(rpcResult, 'submit_order');
 
-    if (!rpcResult || !rpcResult.success) {
-      throw new Error(rpcResult?.message || '送出失敗');
-    }
-
     showMessageModal(
       '✅ 送出成功',
       `訂單已送出，共 ${rpcResult.itemCount} 種餐點，總計 $${rpcResult.total}`
