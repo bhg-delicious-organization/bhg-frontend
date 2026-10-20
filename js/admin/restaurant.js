@@ -404,6 +404,8 @@ async function executeCutOffOrder() {
       return;
     }
 
+    assertRpcSuccess(data, 'cut_off_order');
+
     const result = data;
 
     if (result.success) {
