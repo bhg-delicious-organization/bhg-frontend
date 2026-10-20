@@ -43,7 +43,10 @@ const AppState = (function() {
     currentStudentId: () => _currentStudentId,
     isAdminMode: () => _isAdminMode,
     currentRestaurantName: () => _currentRestaurantName,
-    getUserData: () => _userDataCache,   // ← 新增
+    getUserData: (studentId) => {
+      if (studentId && studentId !== _currentStudentId) return null;
+      return _userDataCache;
+    },
 
     // ========== Setters ==========
     setAdmin: function(value, token, csrfToken) {
@@ -68,6 +71,11 @@ const AppState = (function() {
       } else {
         localStorage.removeItem('currentStudentId');
       }
+      // 切換帳號時清空資料快取
+      if (old !== id) {
+        _userDataCache = null;
+        _notify('userData', null);
+      }
       _notify('studentId', { old, new: id });
     },
 
@@ -83,8 +91,11 @@ const AppState = (function() {
       _notify('restaurant', { old, new: name });
     },
 
-    // ← 新增
-    setUserData: function(data) {
+    setUserData: function(studentId, data) {
+      if (studentId !== _currentStudentId) {
+        console.warn('setUserData: studentId 不符，忽略', studentId, _currentStudentId);
+        return;
+      }
       _userDataCache = data;
       _notify('userData', data);
     },
