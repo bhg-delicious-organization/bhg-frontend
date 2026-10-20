@@ -55,29 +55,23 @@ async function changeUserId(oldUserId, newUserId) {
 
     assertRpcSuccess(data, 'change_user_id');
 
-    if (data.success) {
-      let details = '';
-      if (data.results) {
-        details = '<ul style="margin-top: 10px; text-align: left;">';
-        if (data.results.users) details += '<li>✓ 使用者資料已更新</li>';
-        if (data.results.transactions) details += '<li>✓ 交易紀錄已更新</li>';
-        if (data.results.orderDetails) details += '<li>✓ 訂單歷史已更新</li>';
-        details += '</ul>';
-      }
-
-      if (resultDiv) {
-        resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(data.message)}${details}</div>`;
-      }
-
-      document.getElementById('changeOldUserId').value = '';
-      document.getElementById('changeNewUserId').value = '';
-
-      showMessageModal('✅ 成功', '學號更改成功');
-    } else {
-      if (resultDiv) {
-        resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
-      }
+    let details = '';
+    if (data.results) {
+      details = '<ul style="margin-top: 10px; text-align: left;">';
+      if (data.results.users) details += '<li>✓ 使用者資料已更新</li>';
+      if (data.results.transactions) details += '<li>✓ 交易紀錄已更新</li>';
+      if (data.results.orderDetails) details += '<li>✓ 訂單歷史已更新</li>';
+      details += '</ul>';
     }
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success">✅ ${escapeHtml(data.message)}${details}</div>`;
+    }
+
+    document.getElementById('changeOldUserId').value = '';
+    document.getElementById('changeNewUserId').value = '';
+
+    showMessageModal('✅ 成功', '學號更改成功');
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
     console.error('更改學號失敗:', error);
