@@ -270,29 +270,27 @@ async function executeBatchDeductByCategory(restaurant, category, amount) {
       return;
     }
 
-    if (data.success) {
-      let html = `<div class="message success">
-        <i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}<br>
-        影響人數：${data.count} 人<br>
-        總扣款金額：$${data.totalDeducted}
-      </div>`;
+    assertRpcSuccess(data, 'batch_deduct_by_category');
 
-      const failed = (data.results || []).filter(r => !r.success);
-      if (failed.length > 0) {
-        html += `<div class="message warning" style="margin-top: 10px;">
-          <strong>⚠️ 以下使用者餘額不足，未扣款：</strong><ul>`;
-        failed.forEach(f => {
-          html += `<li>${escapeHtml(f.userId)} ${escapeHtml(f.name)} - 需扣 ${f.deductAmount} 元，餘額 ${f.oldBalance} 元</li>`;
-        });
-        html += `</ul></div>`;
-      }
+    let html = `<div class="message success">
+      <i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}<br>
+      影響人數：${data.count} 人<br>
+      總扣款金額：$${data.totalDeducted}
+    </div>`;
 
-      if (resultDiv) resultDiv.innerHTML = html;
-      document.getElementById('batchDeductAmount').value = '';
-      showCategoryOrderers();
-    } else {
-      if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(data.message)}</div>`;
+    const failed = (data.results || []).filter(r => !r.success);
+    if (failed.length > 0) {
+      html += `<div class="message warning" style="margin-top: 10px;">
+        <strong>⚠️ 以下使用者餘額不足，未扣款：</strong><ul>`;
+      failed.forEach(f => {
+        html += `<li>${escapeHtml(f.userId)} ${escapeHtml(f.name)} - 需扣 ${f.deductAmount} 元，餘額 ${f.oldBalance} 元</li>`;
+      });
+      html += `</ul></div>`;
     }
+
+    if (resultDiv) resultDiv.innerHTML = html;
+    document.getElementById('batchDeductAmount').value = '';
+    showCategoryOrderers();
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
     console.error('批量扣款失敗:', error);
