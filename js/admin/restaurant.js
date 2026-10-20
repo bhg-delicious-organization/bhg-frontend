@@ -148,6 +148,8 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
       throw new Error(error.message);
     }
 
+    assertRpcSuccess(data, 'set_today_restaurant');
+
     if (!data || !data.success) {
       throw new Error(data?.message || '設定失敗');
     }
