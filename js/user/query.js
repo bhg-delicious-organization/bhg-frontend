@@ -17,7 +17,7 @@ async function loadUserBalance(studentId) {
   const balanceDisplay = document.getElementById('balanceDisplay');
   const userNameDisplay = document.getElementById('userNameDisplay');
 
-  const cached = AppState.getUserData();
+  const cached = AppState.getUserData(studentId);
   if (cached?.user) {
     if (balanceDisplay) balanceDisplay.textContent = `$${cached.user.balance}`;
     if (userNameDisplay) userNameDisplay.textContent = cached.user.name || '';
@@ -43,8 +43,8 @@ async function loadUserBalance(studentId) {
     if (balanceDisplay) balanceDisplay.textContent = `$${userData.balance}`;
     if (userNameDisplay) userNameDisplay.textContent = userData.name || '';
 
-    const cached = AppState.getUserData() || {};
-    AppState.setUserData({ ...cached, user: userData });
+    const cached = AppState.getUserData(studentId) || {};
+    AppState.setUserData(studentId, { ...cached, user: userData });
 
   } catch (error) {
     console.error('載入餘額失敗:', error);
@@ -67,7 +67,7 @@ async function loadUserTransactions(studentId) {
   if (!tbody) return;
 
   // 先用快取
-  const cached = AppState.getUserData();
+  const cached = AppState.getUserData(studentId);
   if (cached?.transactions && cached.transactions.length > 0) {
     tbody.innerHTML = '';
     renderTransactions(cached.transactions, tbody);
@@ -97,8 +97,8 @@ async function loadUserTransactions(studentId) {
     updateLoadMoreButton();
 
     // 更新快取
-    const cached = AppState.getUserData() || {};
-    AppState.setUserData({ ...cached, transactions: list });
+    const cached = AppState.getUserData(studentId) || {};
+    AppState.setUserData(studentId, { ...cached, transactions: list });
 
   } catch (error) {
     console.error('載入交易紀錄失敗:', error);
