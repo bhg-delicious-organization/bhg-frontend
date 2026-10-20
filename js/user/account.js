@@ -18,7 +18,7 @@ async function loadAccountPage() {
   if (studentIdEl) studentIdEl.textContent = studentId;
 
   // 先用快取
-  const cached = AppState.getUserData();
+  const cached = AppState.getUserData(studentId);
   if (cached?.user) {
     const userNameEl = document.getElementById('accountUserName');
     if (userNameEl) userNameEl.textContent = cached.user.name || '未知';
