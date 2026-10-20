@@ -378,7 +378,7 @@ async function preloadUserData(studentId) {
       loadedAt: Date.now()
     };
 
-    AppState.setUserData(data);
+    AppState.setUserData(studentId, data);
     console.log('✅ 使用者資料已預載:', data);
     return data;
   } catch (error) {
