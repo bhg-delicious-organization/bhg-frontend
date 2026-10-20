@@ -518,8 +518,23 @@ async function initApp() {
   console.log('✅ 系統初始化完成');
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Sprint 2.6：RPC 回傳格式斷言
+// ═══════════════════════════════════════════════════════════════
+
+function assertRpcSuccess(data, name) {
+  if (!data || typeof data !== 'object' || !('success' in data)) {
+    throw new Error(`RPC ${name} 回傳格式異常（缺少 success 欄位）`);
+  }
+  if (!data.success) {
+    throw new Error(data.message || `RPC ${name} 失敗`);
+  }
+  return data;
+}
+
 document.addEventListener('DOMContentLoaded', initApp);
 
+window.assertRpcSuccess = assertRpcSuccess;
 window.initApp = initApp;
 window.toggleNav = toggleNav;
 window.copyToClipboard = copyToClipboard;
