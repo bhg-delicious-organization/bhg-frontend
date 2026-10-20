@@ -371,6 +371,8 @@ async function submitOrder(event) {
       throw new Error(rpcError.message);
     }
 
+    assertRpcSuccess(rpcResult, 'submit_order');
+
     if (!rpcResult || !rpcResult.success) {
       throw new Error(rpcResult?.message || '送出失敗');
     }
