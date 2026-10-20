@@ -150,10 +150,6 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
 
     assertRpcSuccess(data, 'set_today_restaurant');
 
-    if (!data || !data.success) {
-      throw new Error(data?.message || '設定失敗');
-    }
-
     // 更新前端狀態
     AppState.setCurrentRestaurantName(restaurantName);
     TIME.ORDER_END = parseInt(orderEndTime);
@@ -408,25 +404,21 @@ async function executeCutOffOrder() {
 
     const result = data;
 
-    if (result.success) {
-      let msg = result.message;
-      if (result.errors && result.errors.length > 0) {
-        msg += `\n\n⚠️ ${result.errors.length} 位使用者扣款失敗：`;
-        result.errors.forEach(e => {
-          msg += `\n• ${e.user_id} ${e.name}：${e.reason}`;
-        });
-      }
-      showMessageModal('✅ 截止訂餐', msg);
-
-      AppState.setCurrentRestaurantName('');
-
-      if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
-      if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
-
-      loadTodayRestaurantStatus();
-    } else {
-      showMessageModal('❌ 截止失敗', result.message);
+    let msg = result.message;
+    if (result.errors && result.errors.length > 0) {
+      msg += `\n\n⚠️ ${result.errors.length} 位使用者扣款失敗：`;
+      result.errors.forEach(e => {
+        msg += `\n• ${e.user_id} ${e.name}：${e.reason}`;
+      });
     }
+    showMessageModal('✅ 截止訂餐', msg);
+
+    AppState.setCurrentRestaurantName('');
+
+    if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
+    if (typeof clearRestaurantMenuCache === 'function') clearRestaurantMenuCache();
+
+    loadTodayRestaurantStatus();
   } catch (err) {
     if (btn) setButtonLoading(btn, false);
     console.error('截止訂餐失敗:', err);
