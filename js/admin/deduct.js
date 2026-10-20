@@ -42,15 +42,13 @@ async function deductBalance(event) {
       return;
     }
 
-    if (data.success) {
-      if (resultDiv) {
-        resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}</div>`;
-      }
-      document.getElementById('deductStudentId').value = '';
-      document.getElementById('deductAmount').value = '';
-    } else {
-      if (resultDiv) resultDiv.innerHTML = `<div class="message error"><i class="fas fa-exclamation-circle"></i> ${escapeHtml(data.message)}</div>`;
+    assertRpcSuccess(data, 'admin_deduct');
+
+    if (resultDiv) {
+      resultDiv.innerHTML = `<div class="message success"><i class="fas fa-check-circle"></i> ${escapeHtml(data.message)}</div>`;
     }
+    document.getElementById('deductStudentId').value = '';
+    document.getElementById('deductAmount').value = '';
   } catch (error) {
     if (btn) setButtonLoading(btn, false);
     if (resultDiv) resultDiv.innerHTML = `<div class="message error">❌ ${escapeHtml(error.message)}</div>`;
