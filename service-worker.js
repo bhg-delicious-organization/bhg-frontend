@@ -64,13 +64,25 @@ function isMajorUpdate(oldVersion, newVersion) {
 self.addEventListener('install', function(event) {
   console.log(`📦 新版本 ${VERSION} 安裝中...`);
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(URLS_TO_CACHE).catch(function(err) {
-        console.warn('⚠️ 部分資源快取失敗:', err);
-      });
-    })
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    const results = await Promise.allSettled(
+      URLS_TO_CACHE.map(url =>
+        fetch(url, { cache: 'no-cache' })
+          .then(res => {
+            if (!res.ok) throw new Error(`${url} → ${res.status}`);
+            return cache.put(url, res);
+          })
+      )
+    );
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.warn('⚠️ 部分資源快取失敗:');
+      failed.forEach(f => console.warn('  -', f.reason?.message || f.reason));
+    } else {
+      console.log('✅ 所有資源已快取');
+    }
+  })());
 });
 
 self.addEventListener('activate', function(event) {
