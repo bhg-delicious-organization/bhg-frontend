@@ -12,6 +12,7 @@ const URLS_TO_CACHE = [
   './index.html',
   './manifest.json',
   './icon-192.png',
+  './icon-512.png',
   './styles.css',
   './assets/conan.png',
   './js/core/supabase.js',
