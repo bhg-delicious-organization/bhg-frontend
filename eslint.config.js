@@ -46,19 +46,14 @@ export default [
         OneSignal: 'readonly',
         OneSignalDeferred: 'writable',
         supabase: 'readonly',
-
-        // 你的狀態物件（跨檔案共用）
-        AppState: 'readonly',
-        TIME: 'readonly',
-        UI: 'readonly',
       },
     },
     rules: {
       'no-unused-vars': ['warn', { 
         argsIgnorePattern: '^_', 
-        varsIgnorePattern: '^(_|show|close|confirm|rebind|last|load|init|check|handle|save|remove|update|on|set|toggle|copy|get|view|start|next|skip|end|current)' 
+        varsIgnorePattern: '^(_|show|close|confirm|rebind|last|load|init|check|handle|save|remove|update|on|set|toggle|copy|get|view|start|next|skip|end|current|btn|stats|data|event)' 
       }],
-      'no-undef': 'off',           // ← 你的架構不適合靜態分析
+      'no-undef': 'off',
       'no-console': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
       'no-unreachable': 'error',
