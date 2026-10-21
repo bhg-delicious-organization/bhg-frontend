@@ -1,0 +1,62 @@
+name: Lint & Format Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ESLint & Prettier
+        run: npm install --no-save eslint prettier @eslint/js
+
+      - name: Run ESLint
+        run: npx eslint "js/**/*.js" "service-worker.js" --no-error-on-unmatched-pattern
+        continue-on-error: true
+
+      - name: Check Prettier formatting
+        run: npx prettier --check "js/**/*.js" "*.html" "pages/*.html" "styles.css"
+        continue-on-error: true
+
+      - name: Check key files exist
+        run: |
+          for f in index.html manifest.json service-worker.js styles.css icon-192.png icon-512.png; do
+            if [ ! -f "$f" ]; then
+              echo "❌ 缺少關鍵檔案: $f"
+              exit 1
+            fi
+          done
+          echo "✅ 所有關鍵檔案存在"
+
+      - name: Check SW VERSION format
+        run: |
+          VERSION=$(grep -oP "const VERSION = '\K[^']+" service-worker.js || echo "")
+          if [ -z "$VERSION" ]; then
+            echo "❌ service-worker.js 找不到 VERSION"
+            exit 1
+          fi
+          if ! echo "$VERSION" | grep -qP '^\d+\.\d+\.\d+$'; then
+            echo "❌ VERSION 格式錯誤: $VERSION（應為 X.Y.Z）"
+            exit 1
+          fi
+          echo "✅ VERSION: $VERSION"
+
+      - name: Check for undefined function references
+        run: |
+          echo "檢查常見的函數名稱錯誤..."
+          if grep -rE "\bAdminLogin\b" js/ 2>/dev/null; then
+            echo "❌ 發現 AdminLogin（應為 checkSupabaseAdminLogin）"
+            exit 1
+          fi
+          echo "✅ 無明顯函數名稱錯誤"
