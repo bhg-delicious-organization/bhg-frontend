@@ -1,7 +1,7 @@
 // ==================== core.js ====================
 // 核心功能模組
 // 依賴：state.js、ui.js、time.js、common.js、navigation.js、preload.js、supabase.js
-// ==================================================
+// ====================================================
 
 window.navHidden = false;
 let lastScrollY = window.scrollY;
@@ -42,6 +42,7 @@ async function checkSupabaseAdminLogin() {
     return false;
   }
 }
+
 async function checkUserSession() {
   try {
     const sb = await initSupabase();
@@ -120,79 +121,52 @@ function updateNavigationVisibility() {
   }
 }
 
-// ==================== Enter 鍵綁定 ====================
+// ==================== Enter 鍵綁定（事件委派版） ====================
 
-function bindEnterKey(element, callback) {
-  if (!element) return;
-  element.addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      callback();
+// 定義每個輸入框按下 Enter 後要執行的動作
+const ENTER_KEY_ACTIONS = {
+  // 使用者端
+  'queryStudentId': () => { if (typeof queryUserInfo === 'function') queryUserInfo(); },
+  'registerStudentId': () => document.getElementById('registerName')?.focus(),
+  'registerName': () => { if (typeof registerUser === 'function') registerUser(); },
+  'loginStudentId': () => document.getElementById('loginPassword')?.focus(),
+  'loginPassword': () => { if (typeof loginFromGate === 'function') loginFromGate(); },
+  'mealStudentId': () => { if (typeof loadMealInfo === 'function') loadMealInfo(); },
+  
+  // 修改密碼
+  'changepwdOldPassword': () => document.getElementById('changepwdNewPassword')?.focus(),
+  'changepwdNewPassword': () => document.getElementById('changepwdConfirmPassword')?.focus(),
+  'changepwdConfirmPassword': () => { if (typeof submitChangePassword === 'function') submitChangePassword(); },
+
+  // 管理員端
+  'adminEmail': () => document.getElementById('adminPassword')?.focus(),
+  'adminPassword': () => { if (typeof adminLogin === 'function') adminLogin(); },
+};
+
+/**
+ * 初始化全域 Enter 鍵監聽（只會執行一次）
+ */
+function setupGlobalEnterKey() {
+  if (window._globalEnterKeyBound) return; // 防止重複綁定
+  window._globalEnterKeyBound = true;
+
+  document.addEventListener('keydown', function(e) {
+    // 只處理 Enter 鍵
+    if (e.key !== 'Enter') return;
+
+    // 避免在 textarea 中誤觸（例如備註欄位）
+    if (e.target.tagName === 'TEXTAREA') return;
+
+    // 根據觸發元素的 ID 尋找對應動作
+    const action = ENTER_KEY_ACTIONS[e.target.id];
+    
+    if (action) {
+      e.preventDefault(); // 阻止表單預設的 submit 行為
+      action();
     }
   });
-}
 
-function rebindEnterKeys() {
-  initEnterKeyBindings();
-}
-
-function initEnterKeyBindings() {
-  const queryInput = document.getElementById('queryStudentId');
-  if (queryInput && typeof queryUserInfo === 'function') {
-    bindEnterKey(queryInput, () => queryUserInfo());
-  }
-
-  const registerStudentId = document.getElementById('registerStudentId');
-  const registerName = document.getElementById('registerName');
-  if (registerStudentId) {
-    bindEnterKey(registerStudentId, () => {
-      if (registerName) registerName.focus();
-    });
-  }
-  if (registerName && typeof registerUser === 'function') {
-    bindEnterKey(registerName, () => registerUser());
-  }
-
-  const loginStudentId = document.getElementById('loginStudentId');
-  const loginPassword = document.getElementById('loginPassword');
-  if (loginStudentId) {
-    bindEnterKey(loginStudentId, () => {
-      if (loginPassword) loginPassword.focus();
-    });
-  }
-  if (loginPassword && typeof loginFromGate === 'function') {
-    bindEnterKey(loginPassword, () => loginFromGate());
-  }
-
-  const mealStudentId = document.getElementById('mealStudentId');
-  if (mealStudentId && typeof loadMealInfo === 'function') {
-    bindEnterKey(mealStudentId, () => loadMealInfo());
-  }
-
-  const changepwdOldPassword = document.getElementById('changepwdOldPassword');
-  const changepwdNewPassword = document.getElementById('changepwdNewPassword');
-  const changepwdConfirmPassword = document.getElementById('changepwdConfirmPassword');
-
-  if (changepwdOldPassword) {
-    bindEnterKey(changepwdOldPassword, () => {
-      if (changepwdNewPassword) changepwdNewPassword.focus();
-    });
-  }
-  if (changepwdNewPassword) {
-    bindEnterKey(changepwdNewPassword, () => {
-      if (changepwdConfirmPassword) changepwdConfirmPassword.focus();
-    });
-  }
-  if (changepwdConfirmPassword && typeof submitChangePassword === 'function') {
-    bindEnterKey(changepwdConfirmPassword, () => submitChangePassword());
-  }
-
-  const adminPasswordInput = document.getElementById('adminPassword');
-  if (adminPasswordInput && typeof adminLogin === 'function') {
-    bindEnterKey(adminPasswordInput, () => adminLogin());
-  }
-
-  console.log('✅ Enter 鍵綁定完成');
+  console.log('✅ 全域 Enter 鍵事件委派已綁定');
 }
 
 // ==================== 剪貼簿 ====================
@@ -396,6 +370,9 @@ async function refreshUserData(studentId) {
 async function initApp() {
   console.log('🚀 系統初始化開始');
 
+  // 1. 啟動全域 Enter 鍵事件委派
+  setupGlobalEnterKey();
+
   if (typeof cleanupOldRestaurantCache === 'function') {
     cleanupOldRestaurantCache();
   }
@@ -512,8 +489,6 @@ async function initApp() {
       item.classList.remove('active');
     });
   }
-
-  setTimeout(initEnterKeyBindings, 500);
 
   console.log('✅ 系統初始化完成');
 }
