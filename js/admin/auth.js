@@ -16,7 +16,7 @@ function showAdminModal() {
 
     setTimeout(() => {
       if (email) email.focus();
-      if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
+      // 移除舊的 rebindEnterKeys，因為事件委派已處理
       if (typeof bindAdminLoginForm === 'function') bindAdminLoginForm();
     }, 100);
   } else {
@@ -27,7 +27,7 @@ function showAdminModal() {
 function hideAdminModal() {
   const modal = document.getElementById('adminModal');
   if (modal) modal.classList.remove('active');
-  if (typeof rebindEnterKeys === 'function') rebindEnterKeys();
+  // 移除舊的 rebindEnterKeys
 }
 
 async function adminLogin(event) {
