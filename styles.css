@@ -1012,3 +1012,92 @@ body.tutorial-active {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+
+/* ==================== 工業級 Tabs 分頁籤 ==================== */
+
+/* Tab 導航列容器 */
+.tabs-nav {
+    display: flex;
+    background: #f8f9fa;
+    border-radius: var(--radius);
+    padding: 4px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* 隱藏 Firefox 捲軸 */
+}
+
+.tabs-nav::-webkit-scrollbar {
+    display: none; /* 隱藏 Chrome/Safari 捲軸 */
+}
+
+/* Tab 按鈕 */
+.tab-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    border-radius: calc(var(--radius) - 4px);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--gray);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    position: relative;
+    z-index: 1;
+}
+
+/* 滑鼠移入效果 */
+.tab-btn:hover {
+    color: var(--primary);
+}
+
+/* 選中狀態 (模擬滑動膠囊效果) */
+.tab-btn.active {
+    background: white;
+    color: var(--secondary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+/* Tab 內容容器 */
+.tab-content {
+    display: none;
+    animation: tabFadeIn 0.3s ease;
+}
+
+/* 顯示中的 Tab 內容 */
+.tab-content.active {
+    display: block;
+}
+
+/* 切換時的淡入動畫 */
+@keyframes tabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ==================== 響應式調整 ==================== */
+@media (max-width: 480px) {
+    .tab-btn {
+        font-size: 0.85rem;
+        padding: 8px 10px;
+        min-width: 70px;
+    }
+    
+    .tabs-nav {
+        padding: 3px;
+        margin-bottom: 16px;
+    }
+}
