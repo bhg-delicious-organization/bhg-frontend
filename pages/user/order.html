@@ -1,0 +1,62 @@
+<div id="page-user-order" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-utensils"></i> 訂餐中心
+            </h2>
+        </div>
+
+        <!-- 餘額與今日點餐狀態 -->
+        <div class="balance-box" id="mealBalanceBox">
+            請先載入資料
+        </div>
+
+        <!-- Tabs 內部導覽 -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="ord-menu">今日點餐</button>
+            <button class="tab-btn" data-tab="ord-history">歷史訂單</button>
+        </div>
+
+        <!-- Tab 1: 今日點餐 -->
+        <div id="ord-menu" class="tab-content active">
+            <div id="orderRestaurantSection" class="admin-section" style="border-left-color: #4f46e5; margin-top: 15px;">
+                <h3>🍽️ 今日特選餐廳</h3>
+                <div id="orderTodayRestaurantName" style="font-weight: bold; margin-bottom: 10px;">載入中...</div>
+
+                <select id="orderRestaurantCategorySelect" class="form-control" style="margin-bottom: 10px;" onchange="onRestaurantCategoryChange()">
+                    <option value="">請選擇分類</option>
+                </select>
+
+                <select id="orderRestaurantItemSelect" class="form-control" style="margin-bottom: 10px;">
+                    <option value="">請先選擇分類</option>
+                </select>
+
+                <button class="btn btn-success" onclick="addOrderRestaurantMeal()" style="width: 100%;">
+                    <i class="fas fa-plus"></i> 加入今日特選餐廳餐點
+                </button>
+            </div>
+
+            <div class="admin-section" style="margin-top: 15px;">
+                <h3>📋 您今天的餐點</h3>
+                <div id="orderMealsList">
+                    載入中...
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;">
+                <button id="submitOrderBtn" class="btn btn-primary" onclick="submitOrder(event)" style="width: 100%;">
+                    <i class="fas fa-check-circle"></i> 確認送出
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab 2: 歷史訂單 -->
+        <div id="ord-history" class="tab-content">
+            <div id="userOrderHistory">
+                <div class="message info">
+                    <i class="fas fa-info-circle"></i> 載入中...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
