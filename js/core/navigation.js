@@ -36,14 +36,21 @@ function getSmartHomePage() {
  */
 function getPagePath(pageName) {
   if (pageName === 'user-register') {
-    return null; // 登入/註冊頁在 index.html 裡，不須 fetch
+    return null; 
   }
+  
+  // 處理 user- 開頭
   if (pageName.startsWith('user-')) {
-    return `pages/user/${pageName}.html`;
+    const fileName = pageName.replace('user-', '');
+    return `pages/user/${fileName}.html`;
   }
+  
+  // 處理 admin- 開頭
   if (pageName.startsWith('admin-')) {
-    return `pages/admin/${pageName}.html`;
+    const fileName = pageName.replace('admin-', '');
+    return `pages/admin/${fileName}.html`;
   }
+  
   return `pages/${pageName}.html`;
 }
 
