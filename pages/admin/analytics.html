@@ -1,0 +1,69 @@
+<div id="page-admin-analytics" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-chart-pie"></i> 數據中心
+            </h2>
+        </div>
+
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="ana-overview">系統概況</button>
+            <button class="tab-btn" data-tab="ana-orders">歷史訂單</button>
+            <button class="tab-btn" data-tab="ana-errors">錯誤日誌</button>
+        </div>
+
+        <div id="ana-overview" class="tab-content active">
+            <div id="basicStats" class="stats-grid" style="margin-bottom: 20px;">
+                <div class="loading"><div class="spinner"></div>載入中...</div>
+            </div>
+            <div class="card-title" style="font-size: 1rem; margin-bottom: 10px;">
+                <i class="fas fa-trophy"></i> 消費排行
+            </div>
+            <div id="spendingRanking">
+                <div class="loading"><div class="spinner"></div>載入中...</div>
+            </div>
+            <div class="card-title" style="font-size: 1rem; margin: 20px 0 10px;">
+                <i class="fas fa-chart-line"></i> 近30天交易趨勢
+            </div>
+            <div id="trendChart">
+                <div class="loading"><div class="spinner"></div>載入中...</div>
+            </div>
+        </div>
+
+        <div id="ana-orders" class="tab-content">
+            <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; align-items: flex-end;">
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.8rem; color: var(--gray);">開始日期</label>
+                    <input type="date" id="orderStartDate" class="form-control" style="padding: 8px;">
+                </div>
+                <div style="flex: 1; min-width: 120px;">
+                    <label style="font-size: 0.8rem; color: var(--gray);">結束日期</label>
+                    <input type="date" id="orderEndDate" class="form-control" style="padding: 8px;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="loadTodayOrders(event)" style="flex: 1; min-width: 100px;">
+                    <i class="fas fa-search"></i> 查詢
+                </button>
+                <button class="btn btn-secondary" onclick="resetOrderDateFilter()" style="flex: 1; min-width: 100px;">
+                    <i class="fas fa-times"></i> 清除
+                </button>
+            </div>
+            <div class="form-text" style="margin-bottom: 15px;">
+                📌 日期範圍最多 7 天，不填則顯示最近 20 筆
+            </div>
+            <div id="ordersDisplay">
+                <div class="loading"><div class="spinner"></div>載入中...</div>
+            </div>
+        </div>
+
+        <div id="ana-errors" class="tab-content">
+            <button class="btn btn-secondary" onclick="viewErrorLogs(event)" style="margin-bottom: 15px;">
+                <i class="fas fa-sync"></i> 重新載入日誌
+            </button>
+            <div id="errorLogsDisplay">
+                <div class="message info">點擊上方按鈕載入錯誤紀錄</div>
+            </div>
+        </div>
+    </div>
+</div>
