@@ -1,7 +1,7 @@
 // ==================== navigation.js ====================
 // 導航控制模組
 // 依賴：state.js、ui.js、time.js、core.js
-// ==================================================
+// ====================================================
 
 function getSmartHomePage() {
   const isAdminMode = AppState.isAdminMode();
@@ -10,9 +10,9 @@ function getSmartHomePage() {
 
   if (isAdminMode) {
     if (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) {
-      return 'admin-restaurant';
+      return 'admin-operations';
     }
-    return 'admin-query';
+    return 'admin-analytics';
   }
 
   if (!studentId) {
@@ -23,21 +23,18 @@ function getSmartHomePage() {
   const hasRestaurant = !!AppState.currentRestaurantName();
 
   if (isOrderTime && hasRestaurant) {
-    return 'user-meal';
+    return 'user-order';
   }
-  return 'user-query';
+  return 'user-home';
 }
 
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
-  // 每次切頁都更新導覽列
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
 
   const adminPages = [
-    'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
-    'admin-query', 'admin-account', 'admin-analytics',
-    'admin-orders', 'admin-users'
+    'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
   ];
   if (adminPages.includes(pageName) && !AppState.isAdmin()) {
     showMessageModal('❌ 權限不足', '請先登入管理員');
@@ -89,44 +86,26 @@ async function navigateTo(pageName) {
     AppState.setCurrentPage(pageName);
 
     switch (pageName) {
-      case 'user-system':
-        if (typeof loadSystemInfo === 'function') loadSystemInfo();
-        break;
-      case 'user-query':
+      case 'user-home':
         if (typeof refreshUserBalance === 'function') refreshUserBalance();
         break;
-      case 'user-meal':
+      case 'user-order':
         if (typeof refreshMealInfo === 'function') refreshMealInfo();
         break;
       case 'user-account':
         if (typeof loadAccountPage === 'function') loadAccountPage();
         break;
-      case 'admin-restaurant':
+      case 'admin-operations':
         if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
         break;
-      case 'admin-batch-deduct':
+      case 'admin-finance':
         if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
-        break;
-      case 'admin-query':
-        if (typeof loadAdminQuery === 'function') loadAdminQuery();
-        break;
-      case 'admin-analytics':
-        if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
-        break;
-      case 'admin-orders':
-        if (typeof loadTodayOrders === 'function') loadTodayOrders();
         break;
       case 'admin-users':
         if (typeof initAdminUsersPage === 'function') initAdminUsersPage();
         break;
-      case 'user-meal-order':
-        if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
-        break;
-      case 'user-changepwd':
-        if (typeof loadChangePwdPage === 'function') loadChangePwdPage();
-        break;
-      case 'user-register':
-        if (typeof initRegisterPage === 'function') initRegisterPage();
+      case 'admin-analytics':
+        if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
         break;
     }
 
@@ -137,41 +116,45 @@ async function navigateTo(pageName) {
   }
 }
 
-function switchToAdminMode() {
-  if (!AppState.isAdmin()) {
-    if (typeof showAdminModal === 'function') showAdminModal();
-    return;
-  }
-  if (AppState.isAdminMode()) return;
+// 初始化頁面內的 Tabs 切換（事件委派）
+function initTabs() {
+  if (window._tabsBound) return;
+  window._tabsBound = true;
 
-  AppState.setAdminMode(true);  // ← 會觸發訂閱，自動更新 UI
-  window.navHidden = false;
+  document.addEventListener('click', function(e) {
+    const tabBtn = e.target.closest('.tab-btn');
+    if (!tabBtn) return;
 
-  const userNav = document.querySelector('.user-nav');
-  const adminNav = document.querySelector('.admin-nav');
-  if (userNav) userNav.classList.remove('hidden');
-  if (adminNav) adminNav.classList.remove('hidden');
+    const tabsNav = tabBtn.closest('.tabs-nav');
+    if (!tabsNav) return;
 
-  navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
+    tabsNav.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    tabBtn.classList.add('active');
+
+    const targetId = tabBtn.dataset.tab;
+    if (!targetId) return;
+
+    const container = tabsNav.parentElement;
+    const contents = container.querySelectorAll('.tab-content');
+    
+    contents.forEach(content => {
+      if (content.id === targetId) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+
+    window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId: targetId } }));
+  });
+
+  console.log('✅ Tabs 事件委派已綁定');
 }
 
-function switchToUserMode() {
-  if (!AppState.isAdminMode()) return;
-
-  AppState.setAdminMode(false);  // ← 會觸發訂閱，自動更新 UI
-  window.navHidden = false;
-
-  const userNav = document.querySelector('.user-nav');
-  const adminNav = document.querySelector('.admin-nav');
-  if (userNav) userNav.classList.remove('hidden');
-  if (adminNav) adminNav.classList.remove('hidden');
-
-  navigateTo(getSmartHomePage());
-}
+document.addEventListener('DOMContentLoaded', initTabs);
 
 window.getSmartHomePage = getSmartHomePage;
 window.navigateTo = navigateTo;
-window.switchToAdminMode = switchToAdminMode;
-window.switchToUserMode = switchToUserMode;
+window.initTabs = initTabs;
 
 console.log('🧭 導航模組已載入');
