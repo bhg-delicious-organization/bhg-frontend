@@ -1,0 +1,81 @@
+<div id="page-admin-finance" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-coins"></i> 財務中心
+            </h2>
+        </div>
+
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="fin-recharge">直接儲值</button>
+            <button class="tab-btn" data-tab="fin-deduct-single">單筆扣款</button>
+            <button class="tab-btn" data-tab="fin-deduct-batch">批量扣款</button>
+        </div>
+
+        <div id="fin-recharge" class="tab-content active">
+            <div class="form-group">
+                <label class="form-label">學號</label>
+                <input type="text" id="directRechargeUserId" class="form-control" placeholder="請輸入6位數學號" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">金額</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(100)">$100</button>
+                    <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(200)">$200</button>
+                    <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(500)">$500</button>
+                    <button class="btn btn-secondary" style="flex: 1; min-width: 70px;" onclick="setDirectAmount(1000)">$1000</button>
+                </div>
+                <input type="number" id="directRechargeAmount" class="form-control" placeholder="輸入金額">
+            </div>
+            <div class="form-group">
+                <label class="form-label">備註（選填）</label>
+                <input type="text" id="directRechargeNote" class="form-control" placeholder="例如：班費、獎學金...">
+            </div>
+            <button class="btn btn-success" onclick="directRecharge(event)">
+                <i class="fas fa-check-circle"></i> 確認直接儲值
+            </button>
+            <div id="directRechargeResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div id="fin-deduct-single" class="tab-content">
+            <div class="form-group">
+                <label class="form-label">被扣款者學號</label>
+                <input type="text" id="deductStudentId" class="form-control" placeholder="請輸入學號" maxlength="6" inputmode="numeric" pattern="\d{6}" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">扣款金額</label>
+                <input type="number" id="deductAmount" class="form-control" placeholder="請輸入金額">
+            </div>
+            <button class="btn btn-danger" onclick="deductBalance(event)">
+                <i class="fas fa-minus-circle"></i> 確認扣款
+            </button>
+            <div id="deductResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <div id="fin-deduct-batch" class="tab-content">
+            <div class="form-group">
+                <label class="form-label">今日餐廳</label>
+                <div id="batchRestaurantName" style="padding: 10px; background: #f0f9ff; border-radius: 8px; border-left: 4px solid var(--secondary);">
+                    載入中...
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">選擇分類</label>
+                <select id="batchCategorySelect" class="form-control" onchange="showCategoryOrderers()">
+                    <option value="">請先選擇分類</option>
+                </select>
+            </div>
+            <div id="batchOrderersList" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 8px; max-height: 200px; overflow-y: auto;">
+            </div>
+            <div class="form-group">
+                <label class="form-label">每個餐點扣款金額</label>
+                <input type="number" id="batchDeductAmount" class="form-control" placeholder="請輸入金額">
+                <div class="form-text">例如輸入 10，則每個訂購者會扣 10 × 訂購數量</div>
+            </div>
+            <button class="btn btn-warning" onclick="confirmBatchDeductByCategory()">
+                <i class="fas fa-calculator"></i> 執行批量扣款
+            </button>
+            <div id="batchDeductResult" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+</div>
