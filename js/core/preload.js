@@ -313,11 +313,8 @@ function getCachedRestaurantMenu() {
 
 async function preloadAllPages() {
   const pages = [
-    'user-query', 'user-meal',
-    'user-account', 'user-system', 'user-changepwd', 'user-meal-order',
-    'admin-restaurant', 'admin-batch-deduct', 'admin-giftcode',
-    'admin-query', 'admin-account', 'admin-analytics',
-    'admin-orders', 'admin-users'
+    'user-home', 'user-order', 'user-account',
+    'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
   ];
 
   const pageContent = document.getElementById('pageContent');
