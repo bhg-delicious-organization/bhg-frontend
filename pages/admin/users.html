@@ -1,0 +1,50 @@
+<div id="page-admin-users" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-users-cog"></i> 用戶管理
+            </h2>
+        </div>
+
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="usr-query">餘額查詢</button>
+            <button class="tab-btn" data-tab="usr-change-id">更改學號</button>
+        </div>
+
+        <div id="usr-query" class="tab-content active">
+            <div class="button-group" style="margin-bottom: 15px;">
+                <button class="btn btn-secondary" onclick="getAllBalances(event)">查詢全體餘額</button>
+                <button class="btn btn-warning" onclick="getLowBalanceUsers(event)">查詢餘額低於100</button>
+            </div>
+            <div class="button-group" style="margin-bottom: 20px;">
+                <button class="btn btn-info" onclick="copyAllUsersList(event)">
+                    <i class="fas fa-copy"></i> 複製全體名單
+                </button>
+                <button class="btn btn-info" onclick="copyLowBalanceUsersList(event)">
+                    <i class="fas fa-copy"></i> 複製低餘額名單
+                </button>
+            </div>
+            <div id="adminQueryResult"></div>
+        </div>
+
+        <div id="usr-change-id" class="tab-content">
+            <div class="message warning" style="margin-bottom: 16px;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>注意：</strong>此操作將會變更使用者在所有系統中的學號，包括交易紀錄和訂單歷史。
+            </div>
+            <div class="form-group">
+                <label class="form-label">原學號</label>
+                <input type="text" id="changeOldUserId" class="form-control" placeholder="請輸入原6位數學號" maxlength="6" required inputmode="numeric" pattern="\d{6}" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label class="form-label">新學號</label>
+                <input type="text" id="changeNewUserId" class="form-control" placeholder="請輸入新6位數學號" maxlength="6" required inputmode="numeric" pattern="\d{6}" autocomplete="off">
+                <span class="form-text">新學號不能與現有學號重複</span>
+            </div>
+            <button type="button" class="btn btn-warning" onclick="confirmChangeUserId()">
+                <i class="fas fa-sync-alt"></i> 確認更改學號
+            </button>
+            <div id="changeUserIdResult" style="margin-top: 16px;"></div>
+        </div>
+    </div>
+</div>
