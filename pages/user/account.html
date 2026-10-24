@@ -1,0 +1,71 @@
+<div id="page-user-account" class="page-container">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-user-circle"></i> 我的帳號
+            </h2>
+            <button class="btn btn-info" onclick="startTutorial('account')" style="width: auto; padding: 6px 12px; margin: 0; font-size: 0.8rem;">
+                <i class="fas fa-graduation-cap"></i> 教學
+            </button>
+        </div>
+
+        <div id="accountLoggedIn">
+            <div class="form-group">
+                <label class="form-label">學號</label>
+                <div class="form-control" id="accountStudentId" style="background: #f5f5f5;">載入中...</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">姓名</label>
+                <div class="form-control" id="accountUserName" style="background: #f5f5f5;">載入中...</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">總消費金額</label>
+                <div class="form-control" id="accountTotalSpent" style="background: #f5f5f5;">載入中...</div>
+            </div>
+        </div>
+
+        <!-- Tabs 內部導覽 -->
+        <div class="tabs-nav" style="margin-top: 20px;">
+            <button class="tab-btn active" data-tab="acc-pwd">修改密碼</button>
+            <button class="tab-btn" data-tab="acc-sys">系統資訊</button>
+        </div>
+
+        <!-- Tab 1: 修改密碼 -->
+        <div id="acc-pwd" class="tab-content active">
+            <div class="form-group">
+                <label class="form-label">原密碼</label>
+                <input type="password" id="changepwdOldPassword" class="form-control" placeholder="請輸入原密碼" inputmode="text" autocomplete="current-password">
+            </div>
+            <div class="form-group">
+                <label class="form-label">新密碼</label>
+                <input type="password" id="changepwdNewPassword" class="form-control" placeholder="請輸入新密碼 (至少6碼)" minlength="6" inputmode="text" autocomplete="new-password">
+            </div>
+            <div class="form-group">
+                <label class="form-label">確認新密碼</label>
+                <input type="password" id="changepwdConfirmPassword" class="form-control" placeholder="請再次輸入新密碼" minlength="6" inputmode="text" autocomplete="new-password">
+            </div>
+            <button class="btn btn-primary" onclick="submitChangePassword()">
+                <i class="fas fa-save"></i> 確認修改密碼
+            </button>
+            <div id="changepwdResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Tab 2: 系統資訊 -->
+        <div id="acc-sys" class="tab-content">
+            <div id="systemInfo" class="list-item" style="flex-direction: column; align-items: flex-start;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>載入中...</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin: 20px 0; border-top: 1px solid #eee;"></div>
+
+        <button class="btn btn-secondary" id="accountLogoutBtn" onclick="logoutFromAccount()" style="width: 100%;">
+            <i class="fas fa-sign-out-alt"></i> 登出
+        </button>
+    </div>
+</div>
