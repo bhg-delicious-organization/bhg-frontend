@@ -28,11 +28,31 @@ function getSmartHomePage() {
   return 'user-home';
 }
 
+/**
+ * 根據頁面名稱決定 HTML 路徑
+ * user-*   -> pages/user/*.html
+ * admin-*  -> pages/admin/*.html
+ * 其他     -> pages/*.html
+ */
+function getPagePath(pageName) {
+  if (pageName === 'user-register') {
+    return null; // 登入/註冊頁在 index.html 裡，不須 fetch
+  }
+  if (pageName.startsWith('user-')) {
+    return `pages/user/${pageName}.html`;
+  }
+  if (pageName.startsWith('admin-')) {
+    return `pages/admin/${pageName}.html`;
+  }
+  return `pages/${pageName}.html`;
+}
+
 async function navigateTo(pageName) {
   console.log('📄 導航到:', pageName);
 
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
 
+  // 管理員頁面白名單
   const adminPages = [
     'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
   ];
@@ -42,6 +62,7 @@ async function navigateTo(pageName) {
     return;
   }
 
+  // 更新底部導覽列 active 狀態
   const isAdminModeNow = AppState.isAdminMode();
   const activeNav = isAdminModeNow ? '.admin-nav' : '.user-nav';
   document.querySelectorAll(`${activeNav} .nav-item`).forEach(item => {
@@ -50,12 +71,14 @@ async function navigateTo(pageName) {
   const activeItem = document.querySelector(`${activeNav} [data-page="${pageName}"]`);
   if (activeItem) activeItem.classList.add('active');
 
+  // 隱藏所有頁面
   document.querySelectorAll('.page-container').forEach(page => {
     page.classList.remove('active');
   });
 
   let targetPage = document.getElementById('page-' + pageName);
 
+  // 若頁面不存在，則動態載入
   if (!targetPage) {
     const pageContent = document.getElementById('pageContent');
     if (!pageContent) {
@@ -63,9 +86,25 @@ async function navigateTo(pageName) {
       return;
     }
 
+    // 處理 user-register（在 index.html 中已存在）
+    if (pageName === 'user-register') {
+      const registerPage = document.getElementById('page-user-register');
+      if (registerPage) {
+        registerPage.classList.add('active');
+        AppState.setCurrentPage(pageName);
+      }
+      return;
+    }
+
+    const path = getPagePath(pageName);
+    if (!path) {
+      console.error('❌ 無法取得頁面路徑:', pageName);
+      return;
+    }
+
     try {
-      console.log('📥 載入頁面片段:', pageName);
-      const response = await fetch(`pages/${pageName}.html`);
+      console.log('📥 載入頁面片段:', path);
+      const response = await fetch(path);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -85,6 +124,7 @@ async function navigateTo(pageName) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
+    // 根據頁面執行對應的初始化函數
     switch (pageName) {
       case 'user-home':
         if (typeof refreshUserBalance === 'function') refreshUserBalance();
@@ -116,7 +156,8 @@ async function navigateTo(pageName) {
   }
 }
 
-// 初始化頁面內的 Tabs 切換（事件委派）
+// ==================== Tabs 事件委派 ====================
+
 function initTabs() {
   if (window._tabsBound) return;
   window._tabsBound = true;
@@ -157,4 +198,4 @@ window.getSmartHomePage = getSmartHomePage;
 window.navigateTo = navigateTo;
 window.initTabs = initTabs;
 
-console.log('🧭 導航模組已載入');
+console.log('🧭 導航模組已載入（資料夾路徑版）');
