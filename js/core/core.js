@@ -15,7 +15,6 @@ async function checkSupabaseAdminLogin() {
       return false;
     }
 
-    // 檢查 session 是否過期
     const expiresAt = session.expires_at;
     if (expiresAt && expiresAt * 1000 < Date.now()) {
       console.warn('⚠️ 管理員 session 已過期，登出');
@@ -23,7 +22,6 @@ async function checkSupabaseAdminLogin() {
       return false;
     }
 
-    // 確認在 admins 表中
     const { data } = await sb
       .from('admins')
       .select('auth_uid')
@@ -48,12 +46,10 @@ async function checkUserSession() {
     const sb = await initSupabase();
     const { data: { session } } = await sb.auth.getSession();
 
-    // 1. 沒有 session → 未登入
     if (!session || !session.user) {
       return { loggedIn: false };
     }
 
-    // 2. session 過期 → 登出
     const expiresAt = session.expires_at;
     if (expiresAt && expiresAt * 1000 < Date.now()) {
       console.warn('⚠️ Session 已過期，登出');
@@ -61,7 +57,6 @@ async function checkUserSession() {
       return { loggedIn: false };
     }
 
-    // 3. 從 email 解析學號
     const email = session.user.email || '';
     const studentId = email.split('@')[0];
 
@@ -69,7 +64,6 @@ async function checkUserSession() {
       return { loggedIn: false };
     }
 
-    // 4. 確認 users 表有對應資料
     const { data: userData, error: userError } = await sb
       .from('users')
       .select('user_id, name')
@@ -82,7 +76,6 @@ async function checkUserSession() {
       return { loggedIn: false, reason: 'no_user_data' };
     }
 
-    // 5. 全部通過
     AppState.setCurrentStudentId(studentId);
     return { loggedIn: true, studentId, name: userData.name };
 
@@ -123,7 +116,6 @@ function updateNavigationVisibility() {
 
 // ==================== Enter 鍵綁定（事件委派版） ====================
 
-// 定義每個輸入框按下 Enter 後要執行的動作
 const ENTER_KEY_ACTIONS = {
   // 使用者端
   'queryStudentId': () => { if (typeof queryUserInfo === 'function') queryUserInfo(); },
@@ -143,25 +135,18 @@ const ENTER_KEY_ACTIONS = {
   'adminPassword': () => { if (typeof adminLogin === 'function') adminLogin(); },
 };
 
-/**
- * 初始化全域 Enter 鍵監聽（只會執行一次）
- */
 function setupGlobalEnterKey() {
-  if (window._globalEnterKeyBound) return; // 防止重複綁定
+  if (window._globalEnterKeyBound) return;
   window._globalEnterKeyBound = true;
 
   document.addEventListener('keydown', function(e) {
-    // 只處理 Enter 鍵
     if (e.key !== 'Enter') return;
-
-    // 避免在 textarea 中誤觸（例如備註欄位）
     if (e.target.tagName === 'TEXTAREA') return;
 
-    // 根據觸發元素的 ID 尋找對應動作
     const action = ENTER_KEY_ACTIONS[e.target.id];
     
     if (action) {
-      e.preventDefault(); // 阻止表單預設的 submit 行為
+      e.preventDefault();
       action();
     }
   });
@@ -370,7 +355,6 @@ async function refreshUserData(studentId) {
 async function initApp() {
   console.log('🚀 系統初始化開始');
 
-  // 1. 啟動全域 Enter 鍵事件委派
   setupGlobalEnterKey();
 
   if (typeof cleanupOldRestaurantCache === 'function') {
@@ -389,11 +373,6 @@ async function initApp() {
     form.addEventListener('submit', e => { e.preventDefault(); return false; });
   });
 
-  const switchToAdminBtn = document.getElementById('switchToAdminBtn');
-  const switchToUserBtn = document.getElementById('switchToUserBtn');
-  if (switchToAdminBtn) switchToAdminBtn.addEventListener('click', switchToAdminMode);
-  if (switchToUserBtn) switchToUserBtn.addEventListener('click', switchToUserMode);
-
   const toggleBtn = document.getElementById('navToggleBtn');
   if (toggleBtn && !toggleBtn._navBound) {
     toggleBtn.addEventListener('click', toggleNav);
@@ -403,7 +382,6 @@ async function initApp() {
   initAutoHideNav();
   AppState.init();
 
-  // 訂閱 AppState 變更
   AppState.subscribe('studentId', () => updateNavigationVisibility());
   AppState.subscribe('admin', () => updateNavigationVisibility());
   AppState.subscribe('adminMode', () => updateNavigationVisibility());
@@ -419,7 +397,6 @@ async function initApp() {
   if (!isAdminLoggedIn) {
     userSession = await checkUserSession();
   
-    // Sprint 2.5：session 無效時，清掉 localStorage 殘留的學號
     if (!userSession.loggedIn) {
       const staleStudentId = localStorage.getItem('currentStudentId');
       if (staleStudentId) {
@@ -450,7 +427,7 @@ async function initApp() {
     AppState.setAdminMode(true);
     updateNavigationVisibility();
 
-    navigateTo(isAdminRestaurantTime() ? 'admin-restaurant' : 'admin-query');
+    navigateTo(isAdminRestaurantTime() ? 'admin-operations' : 'admin-analytics');
 
     setTimeout(() => preloadAllPages(), 3000);
 
