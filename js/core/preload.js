@@ -323,21 +323,23 @@ async function preloadAllPages() {
   console.log('📚 開始預載入所有頁面...');
 
   const results = await Promise.allSettled(
-    pages.map(name =>
-      fetch(`pages/${name}.html`)
+    pages.map(name => {
+      const path = getPagePath(name);
+      if (!path) return Promise.resolve({ name, html: null });
+      return fetch(path)
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.text();
         })
-        .then(html => ({ name, html }))
-    )
+        .then(html => ({ name, html }));
+    })
   );
 
   let successCount = 0;
   results.forEach(result => {
     if (result.status === 'fulfilled') {
       const { name, html } = result.value;
-      if (!document.getElementById('page-' + name)) {
+      if (html && !document.getElementById('page-' + name)) {
         pageContent.insertAdjacentHTML('beforeend', html);
         successCount++;
       }
