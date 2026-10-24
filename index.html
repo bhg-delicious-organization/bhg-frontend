@@ -209,68 +209,43 @@
         <i class="fas fa-chevron-down"></i>
     </button>
 
+    <!-- ==================== 使用者導覽列（3 項） ==================== -->
     <nav class="bottom-nav user-nav" style="display: none;">
-        <a href="#" class="nav-item" data-page="user-query">
-            <i class="fas fa-search-dollar nav-icon"></i>
-            <span>查詢</span>
+        <a href="#" class="nav-item" data-page="user-home">
+            <i class="fas fa-home nav-icon"></i>
+            <span>首頁</span>
         </a>
-        <a href="#" class="nav-item" data-page="user-meal">
+        <a href="#" class="nav-item" data-page="user-order">
             <i class="fas fa-utensils nav-icon"></i>
-            <span>訂飯</span>
+            <span>訂餐</span>
         </a>
         <a href="#" class="nav-item" data-page="user-account">
             <i class="fas fa-user-circle nav-icon"></i>
             <span>帳號</span>
         </a>
-        <a href="#" class="nav-item" data-page="user-system">
-            <i class="fas fa-info-circle nav-icon"></i>
-            <span>資訊</span>
-        </a>
-        <a href="#" class="nav-item" id="switchToAdminBtn" style="color: var(--success);">
-            <i class="fas fa-user-shield nav-icon"></i>
-            <span>管理</span>
-        </a>
     </nav>
 
+    <!-- ==================== 管理員導覽列（4 項） ==================== -->
     <nav class="bottom-nav admin-nav" style="display: none;">
-        <a href="#" class="nav-item" data-page="admin-restaurant">
+        <a href="#" class="nav-item" data-page="admin-operations">
             <i class="fas fa-store nav-icon"></i>
-            <span>餐廳</span>
+            <span>營運</span>
         </a>
-        <a href="#" class="nav-item" data-page="admin-batch-deduct">
-            <i class="fas fa-shopping-cart nav-icon"></i>
-            <span>扣款</span>
-        </a>
-        <a href="#" class="nav-item" data-page="admin-giftcode">
-            <i class="fas fa-gift nav-icon"></i>
-            <span>儲值</span>
-        </a>
-        <a href="#" class="nav-item" data-page="admin-query">
-            <i class="fas fa-chart-line nav-icon"></i>
-            <span>查詢</span>
-        </a>
-        <a href="#" class="nav-item" data-page="admin-account">
-            <i class="fas fa-key nav-icon"></i>
-            <span>帳號</span>
-        </a>
-        <a href="#" class="nav-item" data-page="admin-analytics">
-            <i class="fas fa-chart-line nav-icon"></i>
-            <span>統計</span>
-        </a>
-        <a href="#" class="nav-item" data-page="admin-orders">
-            <i class="fas fa-clipboard-list nav-icon"></i>
-            <span>訂單</span>
+        <a href="#" class="nav-item" data-page="admin-finance">
+            <i class="fas fa-coins nav-icon"></i>
+            <span>財務</span>
         </a>
         <a href="#" class="nav-item" data-page="admin-users">
-            <i class="fas fa-user-plus nav-icon"></i>
+            <i class="fas fa-users-cog nav-icon"></i>
             <span>用戶</span>
         </a>
-        <a href="#" class="nav-item" id="switchToUserBtn" style="color: var(--danger);">
-            <i class="fas fa-user-shield nav-icon"></i>
-            <span>管理</span>
+        <a href="#" class="nav-item" data-page="admin-analytics">
+            <i class="fas fa-chart-pie nav-icon"></i>
+            <span>數據</span>
         </a>
     </nav>
 
+    <!-- ==================== Modals ==================== -->
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -348,6 +323,7 @@
         </div>
     </div>
 
+    <!-- ==================== Scripts ==================== -->
     <script src="api.js" defer></script>
     <script src="js/core/supabase.js" defer></script>
     <script src="js/core/state.js" defer></script>
