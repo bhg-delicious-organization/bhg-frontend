@@ -57,17 +57,11 @@ async function checkUserSession() {
       return { loggedIn: false };
     }
 
-    const email = session.user.email || '';
-    const studentId = email.split('@')[0];
-
-    if (!/^\d{6}$/.test(studentId)) {
-      return { loggedIn: false };
-    }
-
+    // ✅ 改用 auth_uid 查詢，避免改學號後 session email 與 users.user_id 不同步
     const { data: userData, error: userError } = await sb
       .from('users')
       .select('user_id, name')
-      .eq('user_id', studentId)
+      .eq('auth_uid', session.user.id)
       .maybeSingle();
 
     if (userError || !userData) {
@@ -75,6 +69,8 @@ async function checkUserSession() {
       await sb.auth.signOut();
       return { loggedIn: false, reason: 'no_user_data' };
     }
+
+    const studentId = userData.user_id;   // 由 DB 決定，不再從 email 推
 
     AppState.setCurrentStudentId(studentId);
     return { loggedIn: true, studentId, name: userData.name };
