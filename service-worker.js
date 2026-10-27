@@ -6,8 +6,8 @@ const SUPABASE_URL = 'https://wvvmnombzkkrtxxxucqe.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_oK9kGQMbcBdGyoerrrfDzQ_yWyRZcQf';
 
 // 預設版本
-let VERSION = '3.8.0'; 
-let CACHE_NAME = 'bhg-cache-v3.8.0';
+let VERSION = '4.0.3'; 
+let CACHE_NAME = 'bhg-cache-v4.0.3';
 
 console.log(`📦 Service Worker 啟動（版本: ${VERSION}）`);
 
