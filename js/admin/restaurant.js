@@ -1,7 +1,7 @@
 // ==================== restaurant.js ====================
-// 管理員餐廳管理模組（Supabase 版）
+// 管理員餐廳管理模組（狀態機版：open / closed）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js
-// ==================================================
+// ====================================================
 
 function setEndTimeQuick(time) {
   const input = document.getElementById('orderEndTimeInput');
@@ -19,10 +19,13 @@ async function loadTodayRestaurantStatus() {
   const statusDiv = document.getElementById('todayRestaurantStatus');
   const selectContainer = document.getElementById('restaurantSelectContainer');
   const statusText = document.getElementById('todayRestaurantText');
+  const cutoffBtn = document.querySelector('#ops-cutoff .btn-danger');
+  const cutoffResult = document.getElementById('cutOffResult');
 
   if (!statusDiv || !statusText) return;
 
   await ensureTimeLimitsLoaded();
+  await ensureTodayRestaurantLoaded();
 
   try {
     const sb = await initSupabase();
@@ -34,8 +37,39 @@ async function loadTodayRestaurantStatus() {
       .maybeSingle();
 
     const restaurant = setting?.value || '';
+    const todayStatus = AppState.todayStatus();
 
-    if (restaurant) {
+    if (todayStatus === 'closed' && restaurant) {
+      // 已截止，顯示歷史資訊，允許設定新餐廳
+      let endTimeStr = '10:00';
+      try {
+        const { data: endSetting } = await sb
+          .from('system_settings')
+          .select('value')
+          .eq('key', 'today_order_end')
+          .maybeSingle();
+        if (endSetting?.value) {
+          endTimeStr = formatTimeStr(parseInt(endSetting.value));
+        }
+      } catch (e) {
+        console.warn('讀取截止時間失敗:', e);
+      }
+
+      statusText.innerHTML = `
+        ✅ 今日餐廳：<strong>${escapeHtml(restaurant)}</strong><br>
+        ⏰ 截止時間：<strong>${endTimeStr}</strong><br>
+        🔒 <span style="color: var(--danger);">已截止，可設定新餐廳</span>
+      `;
+      statusDiv.style.backgroundColor = '#fef2f2';
+      statusDiv.style.borderLeftColor = '#ef4444';
+      if (selectContainer) selectContainer.style.display = 'block';
+      if (cutoffBtn) cutoffBtn.style.display = 'none';
+      if (cutoffResult) cutoffResult.innerHTML = '';
+
+      loadRestaurantOptions();
+
+    } else if (todayStatus === 'open' && restaurant) {
+      // 開放點餐中
       let endTimeStr = '10:00';
       try {
         const { data: endSetting } = await sb
@@ -54,11 +88,15 @@ async function loadTodayRestaurantStatus() {
       statusDiv.style.backgroundColor = '#f0fdf4';
       statusDiv.style.borderLeftColor = '#10b981';
       if (selectContainer) selectContainer.style.display = 'none';
+      if (cutoffBtn) cutoffBtn.style.display = 'block';
+
     } else {
+      // 尚未設定
       statusText.innerHTML = `⏳ 今日餐廳尚未設定，請選擇：`;
       statusDiv.style.backgroundColor = '#fff7ed';
       statusDiv.style.borderLeftColor = '#f97316';
       if (selectContainer) selectContainer.style.display = 'block';
+      if (cutoffBtn) cutoffBtn.style.display = 'none';
       loadRestaurantOptions();
     }
   } catch (error) {
@@ -136,7 +174,6 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
   try {
     const sb = await initSupabase();
 
-    // 用 RPC 原子寫入
     const { data, error } = await sb.rpc('set_today_restaurant', {
       p_restaurant: restaurantName,
       p_order_end: String(orderEndTime)
@@ -152,6 +189,7 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
 
     // 更新前端狀態
     AppState.setCurrentRestaurantName(restaurantName);
+    AppState.setTodayStatus('open');
     TIME.ORDER_END = parseInt(orderEndTime);
 
     if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
@@ -161,7 +199,6 @@ async function doSetTodayRestaurant(restaurantName, orderEndTime, event) {
       resultDiv.innerHTML = `<div class="message success">✅ 今日餐廳「${escapeHtml(restaurantName)}」設定成功，截止時間 ${formatTimeStr(orderEndTime)}</div>`;
     }
 
-    // 發通知（走 GAS）
     try {
       await fetch('https://script.google.com/macros/s/AKfycbwGpChoVd0K6InXzM6T962y0y5bLcVwNCJO0uy1RIcsyrMmz7-q5CMcNlh_9qDZfDPXUA/exec', {
         method: 'POST',
@@ -319,9 +356,13 @@ async function copyRestaurantStatsList(event) {
 }
 
 async function cutOffOrder() {
-  const btn = document.querySelector('#page-admin-restaurant .btn-warning');
+  if (AppState.todayStatus() !== 'open') {
+    showMessageModal('❌ 無法截止', '今日訂餐尚未開放或已經截止');
+    return;
+  }
 
-  // 先查今天的訂餐狀況
+  const btn = document.querySelector('#ops-cutoff .btn-danger');
+
   if (btn) setButtonLoading(btn, true);
 
   let stats = null;
@@ -330,7 +371,8 @@ async function cutOffOrder() {
 
     const { data: meals, error } = await sb
       .from('today_meals')
-      .select('user_id, amount, price');
+      .select('user_id, amount, price')
+      .eq('is_archived', false);
 
     if (error) throw error;
 
@@ -340,7 +382,6 @@ async function cutOffOrder() {
       return;
     }
 
-    // 計算人數與總金額
     const userIds = new Set();
     let totalAmount = 0;
     meals.forEach(m => {
@@ -363,7 +404,6 @@ async function cutOffOrder() {
 
   if (btn) setButtonLoading(btn, false);
 
-  // 組合確認訊息
   const restaurantName = AppState.currentRestaurantName() || '未知餐廳';
   const confirmMsg =
     `餐廳：${restaurantName}\n` +
@@ -383,7 +423,7 @@ async function cutOffOrder() {
 }
 
 async function executeCutOffOrder() {
-  const btn = document.querySelector('#page-admin-restaurant .btn-warning');
+  const btn = document.querySelector('#ops-cutoff .btn-danger');
   if (btn) setButtonLoading(btn, true);
 
   const resultDiv = document.getElementById('cutOffResult');
@@ -413,6 +453,8 @@ async function executeCutOffOrder() {
     }
     showMessageModal('✅ 截止訂餐', msg);
 
+    // 更新前端狀態
+    AppState.setTodayStatus('closed');
     AppState.setCurrentRestaurantName('');
 
     if (typeof clearTodayRestaurantCache === 'function') clearTodayRestaurantCache();
@@ -433,4 +475,4 @@ window.showTodayRestaurantStats = showTodayRestaurantStats;
 window.copyRestaurantStatsList = copyRestaurantStatsList;
 window.cutOffOrder = cutOffOrder;
 
-console.log('🏪 餐廳模組已載入（Supabase 版 + 原子寫入）');
+console.log('🏪 餐廳模組已載入（狀態機版）');
