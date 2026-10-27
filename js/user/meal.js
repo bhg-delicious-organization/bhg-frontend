@@ -1,14 +1,14 @@
 // ==================== meal.js ====================
-// 使用者訂飯模組（Supabase 版 + 自動載入 + 星星評分 + 禁用說明）
+// 使用者訂飯模組（狀態機版：open / closed）
 // 依賴：supabase.js、state.js、ui.js、time.js、common.js、core.js、navigation.js
-// ==================================================
+// ====================================================
 
 async function loadMealInfo(event) {
   let btn = null;
   if (event && event.currentTarget) {
     btn = event.currentTarget;
   } else {
-    btn = document.querySelector('#page-user-meal .btn-primary');
+    btn = document.querySelector('#page-user-order .btn-primary');
   }
 
   const studentId = AppState.currentStudentId();
@@ -24,6 +24,7 @@ async function loadMealInfo(event) {
   if (btn) setButtonLoading(btn, true);
 
   await ensureTimeLimitsLoaded();
+  await ensureTodayRestaurantLoaded();
 
   try {
     const sb = await initSupabase();
@@ -42,20 +43,14 @@ async function loadMealInfo(event) {
       return;
     }
 
-    const { data: restaurantData } = await sb
-      .from('system_settings')
-      .select('value')
-      .eq('key', 'today_restaurant')
-      .maybeSingle();
-
-    const hasRestaurant = !!(restaurantData && restaurantData.value);
+    const todayStatus = AppState.todayStatus();
+    const hasRestaurant = !!AppState.currentRestaurantName();
+    const isOrderTime = isUserOrderTime();
+    const canOrder = hasRestaurant && isOrderTime && todayStatus === 'open';
 
     await updateMealBalanceDisplay(userData.balance);
 
     // ========== 點餐按鈕狀態 ==========
-    const isOrderTime = isUserOrderTime();
-    const canOrder = hasRestaurant && isOrderTime;
-
     const mealSelectionDiv = document.getElementById('mealSelection');
     if (mealSelectionDiv) {
       mealSelectionDiv.style.display = 'flex';
@@ -83,7 +78,9 @@ async function loadMealInfo(event) {
           let hintText = '';
           const timeRange = getOrderTimeRange();
 
-          if (!hasRestaurant && !isOrderTime) {
+          if (todayStatus === 'closed') {
+            hintText = `🔒 今日訂餐已截止，無法再點餐`;
+          } else if (!hasRestaurant && !isOrderTime) {
             hintText = `⏰ 點餐時間為 ${timeRange}<br>🍽️ 今日餐廳尚未設定`;
           } else if (!hasRestaurant) {
             hintText = `🍽️ 今日餐廳尚未設定，請稍後再試`;
@@ -102,7 +99,7 @@ async function loadMealInfo(event) {
     }
     // ========== 點餐按鈕狀態結束 ==========
 
-    if (isOrderTime || isOrderEnded()) {
+    if (todayStatus === 'closed' || isOrderTime || isOrderEnded()) {
       await loadUserTodayMeals(studentId);
     } else {
       const display = document.getElementById('todayMealDisplay');
@@ -140,11 +137,13 @@ async function updateMealBalanceDisplay(balance) {
   try {
     const sb = await initSupabase();
     const studentId = AppState.currentStudentId();
+    const todayStatus = AppState.todayStatus();
 
     const { data: meals, error } = await sb
       .from('today_meals')
       .select('amount, price')
-      .eq('user_id', studentId);
+      .eq('user_id', studentId)
+      .eq('is_archived', todayStatus === 'closed');
 
     let currentTotal = 0;
     if (!error && meals) {
@@ -175,14 +174,17 @@ async function loadUserTodayMeals(studentId) {
   const orderStart = TIME.ORDER_START;
   const orderEnd = TIME.ORDER_END;
   const ratingTime = isRatingTime();
+  const todayStatus = AppState.todayStatus();
+  const isArchived = todayStatus === 'closed';
 
   try {
     const sb = await initSupabase();
 
     const { data: meals, error } = await sb
       .from('today_meals')
-      .select('slot, restaurant, category, meal_name, amount, price, rated')
+      .select('slot, restaurant, category, meal_name, amount, price, rated, is_archived')
       .eq('user_id', studentId)
+      .eq('is_archived', isArchived)
       .order('slot');
 
     const container = document.getElementById('todayMealDisplay');
@@ -192,14 +194,20 @@ async function loadUserTodayMeals(studentId) {
 
     const timeRange = getOrderTimeRange();
 
-    if (currentTime < orderStart) {
+    if (todayStatus === 'closed') {
+      html += `<p style="color: var(--success); margin-bottom: 8px; font-size: 0.9rem;">
+        <i class="fas fa-check-circle"></i> 今日訂餐已截止，以下是您的餐點明細。
+      </p>`;
+    } else if (currentTime < orderStart) {
       html += `<p style="color: var(--gray);">🕐 點餐時間為 ${timeRange}，尚未開始</p>`;
       container.innerHTML = html;
       return;
     }
 
     if (error || !meals || meals.length === 0) {
-      if (currentTime >= orderEnd) {
+      if (todayStatus === 'closed') {
+        html += `<p style="color: var(--gray);">今日無訂餐紀錄</p>`;
+      } else if (currentTime >= orderEnd) {
         html += `<p style="color: var(--gray);">⏰ 今日訂餐已截止<br>今日無訂餐</p>`;
       } else {
         html += '<p>今日尚未點餐</p>';
@@ -208,20 +216,20 @@ async function loadUserTodayMeals(studentId) {
       return;
     }
 
-    if (currentTime >= orderEnd) {
+    if (todayStatus === 'open' && currentTime >= orderEnd) {
       html += `<p style="color: var(--danger); margin-bottom: 8px;">⏰ 今日訂餐已截止</p>`;
     }
 
-    if (ratingTime) {
+    if (ratingTime && todayStatus === 'open') {
       html += `<p style="color: var(--success); margin-bottom: 8px; font-size: 0.85rem;">
         <i class="fas fa-star"></i> 評分時間 12:00-16:00，為喜歡的餐點評分吧！
       </p>`;
-    } else if (currentTime < TIME.RATING_START) {
+    } else if (todayStatus === 'open' && currentTime < TIME.RATING_START) {
       const remaining = getRatingTimeRemaining();
       html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
         <i class="fas fa-clock"></i> 評分將於 ${formatTimeRemaining(remaining)} 後開始
       </p>`;
-    } else if (currentTime >= TIME.RATING_END) {
+    } else if (todayStatus === 'open' && currentTime >= TIME.RATING_END) {
       html += `<p style="color: var(--gray); margin-bottom: 8px; font-size: 0.85rem;">
         <i class="fas fa-clock"></i> 今日評分已結束，下次再來評分吧！
       </p>`;
@@ -236,7 +244,7 @@ async function loadUserTodayMeals(studentId) {
       html += `<div><strong>${escapeHtml(meal.meal_name)}</strong> x${meal.amount}</div>`;
       html += `<div style="font-size: 0.8rem; color: var(--gray);">${escapeHtml(meal.restaurant)} - ${escapeHtml(meal.category)}</div>`;
 
-      if (ratingTime) {
+      if (ratingTime && todayStatus === 'open') {
         html += renderStarRating(meal.slot, currentRating);
       } else if (currentRating > 0) {
         html += `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--success);">
@@ -250,7 +258,7 @@ async function loadUserTodayMeals(studentId) {
     html += '</ul>';
     container.innerHTML = html;
 
-    if (ratingTime) {
+    if (ratingTime && todayStatus === 'open') {
       container.querySelectorAll('.star-rating').forEach(starContainer => {
         const slot = parseInt(starContainer.dataset.slot);
         bindStarRating(starContainer, studentId, slot);
@@ -332,6 +340,12 @@ async function enterMealOrderMode(event) {
   }
 
   await ensureTimeLimitsLoaded();
+  await ensureTodayRestaurantLoaded();
+
+  if (AppState.todayStatus() !== 'open') {
+    showMessageModal('❌ 無法點餐', '今日訂餐已截止');
+    return;
+  }
 
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
@@ -359,7 +373,7 @@ async function enterMealOrderMode(event) {
     if (btn) setButtonLoading(btn, false);
 
     if (restaurantData && restaurantData.value) {
-      navigateTo('user-meal-order');
+      navigateTo('user-order');
       if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
     } else {
       showMessageModal('❌ 無法點餐', '今日餐廳尚未設定');
@@ -508,4 +522,4 @@ window.loadMealInfo = loadMealInfo;
 window.refreshMealInfo = refreshMealInfo;
 window.enterMealOrderMode = enterMealOrderMode;
 
-console.log('🍽️ 訂飯模組已載入（星星評分 + 禁用說明版）');
+console.log('🍽️ 訂飯模組已載入（狀態機版）');
