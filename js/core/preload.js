@@ -406,16 +406,7 @@ async function runPagePreload(pageName) {
       }
       break;
 
-    case 'user-order':
-      if (typeof loadMealInfo === 'function') {
-        const mealInput = document.getElementById('mealStudentId');
-        if (mealInput) {
-          mealInput.value = studentId;
-          try { await loadMealInfo(); } catch (e) { console.warn(e); }
-        }
-      }
-      break;
-
+    // 刪除舊版的 case 'user-order'，因為新版點餐由 navigateTo 觸發
     default:
       console.log(`ℹ️ 頁面 ${pageName} 無需預載入`);
       break;
