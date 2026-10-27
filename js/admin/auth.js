@@ -110,7 +110,7 @@ async function adminLogin(event) {
     const loginPage = document.getElementById('page-user-register');
     if (loginPage) loginPage.classList.remove('active');
 
-    switchToAdminMode();
+    await switchToAdminMode();
 
   } catch (error) {
     if (btn) {
