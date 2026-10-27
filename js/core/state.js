@@ -12,7 +12,8 @@ const AppState = (function() {
   let _currentStudentId = '';
   let _isAdminMode = false;
   let _currentRestaurantName = '';
-  let _userDataCache = null;   // ← 新增
+  let _todayStatus = 'closed'; // 'open' 或 'closed'
+  let _userDataCache = null;
 
   // 觀察者列表
   let _observers = {
@@ -21,7 +22,8 @@ const AppState = (function() {
     studentId: [],
     adminMode: [],
     restaurant: [],
-    userData: []   // ← 新增
+    todayStatus: [], // 新增
+    userData: []
   };
 
   // ========== 私有方法 ==========
@@ -43,6 +45,7 @@ const AppState = (function() {
     currentStudentId: () => _currentStudentId,
     isAdminMode: () => _isAdminMode,
     currentRestaurantName: () => _currentRestaurantName,
+    todayStatus: () => _todayStatus,
     getUserData: (studentId) => {
       if (studentId && studentId !== _currentStudentId) return null;
       return _userDataCache;
@@ -71,7 +74,6 @@ const AppState = (function() {
       } else {
         localStorage.removeItem('currentStudentId');
       }
-      // 切換帳號時清空資料快取
       if (old !== id) {
         _userDataCache = null;
         _notify('userData', null);
@@ -91,6 +93,12 @@ const AppState = (function() {
       _notify('restaurant', { old, new: name });
     },
 
+    setTodayStatus: function(status) {
+      const old = _todayStatus;
+      _todayStatus = status;
+      _notify('todayStatus', { old, new: status });
+    },
+
     setUserData: function(studentId, data) {
       if (studentId !== _currentStudentId) {
         console.warn('setUserData: studentId 不符，忽略', studentId, _currentStudentId);
@@ -100,15 +108,11 @@ const AppState = (function() {
       _notify('userData', data);
     },
 
-    // ← 新增
     clearUserData: function() {
       _userDataCache = null;
       _notify('userData', null);
     },
 
-    /**
-     * 初始化（只讀學生學號，管理員狀態由 Supabase Auth 判斷）
-     */
     init: function() {
       const savedStudentId = localStorage.getItem('currentStudentId');
       if (savedStudentId) {
@@ -121,7 +125,7 @@ const AppState = (function() {
       this.setAdmin(false, null, null);
       this.setAdminMode(false);
       this.setCurrentStudentId('');
-      this.clearUserData();   // ← 新增
+      this.clearUserData();
     },
 
     subscribe: function(event, callback) {
@@ -144,7 +148,8 @@ const AppState = (function() {
         currentStudentId: _currentStudentId,
         isAdminMode: _isAdminMode,
         currentRestaurantName: _currentRestaurantName,
-        userData: _userDataCache   // ← 新增
+        todayStatus: _todayStatus,
+        userData: _userDataCache
       };
     }
   };
