@@ -1,7 +1,7 @@
 // ==================== preload.js ====================
-// 預載入模組
+// 預載入模組（支援狀態機：today_status）
 // 依賴：api.js、supabase.js、state.js、time.js、core.js
-// ==================================================
+// ====================================================
 
 const TIME_LIMITS_CACHE_KEY = 'bhg_timeLimits';
 const TIME_LIMITS_CACHE_TIME_KEY = 'bhg_timeLimitsTime';
@@ -34,7 +34,6 @@ async function preloadTimeLimits() {
         _timeLimitsLoaded = true;
 
         updateTimeLimitsFromSupabase();
-
         return;
       } catch (e) {
         console.warn('快取解析失敗，重新載入:', e);
@@ -97,7 +96,7 @@ async function updateTimeLimitsFromSupabase() {
   localStorage.setItem(TIME_LIMITS_CACHE_TIME_KEY, String(Date.now()));
 }
 
-// ==================== 單例保護：今日餐廳 ====================
+// ==================== 單例保護：今日餐廳與狀態 ====================
 
 let _todayRestaurantLoaded = false;
 let _todayRestaurantPromise = null;
@@ -119,18 +118,16 @@ async function preloadTodayRestaurant() {
     const cacheKey = `bhg_todayRestaurant_${today}`;
     const cached = localStorage.getItem(cacheKey);
 
-    // ⚠️ 修正：先從 Supabase 讀取最新值（背景更新改為 await）
-    console.log('📡 從 Supabase 預載入今日餐廳...');
+    console.log('📡 從 Supabase 預載入今日餐廳與狀態...');
     try {
       await updateTodayRestaurantFromSupabase(cacheKey, cached);
       _todayRestaurantLoaded = true;
     } catch (error) {
       console.warn('預載入今日餐廳失敗:', error);
-
-      // 讀取失敗時，才用快取
       if (cached !== null) {
         console.log('📦 使用快取（讀取失敗備援）:', cached || '（未設定）');
         AppState.setCurrentRestaurantName(cached || '');
+        AppState.setTodayStatus(cached ? 'open' : 'closed');
       }
     } finally {
       _todayRestaurantPromise = null;
@@ -145,32 +142,31 @@ async function updateTodayRestaurantFromSupabase(cacheKey, oldValue) {
 
   const { data, error } = await sb
     .from('system_settings')
-    .select('value')
-    .eq('key', 'today_restaurant')
-    .maybeSingle();
+    .select('key, value')
+    .in('key', ['today_restaurant', 'today_status']);
 
   if (error) {
     console.error('讀取今日餐廳失敗:', error);
     throw error;
   }
 
-  const restaurant = data?.value || '';
+  const settings = {};
+  data.forEach(item => { settings[item.key] = item.value; });
 
-  AppState.setCurrentRestaurantName(restaurant);
+  const restaurant = settings['today_restaurant'] || '';
+  const status = settings['today_status'] || 'closed';
+
+  AppState.setTodayStatus(status);
+  AppState.setCurrentRestaurantName(status === 'open' ? restaurant : '');
   localStorage.setItem(cacheKey, restaurant);
 
-  if (oldValue === null || oldValue === undefined) {
-    console.log('✅ 今日餐廳已載入:', restaurant || '（未設定）');
-  } else if (restaurant !== oldValue) {
-    console.log('🔄 更新今日餐廳:', oldValue || '（未設定）', '→', restaurant || '（未設定）');
+  console.log(`✅ 今日餐廳狀態: ${restaurant || '（未設定）'}, 狀態: ${status}`);
 
-    if (AppState.currentPage() === 'user-meal') {
-      if (typeof loadMealInfo === 'function') {
-        loadMealInfo();
-      }
+  if (oldValue !== null && oldValue !== undefined && oldValue !== restaurant) {
+    console.log('🔄 更新今日餐廳:', oldValue || '（未設定）', '→', restaurant || '（未設定）');
+    if (AppState.currentPage() === 'user-order') {
+      if (typeof refreshMealInfo === 'function') refreshMealInfo();
     }
-  } else {
-    console.log('✅ 今日餐廳無變更:', restaurant || '（未設定）');
   }
 }
 
@@ -374,8 +370,6 @@ function waitForElement(elementId, timeout = 3000) {
   });
 }
 
-// ==================== 預載入流程 ====================
-
 async function runBasePreload() {
   console.log('🚀 開始基礎預載入...');
   await preloadTodayRestaurant();
@@ -402,7 +396,7 @@ async function runPagePreload(pageName) {
   console.log(`🎯 執行頁面預載入 [${pageName}]，學號: ${studentId}`);
 
   switch (pageName) {
-    case 'user-query':
+    case 'user-home':
       if (typeof queryUserInfo === 'function') {
         const queryInput = document.getElementById('queryStudentId');
         if (queryInput) {
@@ -412,7 +406,7 @@ async function runPagePreload(pageName) {
       }
       break;
 
-    case 'user-meal':
+    case 'user-order':
       if (typeof loadMealInfo === 'function') {
         const mealInput = document.getElementById('mealStudentId');
         if (mealInput) {
@@ -420,9 +414,6 @@ async function runPagePreload(pageName) {
           try { await loadMealInfo(); } catch (e) { console.warn(e); }
         }
       }
-      break;
-
-    case 'user-account':
       break;
 
     default:
@@ -467,4 +458,4 @@ window.waitForElement = waitForElement;
 window.ensureTimeLimitsLoaded = ensureTimeLimitsLoaded;
 window.ensureTodayRestaurantLoaded = ensureTodayRestaurantLoaded;
 
-console.log('📦 預載入模組已載入');
+console.log('📦 預載入模組已載入（狀態機版）');
