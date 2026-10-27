@@ -1,5 +1,5 @@
 // ==================== navigation.js ====================
-// 導航控制模組
+// 導航控制模組（狀態機版）
 // 依賴：state.js、ui.js、time.js、core.js
 // ====================================================
 
@@ -21,8 +21,10 @@ function getSmartHomePage() {
 
   const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
   const hasRestaurant = !!AppState.currentRestaurantName();
+  const todayStatus = AppState.todayStatus();
 
-  if (isOrderTime && hasRestaurant) {
+  // 只有在餐廳存在、狀態為 open、且在點餐時間內，才導向點餐頁
+  if (isOrderTime && hasRestaurant && todayStatus === 'open') {
     return 'user-order';
   }
   return 'user-home';
@@ -30,27 +32,25 @@ function getSmartHomePage() {
 
 /**
  * 根據頁面名稱決定 HTML 路徑
- * user-*   -> pages/user/*.html
- * admin-*  -> pages/admin/*.html
- * 其他     -> pages/*.html
+ * user-home    -> pages/user/home.html
+ * admin-finance -> pages/admin/finance.html
+ * user-register -> null (在 index.html 中)
  */
 function getPagePath(pageName) {
   if (pageName === 'user-register') {
-    return null; 
+    return null;
   }
-  
-  // 處理 user- 開頭
+
   if (pageName.startsWith('user-')) {
     const fileName = pageName.replace('user-', '');
     return `pages/user/${fileName}.html`;
   }
-  
-  // 處理 admin- 開頭
+
   if (pageName.startsWith('admin-')) {
     const fileName = pageName.replace('admin-', '');
     return `pages/admin/${fileName}.html`;
   }
-  
+
   return `pages/${pageName}.html`;
 }
 
@@ -59,7 +59,6 @@ async function navigateTo(pageName) {
 
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
 
-  // 管理員頁面白名單
   const adminPages = [
     'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
   ];
@@ -69,7 +68,6 @@ async function navigateTo(pageName) {
     return;
   }
 
-  // 更新底部導覽列 active 狀態
   const isAdminModeNow = AppState.isAdminMode();
   const activeNav = isAdminModeNow ? '.admin-nav' : '.user-nav';
   document.querySelectorAll(`${activeNav} .nav-item`).forEach(item => {
@@ -78,14 +76,12 @@ async function navigateTo(pageName) {
   const activeItem = document.querySelector(`${activeNav} [data-page="${pageName}"]`);
   if (activeItem) activeItem.classList.add('active');
 
-  // 隱藏所有頁面
   document.querySelectorAll('.page-container').forEach(page => {
     page.classList.remove('active');
   });
 
   let targetPage = document.getElementById('page-' + pageName);
 
-  // 若頁面不存在，則動態載入
   if (!targetPage) {
     const pageContent = document.getElementById('pageContent');
     if (!pageContent) {
@@ -93,7 +89,6 @@ async function navigateTo(pageName) {
       return;
     }
 
-    // 處理 user-register（在 index.html 中已存在）
     if (pageName === 'user-register') {
       const registerPage = document.getElementById('page-user-register');
       if (registerPage) {
@@ -131,7 +126,6 @@ async function navigateTo(pageName) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
-    // 根據頁面執行對應的初始化函數
     switch (pageName) {
       case 'user-home':
         if (typeof refreshUserBalance === 'function') refreshUserBalance();
@@ -184,7 +178,7 @@ function initTabs() {
 
     const container = tabsNav.parentElement;
     const contents = container.querySelectorAll('.tab-content');
-    
+
     contents.forEach(content => {
       if (content.id === targetId) {
         content.classList.add('active');
@@ -202,7 +196,210 @@ function initTabs() {
 document.addEventListener('DOMContentLoaded', initTabs);
 
 window.getSmartHomePage = getSmartHomePage;
+window.getPagePath = getPagePath;
 window.navigateTo = navigateTo;
 window.initTabs = initTabs;
 
-console.log('🧭 導航模組已載入（資料夾路徑版）');
+console.log('🧭 導航模組已載入（狀態機版）');// ==================== navigation.js ====================
+// 導航控制模組（狀態機版）
+// 依賴：state.js、ui.js、time.js、core.js
+// ====================================================
+
+function getSmartHomePage() {
+  const isAdminMode = AppState.isAdminMode();
+  const studentId = AppState.currentStudentId();
+  const currentTime = getCurrentTimeNumber();
+
+  if (isAdminMode) {
+    if (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) {
+      return 'admin-operations';
+    }
+    return 'admin-analytics';
+  }
+
+  if (!studentId) {
+    return 'user-register';
+  }
+
+  const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
+  const hasRestaurant = !!AppState.currentRestaurantName();
+  const todayStatus = AppState.todayStatus();
+
+  // 只有在餐廳存在、狀態為 open、且在點餐時間內，才導向點餐頁
+  if (isOrderTime && hasRestaurant && todayStatus === 'open') {
+    return 'user-order';
+  }
+  return 'user-home';
+}
+
+/**
+ * 根據頁面名稱決定 HTML 路徑
+ * user-home    -> pages/user/home.html
+ * admin-finance -> pages/admin/finance.html
+ * user-register -> null (在 index.html 中)
+ */
+function getPagePath(pageName) {
+  if (pageName === 'user-register') {
+    return null;
+  }
+
+  if (pageName.startsWith('user-')) {
+    const fileName = pageName.replace('user-', '');
+    return `pages/user/${fileName}.html`;
+  }
+
+  if (pageName.startsWith('admin-')) {
+    const fileName = pageName.replace('admin-', '');
+    return `pages/admin/${fileName}.html`;
+  }
+
+  return `pages/${pageName}.html`;
+}
+
+async function navigateTo(pageName) {
+  console.log('📄 導航到:', pageName);
+
+  if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
+
+  const adminPages = [
+    'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
+  ];
+  if (adminPages.includes(pageName) && !AppState.isAdmin()) {
+    showMessageModal('❌ 權限不足', '請先登入管理員');
+    if (typeof showAdminModal === 'function') showAdminModal();
+    return;
+  }
+
+  const isAdminModeNow = AppState.isAdminMode();
+  const activeNav = isAdminModeNow ? '.admin-nav' : '.user-nav';
+  document.querySelectorAll(`${activeNav} .nav-item`).forEach(item => {
+    item.classList.remove('active');
+  });
+  const activeItem = document.querySelector(`${activeNav} [data-page="${pageName}"]`);
+  if (activeItem) activeItem.classList.add('active');
+
+  document.querySelectorAll('.page-container').forEach(page => {
+    page.classList.remove('active');
+  });
+
+  let targetPage = document.getElementById('page-' + pageName);
+
+  if (!targetPage) {
+    const pageContent = document.getElementById('pageContent');
+    if (!pageContent) {
+      console.error('❌ 找不到 pageContent 容器');
+      return;
+    }
+
+    if (pageName === 'user-register') {
+      const registerPage = document.getElementById('page-user-register');
+      if (registerPage) {
+        registerPage.classList.add('active');
+        AppState.setCurrentPage(pageName);
+      }
+      return;
+    }
+
+    const path = getPagePath(pageName);
+    if (!path) {
+      console.error('❌ 無法取得頁面路徑:', pageName);
+      return;
+    }
+
+    try {
+      console.log('📥 載入頁面片段:', path);
+      const response = await fetch(path);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const html = await response.text();
+
+      pageContent.insertAdjacentHTML('beforeend', html);
+      targetPage = document.getElementById('page-' + pageName);
+      console.log('✅ 頁面片段已載入:', pageName);
+    } catch (error) {
+      console.error('❌ 載入頁面失敗:', error);
+      showMessageModal('❌ 載入失敗', `無法載入頁面：${pageName}`);
+      return;
+    }
+  }
+
+  if (targetPage) {
+    targetPage.classList.add('active');
+    AppState.setCurrentPage(pageName);
+
+    switch (pageName) {
+      case 'user-home':
+        if (typeof refreshUserBalance === 'function') refreshUserBalance();
+        break;
+      case 'user-order':
+        if (typeof refreshMealInfo === 'function') refreshMealInfo();
+        break;
+      case 'user-account':
+        if (typeof loadAccountPage === 'function') loadAccountPage();
+        break;
+      case 'admin-operations':
+        if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
+        break;
+      case 'admin-finance':
+        if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
+        break;
+      case 'admin-users':
+        if (typeof initAdminUsersPage === 'function') initAdminUsersPage();
+        break;
+      case 'admin-analytics':
+        if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
+        break;
+    }
+
+    console.log('📢 發送 pageLoaded 事件:', pageName);
+    window.dispatchEvent(new CustomEvent('pageLoaded', {
+      detail: { pageName: pageName }
+    }));
+  }
+}
+
+// ==================== Tabs 事件委派 ====================
+
+function initTabs() {
+  if (window._tabsBound) return;
+  window._tabsBound = true;
+
+  document.addEventListener('click', function(e) {
+    const tabBtn = e.target.closest('.tab-btn');
+    if (!tabBtn) return;
+
+    const tabsNav = tabBtn.closest('.tabs-nav');
+    if (!tabsNav) return;
+
+    tabsNav.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    tabBtn.classList.add('active');
+
+    const targetId = tabBtn.dataset.tab;
+    if (!targetId) return;
+
+    const container = tabsNav.parentElement;
+    const contents = container.querySelectorAll('.tab-content');
+
+    contents.forEach(content => {
+      if (content.id === targetId) {
+        content.classList.add('active');
+      } else {
+        content.classList.remove('active');
+      }
+    });
+
+    window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId: targetId } }));
+  });
+
+  console.log('✅ Tabs 事件委派已綁定');
+}
+
+document.addEventListener('DOMContentLoaded', initTabs);
+
+window.getSmartHomePage = getSmartHomePage;
+window.getPagePath = getPagePath;
+window.navigateTo = navigateTo;
+window.initTabs = initTabs;
+
+console.log('🧭 導航模組已載入（狀態機版）');
