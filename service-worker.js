@@ -1,29 +1,20 @@
 // ==================== service-worker.js ====================
-// PWA Service Worker（開發階段：網路優先策略）
+// PWA Service Worker（全自動更新版）
 // ==========================================================
 
-const SUPABASE_URL = 'https://wvvmnombzkkrtxxxucqe.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_oK9kGQMbcBdGyoerrrfDzQ_yWyRZcQf';
+const CACHE_NAME = 'bhg-cache-v4.0.0';
 
-// 預設版本
-let VERSION = '4.0.3'; 
-let CACHE_NAME = 'bhg-cache-v4.0.3';
+console.log(`📦 Service Worker 啟動`);
 
-console.log(`📦 Service Worker 啟動（版本: ${VERSION}）`);
-
-// ═══════════════════════════════════════════════════════════════
-// install 事件：強制跳過等待，立即啟用
-// ═══════════════════════════════════════════════════════════════
+// 1. 安裝時：不預先快取，直接跳過等待
 self.addEventListener('install', function (event) {
   console.log('📦 Service Worker 安裝中...');
-  self.skipWaiting(); // 強制立刻接管
+  self.skipWaiting(); 
 });
 
-// ═══════════════════════════════════════════════════════════════
-// activate 事件：清除所有舊快取
-// ═══════════════════════════════════════════════════════════════
+// 2. 啟用時：清除所有舊版快取
 self.addEventListener('activate', function (event) {
-  console.log('✅ Service Worker 已啟用，正在清除舊快取...');
+  console.log('✅ Service Worker 已啟用，清理舊快取...');
   event.waitUntil(
     caches.keys().then(function (cacheNames) {
       return Promise.all(
@@ -34,19 +25,25 @@ self.addEventListener('activate', function (event) {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()) // 立刻接管現有頁面
   );
 });
 
-// ═══════════════════════════════════════════════════════════════
-// fetch 事件：網路優先 (Network-First)
-// ═══════════════════════════════════════════════════════════════
+// 3. 接收主執行緒的指令（自動更新用）
+self.addEventListener('message', function (event) {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('⚡ 收到 SKIP_WAITING 指令，立刻接管頁面！');
+    self.skipWaiting();
+  }
+});
+
+// 4. 攔截請求：網路優先 (Network-First)
 self.addEventListener('fetch', function (event) {
   if (event.request.method !== 'GET') return;
 
   const url = event.request.url;
 
-  // 跳過外部 API 和 CDN
+  // 跳過外部 API、CDN 和 OneSignal
   if (url.includes('script.google.com') || 
       url.includes('supabase.co') || 
       url.includes('onesignal.com') || 
@@ -55,22 +52,20 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  // 針對 HTML, JS, CSS 採用「網路優先」
-  // 每次都先跟伺服器要最新的，拿到後更新快取；斷網時才用快取
   event.respondWith(
     fetch(event.request)
       .then(function (networkResponse) {
-        if (!networkResponse || networkResponse.status !== 200) {
-          return networkResponse;
+        // 拿到最新資料後，順便更新快取（供離線時使用）
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then(function (cache) {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
       })
       .catch(function () {
-        // 網路失敗時，回退到快取
+        // 斷網時，才從快取拿資料
         return caches.match(event.request);
       })
   );
