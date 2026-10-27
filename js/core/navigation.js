@@ -9,48 +9,26 @@ function getSmartHomePage() {
   const currentTime = getCurrentTimeNumber();
 
   if (isAdminMode) {
-    if (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) {
-      return 'admin-operations';
-    }
-    return 'admin-analytics';
+    return (currentTime >= TIME.ADMIN_START && currentTime < TIME.ADMIN_END) 
+      ? 'admin-operations' : 'admin-analytics';
   }
 
-  if (!studentId) {
-    return 'user-register';
-  }
+  if (!studentId) return 'user-register';
 
   const isOrderTime = currentTime >= TIME.ORDER_START && currentTime < TIME.ORDER_END;
   const hasRestaurant = !!AppState.currentRestaurantName();
   const todayStatus = AppState.todayStatus();
 
-  // 只有在餐廳存在、狀態為 open、且在點餐時間內，才導向點餐頁
   if (isOrderTime && hasRestaurant && todayStatus === 'open') {
     return 'user-order';
   }
   return 'user-home';
 }
 
-/**
- * 根據頁面名稱決定 HTML 路徑
- * user-home    -> pages/user/home.html
- * admin-finance -> pages/admin/finance.html
- * user-register -> null (在 index.html 中)
- */
 function getPagePath(pageName) {
-  if (pageName === 'user-register') {
-    return null;
-  }
-
-  if (pageName.startsWith('user-')) {
-    const fileName = pageName.replace('user-', '');
-    return `pages/user/${fileName}.html`;
-  }
-
-  if (pageName.startsWith('admin-')) {
-    const fileName = pageName.replace('admin-', '');
-    return `pages/admin/${fileName}.html`;
-  }
-
+  if (pageName === 'user-register') return null;
+  if (pageName.startsWith('user-')) return `pages/user/${pageName.replace('user-', '')}.html`;
+  if (pageName.startsWith('admin-')) return `pages/admin/${pageName.replace('admin-', '')}.html`;
   return `pages/${pageName}.html`;
 }
 
@@ -59,9 +37,7 @@ async function navigateTo(pageName) {
 
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
 
-  const adminPages = [
-    'admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'
-  ];
+  const adminPages = ['admin-operations', 'admin-finance', 'admin-users', 'admin-analytics'];
   if (adminPages.includes(pageName) && !AppState.isAdmin()) {
     showMessageModal('❌ 權限不足', '請先登入管理員');
     if (typeof showAdminModal === 'function') showAdminModal();
@@ -84,10 +60,7 @@ async function navigateTo(pageName) {
 
   if (!targetPage) {
     const pageContent = document.getElementById('pageContent');
-    if (!pageContent) {
-      console.error('❌ 找不到 pageContent 容器');
-      return;
-    }
+    if (!pageContent) return;
 
     if (pageName === 'user-register') {
       const registerPage = document.getElementById('page-user-register');
@@ -99,19 +72,11 @@ async function navigateTo(pageName) {
     }
 
     const path = getPagePath(pageName);
-    if (!path) {
-      console.error('❌ 無法取得頁面路徑:', pageName);
-      return;
-    }
-
     try {
       console.log('📥 載入頁面片段:', path);
       const response = await fetch(path);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const html = await response.text();
-
       pageContent.insertAdjacentHTML('beforeend', html);
       targetPage = document.getElementById('page-' + pageName);
       console.log('✅ 頁面片段已載入:', pageName);
@@ -126,39 +91,38 @@ async function navigateTo(pageName) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
 
-    switch (pageName) {
-      case 'user-home':
-        if (typeof refreshUserBalance === 'function') refreshUserBalance();
-        break;
-      case 'user-order':
-        if (typeof refreshMealInfo === 'function') refreshMealInfo();
-        break;
-      case 'user-account':
-        if (typeof loadAccountPage === 'function') loadAccountPage();
-        break;
-      case 'admin-operations':
-        if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
-        break;
-      case 'admin-finance':
-        if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
-        break;
-      case 'admin-users':
-        if (typeof initAdminUsersPage === 'function') initAdminUsersPage();
-        break;
-      case 'admin-analytics':
-        if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
-        break;
-    }
+    // ★ 關鍵修正：使用 setTimeout 確保 DOM 渲染完成後才執行初始化
+    setTimeout(() => {
+      switch (pageName) {
+        case 'user-home':
+          if (typeof refreshUserBalance === 'function') refreshUserBalance();
+          break;
+        case 'user-order':
+          if (typeof loadMealOrderPage === 'function') loadMealOrderPage();
+          break;
+        case 'user-account':
+          if (typeof loadAccountPage === 'function') loadAccountPage();
+          break;
+        case 'admin-operations':
+          if (typeof loadTodayRestaurantStatus === 'function') loadTodayRestaurantStatus();
+          break;
+        case 'admin-finance':
+          if (typeof loadBatchDeductData === 'function') loadBatchDeductData();
+          break;
+        case 'admin-users':
+          if (typeof initAdminUsersPage === 'function') initAdminUsersPage();
+          break;
+        case 'admin-analytics':
+          if (typeof loadAdminAnalytics === 'function') loadAdminAnalytics();
+          break;
+      }
+    }, 100);
 
-    console.log('📢 發送 pageLoaded 事件:', pageName);
-    window.dispatchEvent(new CustomEvent('pageLoaded', {
-      detail: { pageName: pageName }
-    }));
+    window.dispatchEvent(new CustomEvent('pageLoaded', { detail: { pageName } }));
   }
 }
 
-// ==================== Tabs 事件委派 ====================
-
+// ==================== Tabs 事件委派與歷史訂單載入 ====================
 function initTabs() {
   if (window._tabsBound) return;
   window._tabsBound = true;
@@ -180,14 +144,14 @@ function initTabs() {
     const contents = container.querySelectorAll('.tab-content');
 
     contents.forEach(content => {
-      if (content.id === targetId) {
-        content.classList.add('active');
-      } else {
-        content.classList.remove('active');
-      }
+      if (content.id === targetId) content.classList.add('active');
+      else content.classList.remove('active');
     });
 
-    window.dispatchEvent(new CustomEvent('tabChanged', { detail: { tabId: targetId } }));
+    // ★ 關鍵修正：當點擊「歷史訂單」Tab 時，主動觸發載入
+    if (targetId === 'ord-history') {
+      if (typeof checkUserOrderHistory === 'function') checkUserOrderHistory();
+    }
   });
 
   console.log('✅ Tabs 事件委派已綁定');
