@@ -1,7 +1,7 @@
 // ==================== meal-order.js ====================
-// 使用者點餐頁面模組（購物車模式 + 餘額檢查）
+// 使用者點餐頁面模組（購物車模式 + 餘額檢查 + 狀態機）
 // 依賴：supabase.js、state.js、ui.js、common.js、core.js、navigation.js、time.js、preload.js
-// ==================================================
+// ====================================================
 
 let menuCache = null;
 let cart = [];
@@ -14,20 +14,27 @@ async function loadMealOrderPage() {
   const studentId = AppState.currentStudentId();
   if (!studentId) {
     showMessageModal('❌ 錯誤', '請先返回訂飯頁面載入學號');
-    navigateTo('user-meal');
+    navigateTo('user-order');
     return;
   }
 
   await ensureTimeLimitsLoaded();
+  await ensureTodayRestaurantLoaded();
+
+  // 檢查今日狀態是否為 open
+  if (AppState.todayStatus() !== 'open') {
+    showMessageModal('❌ 今日已截止', '今日訂餐已截止，無法點餐');
+    navigateTo('user-order');
+    return;
+  }
 
   if (!isUserOrderTime()) {
     const timeRange = getOrderTimeRange();
     showMessageModal('❌ 非點餐時間', `點餐時間為 ${timeRange}`);
-    navigateTo('user-meal');
+    navigateTo('user-order');
     return;
   }
 
-  // ⚠️ 修正：AppState 沒有就從 Supabase 讀
   let restaurantName = AppState.currentRestaurantName();
 
   if (!restaurantName) {
@@ -52,7 +59,7 @@ async function loadMealOrderPage() {
 
   if (!restaurantName) {
     showMessageModal('❌ 今日餐廳尚未設定', '請稍後再試');
-    navigateTo('user-meal');
+    navigateTo('user-order');
     return;
   }
 
@@ -75,6 +82,7 @@ async function loadMealOrderPage() {
       sb.from('today_meals')
         .select('slot, restaurant, category, meal_name, amount, price, rated')
         .eq('user_id', studentId)
+        .eq('is_archived', false)
         .order('slot'),
       sb.from('users')
         .select('balance')
@@ -317,15 +325,19 @@ function adjustCartItem(idx, change) {
 }
 
 /**
- * 送出訂單（Supabase 版）
- */
-/**
  * 送出訂單（Sprint 1.6：只送 meal_name 和 amount）
  */
 async function submitOrder(event) {
   const btn = event ? event.currentTarget : document.getElementById('submitOrderBtn');
 
   await ensureTimeLimitsLoaded();
+  await ensureTodayRestaurantLoaded();
+
+  // 檢查今日狀態是否為 open
+  if (AppState.todayStatus() !== 'open') {
+    showMessageModal('❌ 無法送出', '今日訂餐已截止，無法送出訂單');
+    return;
+  }
 
   if (!isUserOrderTime()) {
     showMessageModal('❌ 非點餐時間', '點餐時間已過，無法送出');
@@ -350,15 +362,11 @@ async function submitOrder(event) {
   try {
     const sb = await initSupabase();
 
-    // ═══════════════════════════════════════
-    // 只送 meal_name 和 amount（後端會重查價格）
-    // ═══════════════════════════════════════
     const itemsPayload = cart.map(item => ({
       meal_name: item.name,
       amount: item.amount
     }));
 
-    // 呼叫 RPC（後端負責驗證、重算、寫入）
     const { data: rpcResult, error: rpcError } = await sb.rpc('submit_order', {
       p_user_id: studentId,
       p_restaurant: restaurantName,
@@ -378,10 +386,8 @@ async function submitOrder(event) {
       `訂單已送出，共 ${rpcResult.itemCount} 種餐點，總計 $${rpcResult.total}`
     );
 
-    // 清空購物車
     cart = [];
 
-    // 重新載入頁面顯示最新狀態
     if (typeof loadMealOrderPage === 'function') {
       await loadMealOrderPage();
     }
@@ -398,4 +404,4 @@ window.onRestaurantCategoryChange = onRestaurantCategoryChange;
 window.addOrderRestaurantMeal = addOrderRestaurantMeal;
 window.submitOrder = submitOrder;
 
-console.log('🍽️ 點餐模組已載入（餘額檢查版）');
+console.log('🍽️ 點餐模組已載入（狀態機版）');
