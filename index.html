@@ -377,25 +377,39 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function() {
+          // 1. 註冊 Service Worker，並強制不使用 HTTP 快取讀取 SW 腳本
           navigator.serviceWorker.register('service-worker.js', {
-            scope: '/bhg-frontend/'
+            scope: '/bhg-frontend/',
+            updateViaCache: 'none' // 關鍵：永遠去伺服器檢查 service-worker.js 是否有更新
           })
             .then(function(registration) {
               console.log('✅ Service Worker 註冊成功');
+
+              // 2. 監聽是否有新的 Service Worker 正在安裝
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                console.log('🔄 發現新版本的 Service Worker');
+
+                newWorker.addEventListener('statechange', () => {
+                  // 當新 SW 安裝完成，且已經有舊 SW 在控制頁面時
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('📥 新版本已就緒，發送 SKIP_WAITING 指令...');
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
             })
             .catch(function(error) {
               console.warn('⚠️ Service Worker 註冊失敗:', error);
             });
 
-          navigator.serviceWorker.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'SW_UPDATED') {
-              const { oldVersion, newVersion } = event.data;
-              console.log(`📥 更新通知: ${oldVersion || '無'} → ${newVersion}`);
-              setTimeout(function() {
-                const url = window.location.href.split('?')[0];
-                window.location.href = url + '?_t=' + Date.now();
-              }, 300);
-            }
+          // 3. 監聽 Service Worker 控制權變更（代表新 SW 已經接管）
+          let refreshing;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            console.log('🔄 Service Worker 已更新，自動重新整理頁面...');
+            window.location.reload(); // 自動重整，載入最新畫面
           });
         });
       }
