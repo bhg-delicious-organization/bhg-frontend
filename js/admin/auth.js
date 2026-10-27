@@ -306,6 +306,44 @@ function bindAdminLoginForm() {
   form._adminBound = true;
 }
 
+/**
+ * 切換到管理員模式（登入成功後呼叫）
+ * 依時間決定導覽到 admin-operations 或 admin-analytics
+ */
+async function switchToAdminMode() {
+  console.log('🔧 切換到管理員模式');
+
+  // 1. 清掉可能殘留的使用者身分，避免 user / admin 模式衝突
+  if (AppState.currentStudentId()) {
+    console.warn('⚠️ 偵測到殘留學生身分，清除:', AppState.currentStudentId());
+    AppState.setCurrentStudentId('');
+  }
+
+  // 2. 切換 adminMode（設 true 後才讓 navigateTo 認得管理員頁）
+  AppState.setAdminMode(true);
+  updateAdminUI();
+
+  // 3. 確保時間限制已載入（否則 isAdminRestaurantTime 用預設值判斷）
+  if (typeof ensureTimeLimitsLoaded === 'function') {
+    try {
+      await ensureTimeLimitsLoaded();
+    } catch (e) {
+      console.warn('載入時間限制失敗，使用預設值:', e);
+    }
+  }
+
+  // 4. 更新導覽列可見性
+  updateNavigationVisibility();
+
+  // 5. 依時間導覽
+  const targetPage = (typeof isAdminRestaurantTime === 'function' && isAdminRestaurantTime())
+    ? 'admin-operations'
+    : 'admin-analytics';
+
+  console.log('📄 管理員登入後導覽到:', targetPage);
+  await navigateTo(targetPage);
+}
+
 window.bindAdminLoginForm = bindAdminLoginForm;
 window.showAdminModal = showAdminModal;
 window.hideAdminModal = hideAdminModal;
