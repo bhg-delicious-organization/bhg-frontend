@@ -32,7 +32,7 @@ function getPagePath(pageName) {
   return `pages/${pageName}.html`;
 }
 
-async function navigateTo(pageName) {
+async function navigateTo(pageName, isPopState = false) {
   console.log('📄 導航到:', pageName);
 
   if (typeof updateNavigationVisibility === 'function') updateNavigationVisibility();
@@ -90,6 +90,12 @@ async function navigateTo(pageName) {
   if (targetPage) {
     targetPage.classList.add('active');
     AppState.setCurrentPage(pageName);
+
+    if (!isPopState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('page', pageName); // 保留完整 pageName，如 user-home、admin-operations
+      window.history.pushState({ pageName }, '', url.toString());
+    }
 
     // ★ 關鍵修正：使用 setTimeout 確保 DOM 渲染完成後才執行初始化
     setTimeout(() => {
@@ -158,6 +164,27 @@ function initTabs() {
 }
 
 document.addEventListener('DOMContentLoaded', initTabs);
+
+// ★ 監聽瀏覽器上一頁 / 下一頁按鈕動作
+window.addEventListener('popstate', (event) => {
+    let targetPageName = null;
+
+    // 優先從 history state 中讀取 pageName
+    if (event.state && event.state.pageName) {
+        targetPageName = event.state.pageName;
+    } else {
+        // 若 state 為空（例如手動重新整理或從外部連入），則讀取 URL 中的 query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        targetPageName = urlParams.get('page');
+    }
+
+    // 若 URL 有指定頁面則切換，否則回到預設首頁
+    if (targetPageName) {
+        navigateTo(targetPageName, true);
+    } else if (typeof getSmartHomePage === 'function') {
+        navigateTo(getSmartHomePage(), true);
+    }
+});
 
 window.getSmartHomePage = getSmartHomePage;
 window.getPagePath = getPagePath;
