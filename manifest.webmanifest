@@ -1,35 +1,38 @@
 {
   "name": "大家政便當廠-儲值系統",
-  "short_name": "大家政便當廠-儲值系統",
+  "short_name": "便當廠",
   "description": "校園儲值與訂餐系統",
+  "id": "Balance-Order-System",
   "start_url": "/bhg-frontend/?utm_source=pwa",
   "scope": "/bhg-frontend/",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen", "browser"],
   "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#2c3e50",
   "lang": "zh-TW",
+  "dir": "ltr",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/bhg-frontend/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-256.png",
+      "src": "/bhg-frontend/icon-256.png",
       "sizes": "256x256",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/bhg-frontend/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-mask.png",
+      "src": "/bhg-frontend/icon-mask.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -37,51 +40,29 @@
   ],
   "screenshots": [
     {
-      "src": "screenshots-1.jpg",
+      "src": "/bhg-frontend/screenshots-1.jpg",
       "sizes": "1220x2539",
-      "type": "image/jpg",
-      "label": "應用程式載入畫面",
-      "form_factor": "wide"
-    },
-    {
-      "src": "screenshots-2.jpg",
-      "sizes": "1220x2539",
-      "type": "image/jpg",
-      "label": "系統實機畫面",
-      "form_factor": "wide"
-    },
-    {
-      "src": "screenshots-1.jpg",
-      "sizes": "1220x2539",
-      "type": "image/jpg",
+      "type": "image/jpeg",
       "label": "應用程式載入畫面",
       "form_factor": "narrow"
     },
     {
-      "src": "screenshots-2.jpg",
+      "src": "/bhg-frontend/screenshots-2.jpg",
       "sizes": "1220x2539",
-      "type": "image/jpg",
+      "type": "image/jpeg",
       "label": "系統實機畫面",
       "form_factor": "narrow"
     }
   ],
-  "id": "Balance-Order-System",
-  "version": "3.0",
-  "dir": "ltr",
-  "display_override": [
-    "window-controls-overlay",
-    "standalone",
-    "fullscreen",
-    "browser"
-  ],
   "shortcuts": [
     {
       "name": "查詢",
-      "url": "/?utm_source=shortcut&page=balance",
+      "short_name": "查詢",
       "description": "查詢餘額",
+      "url": "/bhg-frontend/?page=user-query",
       "icons": [
         {
-          "src": "icon-192.png",
+          "src": "/bhg-frontend/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -89,80 +70,17 @@
     },
     {
       "name": "點餐",
-      "url": "/?utm_source=shortcut&page=meal",
+      "short_name": "點餐",
       "description": "點餐",
+      "url": "/bhg-frontend/?page=user-order",
       "icons": [
         {
-          "src": "icon-192.png",
+          "src": "/bhg-frontend/icon-192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
       ]
     }
   ],
-  "protocol_handlers": [
-    {
-      "protocol": "mailto",
-      "url": "/?utm_source=protocol&mailto=%s"
-    },
-    {
-      "protocol": "bitcoin",
-      "url": "/?utm_source=protocol&bitcoin=%s"
-    },
-    {
-      "protocol": "magnet",
-      "url": "/?utm_source=protocol&magnet=%s"
-    }
-  ],
-  "categories": [
-    "business",
-    "finance",
-    "food"
-  ],
-  "share_target": {
-    "method": "GET",
-    "action": "/",
-    "params": {
-      "url": "/?utm_source=pwa_target",
-      "files": [
-        {
-          "name": "file_name",
-          "accept": [
-            ".txt",
-            ".png",
-            ".jpg",
-            ".svg",
-            ".webp",
-            ".jpeg",
-            ".7z",
-            ".zip",
-            ".doc",
-            ".docx",
-            ".ppt",
-            ".pptx",
-            ".xlsx",
-            ".css",
-            ".csv",
-            ".js",
-            ".py",
-            ".c",
-            ".cpp",
-            ".pdf",
-            ".html",
-            ".markdown",
-            ".md",
-            ".gif",
-            ".epub",
-            ".ico",
-            ".mp4",
-            ".mp3",
-            ".flac",
-            ".git"
-          ]
-        }
-      ],
-      "title": "target_title",
-      "text": "target_text"
-    }
-  }
+  "categories": ["business", "finance", "food"]
 }
