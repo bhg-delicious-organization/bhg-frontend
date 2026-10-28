@@ -31,7 +31,7 @@ jobs:
 
       - name: Check key files exist
         run: |
-          for f in index.html manifest.json service-worker.js styles.css icon-192.png icon-512.png; do
+          for f in index.html manifest.webmanifest service-worker.js styles.css icon-192.png icon-512.png; do
             if [ ! -f "$f" ]; then
               echo "❌ 缺少關鍵檔案: $f"
               exit 1
@@ -41,7 +41,7 @@ jobs:
 
       - name: Check SW VERSION format
         run: |
-          VERSION=$(grep -oP "const VERSION = '\K[^']+" service-worker.js || echo "")
+          VERSION=$(grep -oP "const CACHE_NAME = 'bhg-cache-v\K[^']+" service-worker.js || echo "")
           if [ -z "$VERSION" ]; then
             echo "❌ service-worker.js 找不到 VERSION"
             exit 1
