@@ -7,6 +7,9 @@
     <meta name="description" content="校園儲值與訂餐系統">
     <meta name="author" content="gtes10301">
 
+    <base href="https://bhg-delicious.github.io/BHG_order_system/" target="_blank">
+    <link rel="canonical" href="https://bhg-delicious.github.io/BHG_order_system/?utm_source=canonical">
+
     <link rel="icon" type="image/png" href="icon-192.png">
     <title>大家政便當廠-儲值系統</title>
 
@@ -17,6 +20,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="便當廠">
     <link rel="apple-touch-icon" href="icon-192.png">
+
+    <meta name="google-site-verification" content="AkQAikafnBmeebrxOdgJlXoEXnwoEqwnDiyBI6UW8ho">
 
     <link rel="preconnect" href="https://wvvmnombzkkrtxxxucqe.supabase.co" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
@@ -34,6 +39,10 @@
     </noscript>
 
     <link rel="stylesheet" href="styles.css">
+
+    <script src="https://www.googletagmanager.com/gtm.js?id=GTM-56DFMCCC" defer></script>
+    <script src="https://www.googletagmanager.com/gtag/js?id=G-W1CE83K69G" defer></script>
+    <script src="google/gtag.js" defer></script>
 </head>
 <body>
     <header class="header">
@@ -379,7 +388,7 @@
         window.addEventListener('load', function() {
           // 1. 註冊 Service Worker，並強制不使用 HTTP 快取讀取 SW 腳本
           navigator.serviceWorker.register('service-worker.js', {
-            scope: '/bhg-frontend/',
+            scope: '/BHG_order_system/',
             updateViaCache: 'none' // 關鍵：永遠去伺服器檢查 service-worker.js 是否有更新
           })
             .then(function(registration) {
@@ -423,8 +432,8 @@
             appId: "fb14b87c-e10e-4aa0-8613-0f2b05e5c937",
             safari_web_id: "web.onesignal.auto.2510e921-2066-4b3b-be25-8e0e09bd836c",
             notifyButton: { enable: false },
-            serviceWorkerParam: { scope: "/bhg-frontend/onesignal/" },
-            serviceWorkerPath: "/bhg-frontend/onesignal/OneSignalSDKWorker.js",
+            serviceWorkerParam: { scope: "/BHG_order_system/onesignal/" },
+            serviceWorkerPath: "/BHG_order_system/onesignal/OneSignalSDKWorker.js",
             allowLocalhostAsSecureOrigin: location.hostname === 'localhost',
           });
           console.log('✅ OneSignal 已初始化');
